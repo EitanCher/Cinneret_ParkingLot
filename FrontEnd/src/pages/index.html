@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Preconnect to Google Fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <!-- Load Google Fonts (Inter and Noto Sans) asynchronously -->
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+    <!-- Page title and favicon -->
+    <title>Galileo Design</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <!-- Load Tailwind CSS from CDN with forms and container-queries plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <!-- Main container with a full-height screen, white background, and a group class for potential design-specific overrides -->
+    <div class=" flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <!-- Layout container for the entire page -->
+        <div class="layout-container flex h-full grow flex-col">
+            <!-- Header section with border and padding -->
+            <header
+                class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f0f4] px-10 py-3">
+                <!-- Logo and site title -->
+                <div class="flex items-center gap-4 text-[#111118]">
+                    <div class="size-4">
+                        <!-- SVG icon for the logo -->
+                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z" fill="currentColor"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-[#111118] text-lg font-bold leading-tight tracking-[-0.015em]">ParkNow</h2>
+                </div>
+                <!-- Navigation links and buttons -->
+                <div class="flex flex-1 justify-end gap-8">
+                    <div class="flex items-center gap-9">
+                        <a class="text-[#111118] text-sm font-medium leading-normal" href="#">How it works</a>
+                        <a class="text-[#111118] text-sm font-medium leading-normal" href="#">Cities</a>
+                        <a class="text-[#111118] text-sm font-medium leading-normal" href="#">Businesses</a>
+                        <a class="text-[#111118] text-sm font-medium leading-normal" href="#">Resources</a>
+                    </div>
+                    <div class="flex gap-2">
+                        <!-- Log in and Sign up buttons -->
+                        <button
+                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#1919e6] text-white text-sm font-bold leading-normal tracking-[0.015em]">
+                            <span class="truncate">Log in</span>
+                        </button>
+                        <button
+                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#f0f0f4] text-[#111118] text-sm font-bold leading-normal tracking-[0.015em]">
+                            <span class="truncate">Sign up</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <!-- Main content section -->
+            <div class="px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    <!-- Hero section with a background image and gradient overlay -->
+                    <div class="@container">
+                        <div class="@[480px]:p-4">
+                            <div class="flex min-h-[480px] flex-col gap-6 bg-cover bg-center bg-no-repeat @[480px]:gap-8 @[480px]:rounded-xl items-start justify-end px-4 pb-10 @[480px]:px-10"
+                                style='background-image: linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%), url("https://cdn.usegalileo.ai/stability/c6dcf5ac-74d4-4a1a-b026-0b6d3516b783.png");'>
+                                <!-- Hero text and buttons -->
+                                <div class="flex flex-col gap-2 text-left">
+                                    <h1
+                                        class="text-white text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl @[480px]:font-black @[480px]:leading-tight @[480px]:tracking-[-0.033em]">
+                                        Welcome to ParkNow
+                                    </h1>
+                                    <h2
+                                        class="text-white text-sm font-normal leading-normal @[480px]:text-base @[480px]:font-normal @[480px]:leading-normal">
+                                        The smarter way to park. Pay for parking on the go and receive reminders before
+                                        time runs out. Extend your session without leaving your spot.
+                                    </h2>
+                                </div>
+                                <div class="flex-wrap gap-3 flex">
+                                    <!-- Log in and Sign up buttons in the hero section -->
+                                    <button
+                                        class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 @[480px]:h-12 @[480px]:px-5 bg-[#1919e6] text-white text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base @[480px]:font-bold @[480px]:leading-normal @[480px]:tracking-[0.015em]">
+                                        <span class="truncate">Log in</span>
+                                    </button>
+                                    <button
+                                        class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 @[480px]:h-12 @[480px]:px-5 bg-[#f0f0f4] text-[#111118] text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base @[480px]:font-bold @[480px]:leading-normal @[480px]:tracking-[0.015em]">
+                                        <span class="truncate">Sign up</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Additional information section -->
+                    <div class="flex flex-col gap-10 px-4 py-10 @container">
+                        <div class="flex flex-col gap-4">
+                            <h1
+                                class="text-[#111118] tracking-light text-[32px] font-bold leading-tight @[480px]:text-4xl @[480px]:font-black @[480px]:leading-tight @[480px]:tracking-[-0.033em] max-w-[720px]">
+                                How it works
+                            </h1>
+                            <p class="text-[#111118] text-base font-normal leading-normal max-w-[720px]">
+                                ParkNow is a parking payment system that allows users to pay for parking from their
+                                phone. Users can also use the app to find parking spaces at participating
+                                locations and get real-time updates on parking availability. The system uses GPS
+                                technology to detect when a user has parked their car and automatically starts a
+                                parking session. Users can also enter the zone number displayed on the parking meter to
+                                start a session manually. Once a parking session is started, users can add
+                                more time to their session if needed. When a parking session is active, the app displays
+                                the time remaining and sends push notifications when the session is about
+                                to expire.
+                            </p>
+                        </div>
+                        <!-- Features grid -->
+                        <div class="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3">
+                            <!-- Feature item with background image -->
+                            <div class="flex flex-col gap-3 pb-3">
+                                <div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl"
+                                    style='background-image: url("https://cdn.usegalileo.ai/stability/51a70205-5a27-4d53-93d6-ff5475b7f53e.png");'>
+                                </div>
+                                <div>
+                                    <p class="text-[#111118] text-base font-medium leading-normal">Pay by zone</p>
+                                    <p class="text-[#636388] text-sm font-normal leading-normal">
+                                        Use the app to enter the zone number displayed on the parking meter and start a
+                                        parking session.
+                                    </p>
+                                </div>
+                            </div>
+                            <!-- Repeat for other features -->
+                            <div class="flex flex-col gap-3 pb-3">
+                                <div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl"
+                                    style='background-image: url("https://cdn.usegalileo.ai/stability/60abdea9-9209-47d8-a005-edde3a945e1e.png");'>
+                                </div>
+                                <div>
+                                    <p class="text-[#111118] text-base font-medium leading-normal">Find parking</p>
+                                    <p class="text-[#636388] text-sm font-normal leading-normal">
+                                        Use the app to find parking spaces at participating locations and get real-time
+                                        updates on parking availability.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-3 pb-3">
+                                <div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl"
+                                    style='background-image: url("https://cdn.usegalileo.ai/stability/f50812e3-bfd9-48ea-8e60-195ee0219685.png");'>
+                                </div>
+                                <div>
+                                    <p class="text-[#111118] text-base font-medium leading-normal">Get updates</p>
+                                    <p class="text-[#636388] text-sm font-normal leading-normal">
+                                        Get real-time updates on parking availability and receive push notifications
+                                        when your session is about to expire.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Call-to-action section -->
+                    <div class="@container">
+                        <div
+                            class="flex flex-col justify-end gap-6 px-4 py-10 @[480px]:gap-8 @[480px]:px-10 @[480px]:py-20">
+                            <div class="flex flex-col gap-2 text-center">
+                                <h1
+                                    class="text-[#111118] tracking-light text-[32px] font-bold leading-tight @[480px]:text-4xl @[480px]:font-black @[480px]:leading-tight @[480px]:tracking-[-0.033em] max-w-[720px]">
+                                    Ready to park smarter?
+                                </h1>
+                            </div>
+                            <div class="flex flex-1 justify-center">
+                                <div class="flex justify-center">
+                                    <!-- Download app button -->
+                                    <button
+                                        class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 @[480px]:h-12 @[480px]:px-5 bg-[#1919e6] text-white text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base @[480px]:font-bold @[480px]:leading-normal @[480px]:tracking-[0.015em] grow">
+                                        <span class="truncate">Download the app</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+
+<!-- 
+
+flex: Makes the container a flexbox container.
+min-h-screen: Sets the minimum height of the element to be the height of the viewport.
+bg-white: Sets the background color to white.
+px-10 / py-3: Sets padding on the x and y axes respectively.
+text-[#111118]: Sets text color using a custom hex code.
+text-lg / text-sm: Sets text size to large or small.
+font-bold / font-medium: Sets font weight to bold or medium.
+leading-tight: Adjusts line height for tighter text spacing.
+tracking-[-0.015em]: Adjusts letter spacing.
+rounded-xl: Applies rounded corners with extra-large radius.
+bg-[#1919e6] / bg-[#f0f0f4]: Sets background color using custom hex codes.
+gap-6: Sets the gap between flex items.
+w-full: Sets the width to 100%.
+aspect-video: Maintains a 16:9 aspect ratio for the element.
+bg-cover / bg-center / bg-no-repeat: Styles background image behavior.
+-->
