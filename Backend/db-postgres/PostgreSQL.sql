@@ -16,11 +16,12 @@ CREATE TABLE IF NOT EXISTS "Users" (
   "persId" INTEGER NOT NULL UNIQUE,
   "FirstName" VARCHAR(40) NOT NULL,
   "LastName" VARCHAR(45) NOT NULL,
-  "Phone" INTEGER NOT NULL,
+  "Phone" VARCHAR(20) NOT NULL,
   "Email" VARCHAR(100) NOT NULL,
   "SubscriptStart" DATE NOT NULL,
   "SubscriptEnd" DATE NOT NULL,
-  "Active" BOOLEAN
+  "Active" BOOLEAN,
+  "Password" VARCHAR(255) NOT NULL -- Add the Password column
 );
 
 -- -----------------------------------------------------
@@ -116,5 +117,22 @@ CREATE TABLE IF NOT EXISTS "ParkingLog" (
   CONSTRAINT "SlotID_fk" FOREIGN KEY ("SlotID") REFERENCES "Slots" ("idSlots") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
+-- Create the SubscriptionPlans table
+CREATE TABLE IF NOT EXISTS "ParkingLot_DB"."SubscriptionPlans" (
+  "idSubscriptionPlans" SERIAL PRIMARY KEY,
+  "Name" VARCHAR(45) NOT NULL UNIQUE,
+  "Price" DECIMAL(10, 2) NOT NULL,
+  "MaxCars" INTEGER NOT NULL,
+  "Features" TEXT[]  -- Store additional features as an array of text
+);
+
+-- Insert subscription plans with features
+INSERT INTO "ParkingLot_DB"."SubscriptionPlans" ("Name", "Price", "MaxCars", "Features")
+VALUES 
+('Single Vehicle Subscription', 40.00, 1, ARRAY['Access to parking for 1 vehicle', '24/7 access to parking spaces', 'Priority parking spots', 'Dedicated customer support line', 'Monthly parking spot reservation']),
+('Family Subscription', 70.00, 3, ARRAY['Access to parking for up to 3 vehicles', '24/7 access to parking spaces', 'Priority parking spots', 'Dedicated customer support line', 'Monthly parking spot reservation', 'Family account management']),
+('Enterprise Subscription', 120.00, 10, ARRAY['Access to parking for up to 10 vehicles', '24/7 access to parking spaces', 'Premium parking spots with guaranteed availability', 'Dedicated account manager', 'Advanced reporting and analytics', 'Integration with company systems', 'Enterprise-level customer support']);
+
 -- Reset search path to default
 RESET search_path;
+
