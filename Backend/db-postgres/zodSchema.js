@@ -1,29 +1,38 @@
 // schemas/schemas.js
 const { z } = require("zod");
 
+const stringToDate = z.string().transform((val) => new Date(val));
+const dateToString = z.date().transform((date) => date.toISOString());
+
 const addUserSchema = z.object({
-  persId: z.number().int().nonnegative(),
-  FirstName: z.string().max(40),
-  LastName: z.string().max(45),
-  Phone: z.string().max(20),
-  Email: z.string().email().max(100),
-  SubscriptStart: z.string(),
-  SubscriptEnd: z.string(),
-  Active: z.boolean(),
+  persId: z.string(),
+  FirstName: z.string(),
+  LastName: z.string(),
+  Email: z.string().email(),
+  Phone: z.string(), // Ensure Phone is included
+  Password: z.string().min(6),
+});
+
+const subscriptionSchema = z.object({
+  SubscriptionPlanID: z.number(), // Ensure this is a number
+  StartDate: z.string(),
+  EndDate: z.string(),
+  Status: z.string().optional(), // Optional, as it may be added programmatically
 });
 
 const updateUserSchema = z.object({
-  idUsers: z.number().int().optional(),
   persId: z.number().int().optional(),
   FirstName: z.string().max(40).optional(),
   LastName: z.string().max(45).optional(),
   Phone: z.string().max(20).optional(),
   Email: z.string().email().max(100).optional(),
-  SubscriptStart: z.string().optional(),
-  SubscriptEnd: z.string().optional(),
-  Active: z.boolean().optional(),
+  Password: z.string().min(6).optional(),
 });
 
+const addCarSchema = z.object({
+  RegistrationID: z.string().min(1).max(11),
+  Model: z.string().min(1).max(45),
+});
 // HW_Alive Schema
 const hwAliveSchema = z.object({
   Fault: z.boolean().default(false),
@@ -92,7 +101,6 @@ const parkingLogSchema = z.object({
 });
 
 module.exports = {
-  userSchema,
   hwAliveSchema,
   carSchema,
   areaSchema,
@@ -101,4 +109,8 @@ module.exports = {
   borderSchema,
   slotSchema,
   parkingLogSchema,
+  addUserSchema,
+  updateUserSchema,
+  subscriptionSchema,
+  addCarSchema,
 };
