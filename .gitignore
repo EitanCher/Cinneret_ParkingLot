@@ -1,17 +1,21 @@
-# Node modules
-Backend/node_modules/
-
-# Logs
-*.log
+# Node modules directories
+/node_modules
+/backend/node_modules
 
 # Environment files
 .env
 
-# OS-specific files
+# Logs
+*.log
+
+# Operating System files
 .DS_Store
 Thumbs.db
 
-# Build directories
-dist/
-build/
+# Build output
+/build
+/dist
 
+# IDE configuration files
+.vscode/
+.idea/

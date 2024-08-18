@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model test_table {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+}
+
+model Areas {
+  idAreas  Int     @id @default(autoincrement())
+  AreaName String  @unique @db.VarChar(45)
+  Gates    Gates[]
+  Slots    Slots[]
+}
+
+model Borders {
+  idBorders                        Int     @id @default(autoincrement())
+  Violated                         Boolean
+  Slots_Slots_BorderLeftToBorders  Slots[] @relation("Slots_BorderLeftToBorders")
+  Slots_Slots_BorderRightToBorders Slots[] @relation("Slots_BorderRightToBorders")
+}
+
+model Cars {
+  idCars                     Int          @id @default(autoincrement())
+  RegistrationID             String       @unique @db.VarChar(11)
+  Model                      String       @db.VarChar(45)
+  OwnerID                    Int
+  Users                      Users        @relation(fields: [OwnerID], references: [idUsers], onDelete: NoAction, onUpdate: NoAction)
+  ParkingLog                 ParkingLog[]
+  Slots_Slots_SavedForToCars Slots[]      @relation("Slots_SavedForToCars")
+  Slots_Slots_TakenByToCars  Slots[]      @relation("Slots_TakenByToCars")
+}
+
+model Gates {
+  idGates  Int     @id @default(autoincrement())
+  Entrance Boolean
+  AreaID   Int
+  Fault    Boolean
+  Areas    Areas   @relation(fields: [AreaID], references: [idAreas], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model HW_Alive {
+  Fault Boolean @default(false)
+
+  @@ignore
+}
+
+model ParkingLog {
+  idParkingLog Int      @id @default(autoincrement())
+  CarID        Int
+  SlotID       Int
+  Entrance     DateTime @db.Timestamptz(6)
+  Exit         DateTime @db.Timestamptz(6)
+  ParkingStart DateTime @db.Timestamptz(6)
+  ParkingEnd   DateTime @db.Timestamptz(6)
+  SavingStart  DateTime @db.Timestamptz(6)
+  SavingEnd    DateTime @db.Timestamptz(6)
+  Violation    Boolean
+  Cars         Cars     @relation(fields: [CarID], references: [idCars], onDelete: NoAction, onUpdate: NoAction)
+  Slots        Slots    @relation(fields: [SlotID], references: [idSlots], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model SlotSizes {
+  idSlotSizes Int     @id @default(autoincrement())
+  Size        String  @unique @db.VarChar(45)
+  Slots       Slots[]
+}
+
+model Slots {
+  idSlots                            Int          @id @default(autoincrement())
+  Busy                               Boolean
+  Area                               Int
+  SavedFor                           Int
+  TakenBy                            Int
+  BorderLeft                         Int
+  BorderRight                        Int
+  Size                               Int
+  Active                             Boolean
+  Fault                              Boolean
+  ParkingLog                         ParkingLog[]
+  Areas                              Areas        @relation(fields: [Area], references: [idAreas], onDelete: NoAction, onUpdate: NoAction)
+  Borders_Slots_BorderLeftToBorders  Borders      @relation("Slots_BorderLeftToBorders", fields: [BorderLeft], references: [idBorders], onDelete: NoAction, onUpdate: NoAction)
+  Borders_Slots_BorderRightToBorders Borders      @relation("Slots_BorderRightToBorders", fields: [BorderRight], references: [idBorders], onDelete: NoAction, onUpdate: NoAction)
+  Cars_Slots_SavedForToCars          Cars         @relation("Slots_SavedForToCars", fields: [SavedFor], references: [idCars], onDelete: NoAction, onUpdate: NoAction)
+  SlotSizes                          SlotSizes    @relation(fields: [Size], references: [idSlotSizes], onDelete: NoAction, onUpdate: NoAction)
+  Cars_Slots_TakenByToCars           Cars         @relation("Slots_TakenByToCars", fields: [TakenBy], references: [idCars], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model SubscriptionPlans {
+  idSubscriptionPlans Int                 @id @default(autoincrement())
+  Name                String              @unique @db.VarChar(45)
+  Price               Decimal             @db.Decimal(10, 2)
+  MaxCars             Int
+  Features            String[]
+  UserSubscriptions   UserSubscriptions[]
+}
+
+model UserSubscriptions {
+  idUserSubscriptions Int               @id @default(autoincrement())
+  UserID              Int
+  SubscriptionPlanID  Int
+  StartDate           DateTime          @db.Date
+  EndDate             DateTime          @db.Date
+  Status              String            @db.VarChar(20)
+  SubscriptionPlans   SubscriptionPlans @relation(fields: [SubscriptionPlanID], references: [idSubscriptionPlans], onDelete: NoAction, onUpdate: NoAction, map: "SubscriptionPlan_fk")
+  Users               Users             @relation(fields: [UserID], references: [idUsers], onDelete: Cascade, onUpdate: NoAction, map: "User_fk")
+}
+
+model Users {
+  idUsers           Int                 @id @default(autoincrement())
+  persId            Int
+  FirstName         String              @db.VarChar(40)
+  LastName          String              @db.VarChar(45)
+  Phone             String              @db.VarChar(20)
+  Email             String              @db.VarChar(100)
+  Password          String              @db.VarChar(255)
+  Cars              Cars[]
+  UserSubscriptions UserSubscriptions[]
+}
