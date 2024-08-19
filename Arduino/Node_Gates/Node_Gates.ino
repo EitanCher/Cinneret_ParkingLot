@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <ArduinoWebsockets.h>
-//#include <ParkingLotFunctions.h>
-#include "../ParkingLotFunctions.h"
+#include "../Headers/ParkingClient.h"
+//#include "../Headers/ParkingLotFunctions.h"
 
 // A switch between Entrance / Exit mode of the Gate. Set to enable using one board for both cases due to HW restrictions of the project
 #define GATE_SWITCH 4
@@ -16,8 +16,9 @@
 
 IPAddress local_IP(192, 168, 2, 255); // Manually set for current device (Ultrasonic Sensor on Entry). Has to be verified not to conflict with other devices.
 
-using namespace websockets;
-WebsocketsClient wsclient;
+//using namespace websockets;
+//WebsocketsClient wsclient;
+MyLotNode myClient(local_IP);
 
 void setup() {
   Serial.begin(9600);
@@ -32,7 +33,10 @@ void setup() {
 
   //Initiate the WIFI connection:
   //wifi_Setup();
-  networkSetup(&local_IP, &wsclient);
+  myClient.networkSetup();
+
+  // Connect to the server:
+  myClient.connectWebSocket();
 }
 
 void loop() {
@@ -47,12 +51,16 @@ void loop() {
   else Serial.println("Acting as Exit Gate -------------------------------");
 
   // Read the ultrasonic on Entry gate and send to server if an object detected:
-  long distanceEntry = DistanceRead(TRIG_PIN_ENTR, ECHO_PIN_ENTR);
-  DistanceSend("entry", THRESHOLD_GATE, distanceEntry, &wsclient);
+  //long distanceEntry = DistanceRead(TRIG_PIN_ENTR, ECHO_PIN_ENTR);
+  //DistanceSend("entry", THRESHOLD_GATE, distanceEntry, &wsclient);
+  uint16_t distanceEntry = myClient.getDistance(TRIG_PIN_ENTR, ECHO_PIN_ENTR);
+	myClient.sendDistance("entry", THRESHOLD_GATE, distanceEntry);
   
   // Read the ultrasonic on Exit gate and send to server if an object detected:
-  long distanceExit = DistanceRead(TRIG_PIN_EXIT, ECHO_PIN_EXIT);
-  DistanceSend("exit", THRESHOLD_GATE, distanceExit, &wsclient);
+  uint16_t distanceExit = myClient.getDistance(TRIG_PIN_EXIT, ECHO_PIN_EXIT);
+	myClient.sendDistance("exit", THRESHOLD_GATE, distanceExit);
+  //long distanceExit = DistanceRead(TRIG_PIN_EXIT, ECHO_PIN_EXIT);
+  //DistanceSend("exit", THRESHOLD_GATE, distanceExit, &wsclient);
 /*
   long duration, distance;
 
@@ -81,4 +89,3 @@ void loop() {
 */
   delay(2000);
 }
-
