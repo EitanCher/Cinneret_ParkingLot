@@ -1,10 +1,14 @@
+// stripeController.js
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const { createSubscription, getUserSubscriptionPlanById } = require('../models/subscriptionModel');
 
 const createStripeSession = async (req, res) => {
-  const userId = req.user.idUsers; // Extract userId from authenticated user
-  const { subscriptionPlanId } = req.body;
+  let { userId, subscriptionPlanId } = req.body;
+
+  // Sanitization
+  userId = req.user.idUsers;
+  subscriptionPlanId = subscriptionPlanId;
 
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' });
@@ -41,8 +45,6 @@ const createStripeSession = async (req, res) => {
       mode: 'payment',
       success_url: `https://httpbin.org/get?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `https://httpbin.org/get`,
-      // success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      // cancel_url: `${process.env.FRONTEND_URL}/cancel`,
       metadata: {
         userId,
         subscriptionPlanId

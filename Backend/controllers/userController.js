@@ -1,18 +1,4 @@
-const xss = require('xss');
-const {
-  deleteUserById,
-  updateUserById,
-  getSubscriptions,
-  createUser
-} = require('../models/userModel');
-const {
-  sanitizeAndValidateData,
-  handleZodErrorResponse,
-  logAndRespondWithError
-} = require('../utils/validationUtils');
-const { z } = require('zod'); // Import Zod for validation
-const { updateUserSchema } = require('../db-postgres/zodSchema');
-
+const { deleteUserById, updateUserById, getSubscriptions, createUser, createCars } = require('../models/userModel');
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
@@ -24,17 +10,17 @@ const saltRounds = 10;
 //hashing should move to controller
 //--------------------------------------------------------------------------------------------------------------------------------//
 
-const getUsers = (req, res) => {
+//TODO: some controllers will need a subscription status check (important!)
+const getActiveUsers = (req, res) => {
   res.status(200).json({ message: 'Users retrieved successfully' });
 };
-
 const updateUser = async (req, res) => {
   const id = parseInt(req.params.id); // Convert id to integer if it's a string
-
   const idFromToken = req.user.idUsers;
 
-  if (id !== idFromToken)
-    return res.status(403).json({ message: 'You are not authorized to delete this account' });
+  if (id !== idFromToken) {
+    return res.status(403).json({ message: 'You are not authorized to update this account' });
+  }
 
   const { currentPassword, newPassword, confirmNewPassword, ...data } = req.body;
 
@@ -42,32 +28,20 @@ const updateUser = async (req, res) => {
     // Sanitize the input data
     const sanitizedData = sanitizeObject(data, ['FirstName', 'LastName', 'Phone', 'Email']);
 
-    // Validate the sanitized data
-    const validatedData = updateUserSchema.partial().parse(sanitizedData);
-
-    // Fetch the current user data to compare
-    const currentUser = await prisma.users.findUnique({
-      where: { idUsers: id },
-      select: {
-        FirstName: true,
-        LastName: true,
-        Phone: true,
-        Email: true,
-        Password: true
-      }
-    });
-
-    if (!currentUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    console.log('Stored Password:', currentUser.Password); // Debugging line
-
+    // Handle password update
+    let passwordUpdate = {};
     if (currentPassword && newPassword && confirmNewPassword) {
-      const isPasswordValid = await bcrypt.compare(currentPassword, currentUser.Password);
+      // Fetch the current user data to compare
+      const currentUser = await prisma.users.findUnique({
+        where: { idUsers: id },
+        select: { Password: true }
+      });
 
-      console.log('Provided Password:', currentPassword); // Debugging line
-      console.log('Password Valid:', isPasswordValid); // Debugging line
+      if (!currentUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, currentUser.Password);
 
       if (!isPasswordValid) {
         return res.status(401).json({ message: 'Invalid current password' });
@@ -80,24 +54,14 @@ const updateUser = async (req, res) => {
 
       // Hash new password
       const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-      validatedData.Password = hashedPassword;
+      passwordUpdate.Password = hashedPassword;
     }
 
-    // Construct the data to update based on the validated data and only update changed fields
-    const updates = {};
-    for (const [key, value] of Object.entries(validatedData)) {
-      if (value !== null && value !== undefined && value !== currentUser[key]) {
-        updates[key] = value;
-      }
-    }
-
-    // If no fields have changed, return early
-    if (Object.keys(updates).length === 0) {
-      return res.status(200).json({ message: 'No changes detected' });
-    }
+    // Combine sanitized data and password update
+    const combinedData = { ...sanitizedData, ...passwordUpdate };
 
     // Update the user using the model function
-    const result = await updateUserById(id, updates);
+    const result = await updateUserById(id, combinedData);
 
     if (result.success) {
       return res.status(200).json({ message: result.message, user: result.user });
@@ -105,12 +69,6 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: result.message });
     }
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: `Invalid input: ${error.errors.map((e) => e.message).join(', ')}`
-      });
-    }
-
     console.error('Error updating user:', error.message);
     return res.status(500).json({ message: 'Internal server error' });
   }
@@ -139,43 +97,71 @@ const deleteUser = async (req, res) => {
   }
 };
 
-const stringFields = [
-  'FirstName',
-  'LastName',
-  'Email',
-  'Phone',
-  'SubscriptionPlanID',
-  'StartDate',
-  'EndDate'
-];
-
+const stringFields = ['FirstName', 'LastName', 'Email', 'Phone', 'SubscriptionPlanID', 'StartDate', 'EndDate'];
 const addUserController = async (req, res) => {
-  const { user: userData, subscription: subscriptionData, cars: carsData = [] } = req.body;
+  const userData = req.body.user; // Adjust based on how user data is sent
 
   try {
-    // Sanitize and validate input data
-    const { validatedUserData, validatedSubscriptionData, validatedCarData } =
-      await sanitizeAndValidateData(userData, subscriptionData, carsData);
+    // Sanitize the input data
+    const sanitizedUserData = sanitizeObject(userData, [
+      'persId',
+      'FirstName',
+      'LastName',
+      'Email',
+      'Phone',
+      'Password'
+    ]);
 
-    // Ensure password is provided
-    if (!validatedUserData.Password) {
-      return res.status(400).json({ message: 'Password is required' });
-    }
+    // Create user
+    const user = await createUser(sanitizedUserData);
 
-    // Call the model function to handle user creation
-    const user = await createUser(validatedUserData, validatedSubscriptionData, validatedCarData);
-    //TODO store the token in the frontend
-    const token = jwt.sign({ id: user.idUsers }, process.env.JWT_SECRET, {
-      expiresIn: '72h' // Token expiration time
+    // Generate JWT token
+    const token = jwt.sign({ id: user.idUsers }, process.env.JWT_SECRET, { expiresIn: '72h' });
+
+    // Respond with success and user ID along with JWT token
+    res.status(201).json({
+      message: 'User created successfully. Proceed to payment to select a subscription.',
+      userId: user.idUsers,
+      token
     });
-    // Respond with success
-    res
-      .status(201)
-      .json({ message: 'User, subscription and cars added successfully', user, token });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return handleZodErrorResponse(res, error);
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: `Validation error: ${error.errors.map((e) => e.message).join(', ')}`
+      });
     }
+    console.error('Error:', error.message);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+const addCarsController = async (req, res) => {
+  const { idUsers, cars } = req.body;
+
+  try {
+    // Sanitize input data
+    const sanitizedCars = cars.map((car) => sanitizeObject(car, ['make', 'model']));
+
+    // Fetch user's subscription plan
+    const userSubscription = await prisma.userSubscriptions.findFirst({
+      where: { UserID: idUsers, Status: 'active' },
+      select: { SubscriptionPlanID: true }
+    });
+
+    if (!userSubscription) {
+      return res.status(400).json({ message: 'User does not have an active subscription' });
+    }
+
+    const { SubscriptionPlanID } = userSubscription;
+
+    // Add cars to the database
+    await createCars(idUsers, sanitizedCars, SubscriptionPlanID);
+
+    // Respond with success
+    res.status(201).json({
+      message: 'Cars added successfully.'
+    });
+  } catch (error) {
     console.error('Error:', error.message);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
@@ -195,6 +181,9 @@ const login = (req, res, next) => {
   })(req, res, next); // Pass req, res, and next to the middleware
 };
 
+//TODO
+const extendSubscription = (req, res) => {};
+
 async function getSubscriptionTiers(req, res) {
   try {
     const subscriptions = await getSubscriptions();
@@ -208,10 +197,10 @@ async function getSubscriptionTiers(req, res) {
 //update subscription plans
 
 module.exports = {
-  getUsers,
   updateUser,
   deleteUser,
   getSubscriptionTiers,
   addUserController,
-  login
+  login,
+  addCarsController
 };

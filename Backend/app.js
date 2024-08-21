@@ -1,61 +1,36 @@
-// import express from "express";
-// import { router } from "./routers/user";
-const express = require("express");
-const userRouter = require("./routers/user");
-const adminRouter = require("./routers/admin");
-const helmet = require("helmet");
-const cookieParser = require("cookie-parser");
-const csurf = require("csurf");
+require('dotenv').config('./.env');
+require('./utils/cronJobs');
+const express = require('express');
+const bodyParser = require('body-parser');
+const userRouter = require('./routers/userRouters');
+const adminRouter = require('./routers/admin');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
+const { handleStripeWebhook } = require('./controllers/stripeWebHookController'); // Correctly import the webhook handler
+
 const app = express();
 const port = process.env.PORT || 3001;
+const passport = require('./utils/passport-config');
+
+// Middleware to capture raw body for Stripe webhook verification
+app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
+
+// Other middlewares and routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-//--------------------------------------------------------------------------------------------------------------------------------//
-// Use Helmet to protect against well-known web vulnerabilities
 app.use(helmet());
 
-// Define a Content Security Policy (CSP)
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'trusted-scripts.com'"],
-      styleSrc: ["'self'", "'trusted-styles.com'"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "'fonts.gstatic.com'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
-    },
-  })
-);
-app.get("/", (req, res) => {
-  res.send("Hello from Express Server");
+app.use(passport.initialize());
+
+app.get('/', (req, res) => {
+  res.send('Hello from Express Server');
 });
 
-app.use("/api/users", userRouter);
-
-// app.get("/users", (req, res) => {
-//   res.json(users);
-// });
-
-// app.post("/users", (req, res) => {
-//   const name = req.body.name;
-//   const userExist = users.find((user) => user.name === name);
-
-//   if (userExist) {
-//     return res.status(500).json({ message: "Name already exists" });
-//   }
-
-//   users.push({ name, age: 33 });
-//   return res.status(200).json(users);
-// });
-
-const PORT = process.env.PORT ?? 3001;
+app.use('/api/users', userRouter);
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
 
 // Defer Until Core Functionality is Stable:

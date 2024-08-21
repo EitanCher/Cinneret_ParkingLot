@@ -1,41 +1,41 @@
 // schemas/schemas.js
-const { z } = require("zod");
+const { z } = require('zod');
 
 const stringToDate = z.string().transform((val) => new Date(val));
 const dateToString = z.date().transform((date) => date.toISOString());
 
-const addUserSchema = z.object({
-  persId: z.string(),
+const addUserControllerSchema = z.object({
+  persId: z.string(), // Change to string to match your actual data
   FirstName: z.string(),
   LastName: z.string(),
   Email: z.string().email(),
-  Phone: z.string(), // Ensure Phone is included
-  Password: z.string().min(6),
+  Phone: z.string(),
+  Password: z.string().min(6)
 });
 
 const subscriptionSchema = z.object({
-  SubscriptionPlanID: z.number(), // Ensure this is a number
+  SubscriptionPlanID: z.number(),
   StartDate: z.string(),
   EndDate: z.string(),
-  Status: z.string().optional(), // Optional, as it may be added programmatically
+  Status: z.string().optional()
 });
 
 const updateUserSchema = z.object({
-  persId: z.number().int().optional(),
+  persId: z.string().optional(), // Change to string
   FirstName: z.string().max(40).optional(),
   LastName: z.string().max(45).optional(),
   Phone: z.string().max(20).optional(),
   Email: z.string().email().max(100).optional(),
-  Password: z.string().min(6).optional(),
+  Password: z.string().min(6).optional()
 });
 
 const addCarSchema = z.object({
   RegistrationID: z.string().min(1).max(11),
-  Model: z.string().min(1).max(45),
+  Model: z.string().min(1).max(45)
 });
 // HW_Alive Schema
 const hwAliveSchema = z.object({
-  Fault: z.boolean().default(false),
+  Fault: z.boolean().default(false)
 });
 
 // Cars Schema
@@ -43,33 +43,33 @@ const carSchema = z.object({
   idCars: z.number().int().optional(),
   RegistrationID: z.string().length(11),
   Model: z.string().max(45),
-  OwnerID: z.number().int().min(1),
+  OwnerID: z.number().int().min(1)
 });
 
 // Areas Schema
 const areaSchema = z.object({
   idAreas: z.number().int().optional(),
-  AreaName: z.string().max(45),
+  AreaName: z.string().max(45)
 });
 
 // Gates Schema
 const gateSchema = z.object({
-  idGates: z.number().int().optional(),
+  idGates: z.number().int(),
   Entrance: z.boolean(),
   AreaID: z.number().int().min(1),
-  Fault: z.boolean(),
+  Fault: z.boolean()
 });
 
 // SlotSizes Schema
 const slotSizeSchema = z.object({
   idSlotSizes: z.number().int().optional(),
-  Size: z.string().max(45),
+  Size: z.string().max(45)
 });
 
 // Borders Schema
 const borderSchema = z.object({
   idBorders: z.number().int().optional(),
-  Violated: z.boolean(),
+  Violated: z.boolean()
 });
 
 // Slots Schema
@@ -77,13 +77,13 @@ const slotSchema = z.object({
   idSlots: z.number().int().optional(),
   Busy: z.boolean(),
   Area: z.number().int().min(1),
-  SavedFor: z.number().int().min(1),
-  TakenBy: z.number().int().min(1),
+  SavedFor: z.number().int().min(1).optional(), // Marked optional based on relations
+  TakenBy: z.number().int().min(1).optional(), // Marked optional based on relations
   BorderLeft: z.number().int().min(1),
-  BorderRigth: z.number().int().min(1),
+  BorderRight: z.number().int().min(1),
   Size: z.number().int().min(1),
   Active: z.boolean(),
-  Fault: z.boolean(),
+  Fault: z.boolean()
 });
 
 // ParkingLog Schema
@@ -91,13 +91,13 @@ const parkingLogSchema = z.object({
   idParkingLog: z.number().int().optional(),
   CarID: z.number().int().min(1),
   SlotID: z.number().int().min(1),
-  Entrance: z.string(), // Assuming timestamps are passed as strings (e.g., "2024-08-03T10:00:00Z")
-  Exit: z.string(),
-  ParkingStart: z.string(),
-  ParkingEnd: z.string(),
-  SavingStart: z.string(),
-  SavingEnd: z.string(),
-  Violation: z.boolean(),
+  Entrance: z.coerce.date(), // Converts ISO strings to Date objects
+  Exit: z.coerce.date(),
+  ParkingStart: z.coerce.date(),
+  ParkingEnd: z.coerce.date(),
+  SavingStart: z.coerce.date(),
+  SavingEnd: z.coerce.date(),
+  Violation: z.boolean()
 });
 
 module.exports = {
@@ -109,8 +109,8 @@ module.exports = {
   borderSchema,
   slotSchema,
   parkingLogSchema,
-  addUserSchema,
+  addUserControllerSchema,
   updateUserSchema,
   subscriptionSchema,
-  addCarSchema,
+  addCarSchema
 };

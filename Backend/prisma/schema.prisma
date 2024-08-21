@@ -103,24 +103,55 @@ model SubscriptionPlans {
 }
 
 model UserSubscriptions {
-  idUserSubscriptions Int               @id @default(autoincrement())
+  idUserSubscriptions Int      @id @default(autoincrement())
   UserID              Int
   SubscriptionPlanID  Int
-  StartDate           DateTime          @db.Date
-  EndDate             DateTime          @db.Date
-  Status              String            @db.VarChar(20)
-  SubscriptionPlans   SubscriptionPlans @relation(fields: [SubscriptionPlanID], references: [idSubscriptionPlans], onDelete: NoAction, onUpdate: NoAction, map: "SubscriptionPlan_fk")
-  Users               Users             @relation(fields: [UserID], references: [idUsers], onDelete: Cascade, onUpdate: NoAction, map: "User_fk")
+  StartDate           DateTime @db.Date
+  EndDate             DateTime @db.Date
+  Status              String   @db.VarChar(20)
+  StripeSessionId     String?  @db.VarChar(255) // Optional field
+
+  SubscriptionPlans SubscriptionPlans @relation(fields: [SubscriptionPlanID], references: [idSubscriptionPlans], onDelete: NoAction, onUpdate: NoAction, map: "SubscriptionPlan_fk")
+  Users             Users             @relation(fields: [UserID], references: [idUsers], onDelete: Cascade, onUpdate: NoAction, map: "User_fk")
+
+  @@unique([UserID, Status]) // Ensure one active subscription per user
 }
 
 model Users {
   idUsers           Int                 @id @default(autoincrement())
-  persId            Int
+  persId            String              @db.VarChar(9)
   FirstName         String              @db.VarChar(40)
   LastName          String              @db.VarChar(45)
   Phone             String              @db.VarChar(20)
-  Email             String              @db.VarChar(100)
+  Email             String              @unique @db.VarChar(100)
   Password          String              @db.VarChar(255)
   Cars              Cars[]
   UserSubscriptions UserSubscriptions[]
 }
+
+// {
+//   "user": {
+//     "persId": "123456789",
+//     "FirstName": "John",
+//     "LastName": "Doe",
+//     "Phone": "+1234567890",
+//     "Email": "john.doe@example.com",
+//     "Password": "securePassword123"  // Required
+//   },
+//   "subscription": {
+//     "SubscriptionPlanID": 1,  // ID of the subscription plan
+//     "StartDate": "2024-01-01", // Subscription start date (ISO format)
+//     "EndDate": "2024-12-31",   // Subscription end date (ISO format)
+//     "Status": "active"         // Subscription status
+//   },
+//   "cars": [
+//     {
+//       "RegistrationID": "ABC1234",
+//       "Model": "Toyota Corolla"
+//     },
+//     {
+//       "RegistrationID": "XYZ5678",
+//       "Model": "Honda Civic"
+//     }
+//   ]
+// }

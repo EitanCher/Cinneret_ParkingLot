@@ -1,10 +1,9 @@
-const queries = require("../queries/queries");
-const pool = require("../db-postgres/db_config");
-const prisma = require("../prisma/prismaClient");
-const bcrypt = require("bcrypt");
-const { hashPassword } = require("../utils/passwordUtils");
-const { convertToISODate } = require("../utils/dateUtils");
-const { validateCarCount } = require("../utils/validationUtils");
+const pool = require('../db-postgres/db_config');
+const prisma = require('../prisma/prismaClient');
+const bcrypt = require('bcrypt');
+const { hashPassword } = require('../utils/passwordUtils');
+const { convertToISODate } = require('../utils/dateUtils');
+const { updateUserSchema, addUserControllerSchema, addCarSchema } = require('../db-postgres/zodSchema');
 const saltRounds = 10;
 
 //------------------------------------------------------------------------------//
@@ -12,12 +11,12 @@ const saltRounds = 10;
 async function getUserById(userId) {
   try {
     const user = await prisma.users.findUnique({
-      where: { idUsers: userId }, // Ensure 'idUsers' matches the primary key field name
+      where: { idUsers: userId } // Ensure 'idUsers' matches the primary key field name
     });
     if (user) return user;
-    throw new Error("User not found");
+    throw new Error('User not found');
   } catch (err) {
-    console.error("Error fetching user by ID:", err.message); // Use 'err' consistently
+    console.error('Error fetching user by ID:', err.message); // Use 'err' consistently
     throw err; // Also use 'err' here
   }
 }
@@ -26,46 +25,46 @@ async function deleteUserById(userId) {
   try {
     // Ensure id is an integer
     const userIdInt = parseInt(userId, 10);
-    if (isNaN(userIdInt)) throw new Error("Invalid user ID");
+    if (isNaN(userIdInt)) throw new Error('Invalid user ID');
 
     // Use a transaction to ensure all operations succeed or none
     await prisma.$transaction(async (prisma) => {
       // Delete associated records in `cars`
       await prisma.cars.deleteMany({
-        where: { OwnerID: userIdInt },
+        where: { OwnerID: userIdInt }
       });
 
       // Delete the associated subscription record
 
       // Find the user's subscription
       const userSubscription = await prisma.userSubscriptions.findFirst({
-        where: { UserID: userIdInt },
+        where: { UserID: userIdInt }
       });
 
       if (userSubscription) {
         // Delete the associated subscription record
         await prisma.userSubscriptions.delete({
-          where: { idUserSubscriptions: userSubscription.idUserSubscriptions },
+          where: { idUserSubscriptions: userSubscription.idUserSubscriptions }
         });
       }
 
       // Delete the user
       await prisma.users.delete({
-        where: { idUsers: userIdInt },
+        where: { idUsers: userIdInt }
       });
     });
 
-    console.log("User and associated records deleted successfully");
+    console.log('User and associated records deleted successfully');
     return {
       success: true,
-      message: "User and associated records deleted successfully",
+      message: 'User and associated records deleted successfully'
     };
   } catch (err) {
-    if (err.code === "P2025") {
+    if (err.code === 'P2025') {
       // Prisma error code for record not found
-      return { success: false, message: "User not found" };
+      return { success: false, message: 'User not found' };
     } else {
-      console.error("Error deleting user:", err.message);
+      console.error('Error deleting user:', err.message);
       return { success: false, message: err.message };
     }
   }
@@ -73,122 +72,92 @@ async function deleteUserById(userId) {
 
 async function updateUserById(userId, updates) {
   try {
+    // Validate `userId` if needed
+    if (isNaN(userId) || userId <= 0) {
+      throw new Error('Invalid user ID');
+    }
+    const validatedUpdates = updateUserSchema.parse(updates);
     const user = await prisma.users.update({
       where: { idUsers: userId }, // Ensure 'idUsers' matches the primary key field name
-      data: updates, // `updates` should be an object with fields to update
+      data: validatedUpdates // `updates` should be an object with fields to update
     });
-    console.log("User updated successfully");
-    return { success: true, message: "User updated successfully", user };
+
+    console.log('User updated successfully');
+    return { success: true, message: 'User updated successfully', user };
   } catch (err) {
-    if (err.code === "P2025") {
+    if (err.code === 'P2025') {
       // Prisma error code for record not found
-      return { success: false, message: "User not found" };
+      return { success: false, message: 'User not found' };
     } else {
-      console.error("Error updating user:", err.message);
+      console.error('Error updating user:', err.message);
       return { success: false, message: err.message };
     }
   }
 }
-
 async function getSubscriptions() {
   try {
     const result = await prisma.subscriptionPlans.findMany();
     return result;
   } catch (err) {
-    console.log("error getting subscriptions", err.message);
+    console.log('error getting subscriptions', err.message);
     throw err;
   }
 }
 
-async function createUser(userData, subscriptionData, carsData) {
-  const { persId, FirstName, LastName, Email, Phone, Password } = userData;
-  const { StartDate, EndDate } = subscriptionData;
-
-  if (!Password) throw new Error("Password is required");
-
+async function createUser(userData) {
   try {
-    return await prisma.$transaction(async (prisma) => {
-      // Create user
-      const hashedPassword = await hashPassword(Password);
-      const user = await prisma.users.create({
-        data: {
-          ...userData,
-          Password: hashedPassword,
-          persId: parseInt(persId, 10),
-        },
-      });
+    // Validate userData with the Zod schema
+    const validatedData = addUserControllerSchema.parse(userData);
 
-      // Create subscription
-      const subscription = await prisma.userSubscriptions.create({
-        data: {
-          UserID: user.idUsers,
-          SubscriptionPlanID: subscriptionData.SubscriptionPlanID,
-          StartDate: convertToISODate(StartDate),
-          EndDate: convertToISODate(EndDate),
-          Status: "Active",
-        },
-      });
+    // Proceed with hashing password and creating the user in the database
+    const { Password, ...restOfUserData } = validatedData;
+    const hashedPassword = await hashPassword(Password);
 
-      // Validate and create cars
-      await validateCarCount(carsData, subscription.SubscriptionPlanID);
-      await prisma.cars.createMany({
-        data: carsData.map((car) => ({
-          RegistrationID: car.RegistrationID,
-          Model: car.Model,
-          OwnerID: user.idUsers,
-        })),
-      });
-
-      return user;
+    return await prisma.users.create({
+      data: {
+        ...restOfUserData,
+        Password: hashedPassword
+      }
     });
   } catch (error) {
-    console.error("Error creating user and related records:", error.message);
-    throw error;
-  }
-}
-async function createUserSubscription(
-  client,
-  UserID,
-  SubscriptionPlanID,
-  StartDate,
-  EndDate,
-  Status
-) {
-  try {
-    const result = await client.query(queries.createUserSubscription, [
-      UserID,
-      SubscriptionPlanID,
-      StartDate,
-      EndDate,
-      Status,
-    ]);
-    return result.rows[0];
-  } catch (e) {
-    console.error("Error creating user subscription:", e.message);
-    throw e;
+    if (error.name === 'ZodError') {
+      // Handle validation errors
+      console.error('Validation error:', error.errors);
+      throw new Error(`Validation error: ${error.errors.map((e) => e.message).join(', ')}`);
+    } else {
+      // Handle other errors
+      console.error('Error creating user:', error.message);
+      throw error;
+    }
   }
 }
 
-async function createCar(client, RegistrationID, Model, OwnerID) {
+async function createCars(userId, carsData, subscriptionPlanID) {
+  // Validate car count based on subscription plan
+  const maxCarsObj = await prisma.subscriptionPlans.findFirst({
+    where: { idSubscriptionPlans: subscriptionPlanID },
+    select: { MaxCars: true }
+  });
+
+  if (!maxCarsObj) throw new Error("Couldn't fetch subscription max cars count");
+
+  const maxCars = maxCarsObj.MaxCars;
+  if (carsData.length > maxCars) throw new Error(`This subscription plan only supports up to ${maxCars} cars`);
+  if (carsData.length === 0) throw new Error('No cars data provided');
+
+  // Add cars to the database
   try {
-    const result = await client.query(queries.createCar, [
-      RegistrationID,
-      Model,
-      OwnerID,
-    ]);
-    return result.rows[0].idCars;
-  } catch (e) {
-    console.error("Error creating car:", error);
+    await prisma.cars.createMany({
+      data: carsData.map((car) => ({
+        RegistrationID: car.RegistrationID,
+        Model: car.Model,
+        OwnerID: userId
+      }))
+    });
+  } catch (error) {
+    console.error('Error adding cars:', error.message);
     throw error;
   }
-}
-
-async function createMultipleCars(client, carsData, OwnerID) {
-  return Promise.all(
-    carsData.map((car) =>
-      createCar(client, car.RegistrationID, car.Model, OwnerID)
-    )
-  );
 }
 
 module.exports = {
@@ -197,7 +166,5 @@ module.exports = {
   updateUserById,
   getSubscriptions,
   createUser,
-  createUserSubscription,
-  createCar,
-  createMultipleCars,
+  createCars
 };

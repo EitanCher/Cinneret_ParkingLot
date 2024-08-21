@@ -1,15 +1,32 @@
 const prisma = require('../prisma/prismaClient');
+const { subscriptionSchema } = require('../db-postgres/zodSchema');
+const { calculateEndDate, getCurrentISODate } = require('../utils/dateUtils');
 
 // Function to create a subscription
 const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId }) => {
-  // Fetch the subscription plan details
+  const idUser = parseInt(userId, 10);
+  const planId = parseInt(subscriptionPlanId, 10);
 
-  // Calculate start and end dates
-  const startDate = new Date();
-  const endDate = calculateEndDate(startDate);
+  if (isNaN(planId)) {
+    throw new Error('Invalid subscription plan ID, must be a number');
+  }
+  // Validate subscription data
+  const subscriptionData = {
+    SubscriptionPlanID: planId,
+    StartDate: getCurrentISODate(),
+    EndDate: calculateEndDate(new Date()),
+    Status: 'pending'
+  };
 
+  try {
+    subscriptionSchema.parse(subscriptionData); // Zod validation for subscription data
+  } catch (error) {
+    throw new Error('Validation error: ' + error.message);
+  }
+
+  // Fetch subscription plan details
   const subscriptionPlan = await prisma.subscriptionPlans.findUnique({
-    where: { idSubscriptionPlans: subscriptionPlanId },
+    where: { idSubscriptionPlans: planId },
     select: {
       Price: true,
       Name: true,
@@ -24,31 +41,30 @@ const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId 
   // Check if the user already has a pending subscription
   const existingPendingSubscription = await prisma.userSubscriptions.findFirst({
     where: {
-      UserID: userId,
+      UserID: idUser,
       Status: 'pending'
     }
   });
 
   if (existingPendingSubscription) {
     // Update the existing pending subscription to active if there is a new subscription
-    await prisma.userSubscriptions.update({
+    const updatedSubscription = await prisma.userSubscriptions.update({
       where: { idUserSubscriptions: existingPendingSubscription.idUserSubscriptions },
       data: {
-        SubscriptionPlanID: subscriptionPlanId,
+        SubscriptionPlanID: planId,
         StripeSessionId: stripeSessionId,
-        StartDate: startDate,
-        EndDate: endDate
-        // Optionally update other fields as needed
+        StartDate: new Date(),
+        EndDate: calculateEndDate(new Date())
       }
     });
 
-    return existingPendingSubscription; // Return the updated pending subscription
+    return updatedSubscription;
   }
 
   // Check if the user already has an active subscription
   const existingActiveSubscription = await prisma.userSubscriptions.findFirst({
     where: {
-      UserID: userId,
+      UserID: idUser,
       Status: 'active'
     }
   });
@@ -58,66 +74,71 @@ const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId 
   }
 
   // Create the new subscription record
-  const subscription = await prisma.userSubscriptions.create({
+  const newSubscription = await prisma.userSubscriptions.create({
     data: {
-      UserID: userId,
-      SubscriptionPlanID: subscriptionPlanId,
-      StartDate: startDate,
-      EndDate: endDate,
+      UserID: idUser,
+      SubscriptionPlanID: planId,
+      StartDate: new Date(),
+      EndDate: calculateEndDate(new Date()),
       Status: 'pending',
       StripeSessionId: stripeSessionId
     }
   });
 
-  return subscription;
-};
-
-// Function to calculate the end date based on the start date
-const calculateEndDate = (startDate) => {
-  const endDate = new Date(startDate);
-  endDate.setFullYear(endDate.getFullYear() + 1); // Add 12 months (1 year) to start date
-  return endDate;
+  return newSubscription;
 };
 
 // Function to update subscription status
 const updateSubscriptionStatus = async (userId, subscriptionPlanId, status) => {
-  // Convert userId and subscriptionPlanId to integers
+  // Validate input data
   const userIdInt = parseInt(userId, 10);
   const subscriptionPlanIdInt = parseInt(subscriptionPlanId, 10);
-
-  try {
-    await prisma.userSubscriptions.updateMany({
-      where: {
-        UserID: userIdInt, // Use integer value
-        SubscriptionPlanID: subscriptionPlanIdInt, // Use integer value
-        Status: 'pending'
-      },
-      data: {
-        Status: status
-      }
-    });
-    console.log(`Updated subscription status for user ${userIdInt} and plan ${subscriptionPlanIdInt}`);
-  } catch (error) {
-    console.error('Error updating subscription status:', error);
-    throw error; // Rethrow error to handle it in the webhook controller
+  if (isNaN(userId, subscriptionPlanId)) {
+    throw new Error('Invalid user ID, must be a number');
   }
+  const validStatuses = ['pending', 'active', 'expired'];
+  if (!validStatuses.includes(status)) {
+    throw new Error('Invalid status');
+  }
+
+  await prisma.userSubscriptions.updateMany({
+    where: {
+      UserID: userIdInt,
+      SubscriptionPlanID: subscriptionPlanIdInt,
+      Status: 'pending'
+    },
+    data: {
+      Status: status
+    }
+  });
 };
 
 // Function to get subscription plan details by ID
-async function getUserSubscriptionPlanById(subscriptionPlanId) {
-  try {
-    return await prisma.subscriptionPlans.findUnique({
-      where: { idSubscriptionPlans: subscriptionPlanId },
-      select: {
-        Price: true,
-        Name: true,
-        Features: true
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching subscription plan:', error.message);
-    throw new Error('Failed to fetch subscription plan');
-  }
-}
+const getUserSubscriptionPlanById = async (subscriptionPlanId) => {
+  // Validate input data
+  const id = parseInt(subscriptionPlanId, 10);
 
-module.exports = { createSubscription, updateSubscriptionStatus, getUserSubscriptionPlanById };
+  if (isNaN(id)) {
+    throw new Error('Invalid subscription plan ID, must be a number');
+  }
+
+  return await prisma.subscriptionPlans.findUnique({
+    where: { idSubscriptionPlans: id },
+    select: {
+      Price: true,
+      Name: true,
+      Features: true
+    }
+  });
+};
+
+const isValidStripeSessionId = (sessionId) => {
+  // Implement Stripe session ID validation logic (e.g., check for proper format)
+  return typeof sessionId === 'string' && sessionId.trim().length > 0;
+};
+
+module.exports = {
+  createSubscription,
+  updateSubscriptionStatus,
+  getUserSubscriptionPlanById
+};

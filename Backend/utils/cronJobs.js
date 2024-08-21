@@ -9,6 +9,7 @@ const prisma = require('../prisma/prismaClient'); // Adjust path as needed
 cron.schedule('0 0 * * *', async () => {
   // Runs daily at midnight
   try {
+    console.log('test');
     // any subscriptions with an EndDate before today will be marked as expired.
     await prisma.userSubscriptions.updateMany({
       where: {
@@ -19,7 +20,7 @@ cron.schedule('0 0 * * *', async () => {
         Status: 'expired'
       }
     });
-    console.log('Subscription statuses updated to expired.');
+    console.log('Subscription statuses have been checked and changed to expired if needed.');
   } catch (error) {
     console.error('Error updating subscription statuses:', error.message);
   }
