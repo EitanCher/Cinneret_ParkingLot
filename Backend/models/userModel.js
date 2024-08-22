@@ -132,6 +132,18 @@ async function createUser(userData) {
   }
 }
 
+async function getNumCarsByUserId(userId) {
+  try {
+    const result = await prisma.cars.count({
+      where: { OwnerID: userId }
+    });
+    return result;
+  } catch (err) {
+    console.log('Error getting number of cars by user ID:', err.message);
+    throw err;
+  }
+}
+
 async function createCars(userId, carsData, subscriptionPlanID) {
   // Validate car count based on subscription plan
   const maxCarsObj = await prisma.subscriptionPlans.findFirst({
@@ -142,21 +154,36 @@ async function createCars(userId, carsData, subscriptionPlanID) {
   if (!maxCarsObj) throw new Error("Couldn't fetch subscription max cars count");
 
   const maxCars = maxCarsObj.MaxCars;
+  const numCarsUserHas = await getNumCarsByUserId(userId);
+  console.log('sub plan max cars: ' + maxCars);
+  console.log('user has ' + numCarsUserHas + 'cars');
   if (carsData.length > maxCars) throw new Error(`This subscription plan only supports up to ${maxCars} cars`);
+  if (numCarsUserHas >= maxCars)
+    throw new Error(` this subscription already has the maximum car count for this plan: ${numCarsUserHas}`);
   if (carsData.length === 0) throw new Error('No cars data provided');
 
   // Add cars to the database
   try {
-    await prisma.cars.createMany({
+    const result = await prisma.cars.createMany({
       data: carsData.map((car) => ({
         RegistrationID: car.RegistrationID,
         Model: car.Model,
         OwnerID: userId
-      }))
+      })),
+      skipDuplicates: true // Skip duplicates if any
     });
+
+    // Log the successful insertion
+    console.log(`Successfully inserted ${result.count} cars.`);
+
+    // Return relevant information
+    return {
+      message: 'Cars added successfully.',
+      count: result.count // Number of cars inserted
+    };
   } catch (error) {
     console.error('Error adding cars:', error.message);
-    throw error;
+    throw error; // Re-throw the error to be handled by the calling function
   }
 }
 

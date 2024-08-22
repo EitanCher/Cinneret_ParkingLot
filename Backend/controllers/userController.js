@@ -136,7 +136,10 @@ const addUserController = async (req, res) => {
 };
 
 const addCarsController = async (req, res) => {
-  const { idUsers, cars } = req.body;
+  // Extract user ID from JWT token
+  const idUsers = req.user.idUsers; // Ensure this matches how the user ID is stored in req.user
+
+  const { cars } = req.body;
 
   try {
     // Sanitize input data

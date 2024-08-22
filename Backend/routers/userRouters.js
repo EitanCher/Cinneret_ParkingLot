@@ -9,38 +9,26 @@ const {
   deleteUser,
   getSubscriptionTiers,
   addUserController,
-  login
+  login,
+  addCarsController
 } = require('../controllers/userController');
 const passport = require('passport');
-const { handleCheckoutSession } = require('../controllers/stripeController');
-const { handleStripeWebhook } = require('../controllers/stripeWebHookController');
+const { createStripeSession } = require('../controllers/stripeCheckoutController');
+const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 
-// Route to get subscription tiers
 router.get('/subscriptions', getSubscriptionTiers);
 router.post('/register', addUserController);
 router.post('/login', login);
-// router.post('/create-checkout-session', createCheckoutSessionHandler); // Stripe checkout session route
-
-// // Route to create a Stripe Checkout session
-// router.post("/create-checkout-session", createCheckoutSession);
-
-// // Route to handle post-payment success
-// router.get("/checkout-success", handleCheckoutSuccess);
-router.patch(
-  '/:id',
-  passport.authenticate('jwt', { session: false }),
-  (req, res, next) => {
-    console.log('User in middleware:', req.user); // Debugging line
-    next();
-  },
-  updateUser
-);
-// router.get('/', getUsers); GET /api/users/ - Fetch users
-router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser); // DELETE /api/users/:id - Delete a user
-router.post('/create-checkout-session', handleCheckoutSession);
-//Webhooks are HTTP callbacks that allow one system to notify another system about an event. They are typically used for one-way communication from a service to your server.
-router.post('/webhook', handleStripeWebhook); // Handle Stripe webhook events
-
+router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
+router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
+router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
+// Route to create a Stripe checkout session
+router.post('/create-checkout-session', passport.authenticate('jwt', { session: false }), createStripeSession);
+// Route to handle Stripe webhook events
+router.post('/webhook', handleCheckoutSessionCompleted);
+router.get('/webhook', (req, res) => {
+  res.send('hello from ngrok');
+});
 module.exports = router;
 
 //--------------------------------------------------------------------------------------------------------------------------------//
