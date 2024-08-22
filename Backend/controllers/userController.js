@@ -1,4 +1,11 @@
-const { deleteUserById, updateUserById, getSubscriptions, createUser, createCars } = require('../models/userModel');
+const {
+  deleteUserById,
+  updateUserById,
+  getSubscriptions,
+  createUser,
+  createCars,
+  updateCarsModel
+} = require('../models/userModel');
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
@@ -99,7 +106,7 @@ const deleteUser = async (req, res) => {
 
 const stringFields = ['FirstName', 'LastName', 'Email', 'Phone', 'SubscriptionPlanID', 'StartDate', 'EndDate'];
 const addUserController = async (req, res) => {
-  const userData = req.body.user; // Adjust based on how user data is sent
+  const userData = req.body; // Adjust based on how user data is sent
 
   try {
     // Sanitize the input data
@@ -137,15 +144,18 @@ const addUserController = async (req, res) => {
 
 const addCarsController = async (req, res) => {
   // Extract user ID from JWT token
+
   const idUsers = req.user.idUsers; // Ensure this matches how the user ID is stored in req.user
 
   const { cars } = req.body;
 
   try {
     // Sanitize input data
+    console.log('sanitizing cars');
     const sanitizedCars = cars.map((car) => sanitizeObject(car, ['make', 'model']));
 
     // Fetch user's subscription plan
+    console.log('fetching user subscription');
     const userSubscription = await prisma.userSubscriptions.findFirst({
       where: { UserID: idUsers, Status: 'active' },
       select: { SubscriptionPlanID: true }
@@ -158,6 +168,7 @@ const addCarsController = async (req, res) => {
     const { SubscriptionPlanID } = userSubscription;
 
     // Add cars to the database
+    console.log('triggering create cars model');
     await createCars(idUsers, sanitizedCars, SubscriptionPlanID);
 
     // Respond with success
@@ -197,6 +208,54 @@ async function getSubscriptionTiers(req, res) {
   }
 }
 
+const updateCars = async (req, res) => {
+  console.log('Received PATCH request for /api/users/cars');
+  console.log('User:', req.user); // Log authenticated user
+  console.log('Request Body:', req.body); // Log request body
+  // Extract user ID from JWT token
+  console.log('extracting user from JWT token');
+  const idUsers = req.user.idUsers; // Ensure this matches how the user ID is stored in req.user
+
+  const { cars } = req.body;
+
+  try {
+    console.log('start of try block in updateCars conntroller');
+
+    // Sanitize input data
+    console.log('sanitizing');
+    const sanitizedCars = cars.map((car) => sanitizeObject(car, ['RegistrationID', 'Model']));
+
+    // Update cars in the database
+    console.log('calling updateCarsModel');
+    await updateCarsModel(idUsers, sanitizedCars);
+
+    // Respond with success
+
+    res.status(200).json({
+      message: 'Cars updated successfully.'
+    });
+  } catch (err) {
+    console.error('Error updating cars:', err.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+const getUserCarsController = async (req, res) => {
+  const userId = req.user.idUsers; // Extract user ID from the JWT token
+
+  try {
+    const result = await getCarsByUserId(userId);
+
+    if (result.success) {
+      return res.status(200).json(result.cars);
+    } else {
+      return res.status(404).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error('Error in getUserCarsController:', error.message);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
 //update subscription plans
 
 module.exports = {
@@ -205,5 +264,6 @@ module.exports = {
   getSubscriptionTiers,
   addUserController,
   login,
-  addCarsController
+  addCarsController,
+  updateCars
 };

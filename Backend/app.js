@@ -2,32 +2,41 @@ require('dotenv').config('./.env');
 require('./utils/cronJobs');
 const express = require('express');
 const bodyParser = require('body-parser');
-const userRouter = require('./routers/userRouters');
-const adminRouter = require('./routers/admin');
+const userRouters = require('./routers/userRouters');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const csurf = require('csurf');
-const { handleStripeWebhook } = require('./controllers/stripeWebHookController'); // Correctly import the webhook handler
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3001;
 const passport = require('./utils/passport-config');
 
-// Middleware to capture raw body for Stripe webhook verification
-app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
-
-// Other middlewares and routes
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
-
+app.use(cors()); // Enable CORS if needed
 app.use(passport.initialize());
+
+// Logging Middleware
+app.use((req, res, next) => {
+  console.log(`Received ${req.method} request for ${req.url}`);
+  next();
+});
+app.patch('/testupdate', (req, res) => {
+  console.log('PATCH /testupdate route hit');
+  console.log('Request Headers:', req.headers);
+  console.log('Request Body:', req.body);
+  res.json({ message: 'PATCH /testupdate route working' });
+});
+
+// Routes
+app.use('/api/users', userRouters);
+app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
 
 app.get('/', (req, res) => {
   res.send('Hello from Express Server');
 });
-
-app.use('/api/users', userRouter);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

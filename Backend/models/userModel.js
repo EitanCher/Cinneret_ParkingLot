@@ -1,9 +1,12 @@
 const pool = require('../db-postgres/db_config');
 const prisma = require('../prisma/prismaClient');
 const bcrypt = require('bcrypt');
+const { z } = require('zod');
+
 const { hashPassword } = require('../utils/passwordUtils');
 const { convertToISODate } = require('../utils/dateUtils');
-const { updateUserSchema, addUserControllerSchema, addCarSchema } = require('../db-postgres/zodSchema');
+const { updateUserSchema, addUserControllerSchema, carSchema, carsArraySchema } = require('../db-postgres/zodSchema');
+const { promise } = require('zod');
 const saltRounds = 10;
 
 //------------------------------------------------------------------------------//
@@ -107,6 +110,7 @@ async function getSubscriptions() {
 async function createUser(userData) {
   try {
     // Validate userData with the Zod schema
+
     const validatedData = addUserControllerSchema.parse(userData);
 
     // Proceed with hashing password and creating the user in the database
@@ -146,6 +150,7 @@ async function getNumCarsByUserId(userId) {
 
 async function createCars(userId, carsData, subscriptionPlanID) {
   // Validate car count based on subscription plan
+  console.log('fetching max car per subscription ');
   const maxCarsObj = await prisma.subscriptionPlans.findFirst({
     where: { idSubscriptionPlans: subscriptionPlanID },
     select: { MaxCars: true }
@@ -187,11 +192,82 @@ async function createCars(userId, carsData, subscriptionPlanID) {
   }
 }
 
+async function updateCarsModel(userID, carsData) {
+  try {
+    console.log('Start of try block in updateCarsModel');
+
+    // Validate and sanitize input data
+    const validatedCars = carsArraySchema.parse(carsData);
+    console.log('Validated cars:', validatedCars);
+
+    // Fetch existing cars from the database
+    const carsInDB = await prisma.cars.findMany({
+      where: { OwnerID: userID }
+    });
+    console.log('Cars in DB:', carsInDB);
+
+    // Map existing cars for quick lookup
+    const carsInDBMap = new Map(carsInDB.map((car) => [car.idCars, car]));
+
+    // Determine which cars need to be updated
+    const carsToUpdate = validatedCars
+      .map((car) => {
+        const existingCar = carsInDBMap.get(car.idCars);
+
+        if (!existingCar) {
+          console.log(`Car with idCars ${car.idCars} not found in DB.`);
+          return null;
+        }
+
+        // Always update the car
+        console.log(`Car with idCars ${car.idCars} will be updated.`);
+        return {
+          idCars: car.idCars,
+          data: {
+            RegistrationID: car.RegistrationID,
+            Model: car.Model
+          }
+        };
+      })
+      .filter(Boolean); // Remove null values
+
+    if (carsToUpdate.length === 0) {
+      console.log('No cars to update.');
+      return { success: true, message: 'No cars to update.' };
+    }
+
+    // Update cars in the database
+    await Promise.all(
+      carsToUpdate.map((carUpdate) => {
+        console.log(`Updating car with idCars ${carUpdate.idCars}`);
+        return prisma.cars.update({
+          where: { idCars: carUpdate.idCars },
+          data: carUpdate.data
+        });
+      })
+    );
+
+    console.log(`Successfully updated ${carsToUpdate.length} cars.`);
+    return {
+      message: 'Cars updated successfully.',
+      count: carsToUpdate.length // Number of cars updated
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
+      throw new Error(`Validation error: ${error.errors.map((e) => e.message).join(', ')}`);
+    }
+    console.error('Error updating cars:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   deleteUserById,
   getUserById,
   updateUserById,
   getSubscriptions,
   createUser,
-  createCars
+  createCars,
+  updateCarsModel
 };

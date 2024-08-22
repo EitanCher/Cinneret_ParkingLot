@@ -5,12 +5,12 @@ const stringToDate = z.string().transform((val) => new Date(val));
 const dateToString = z.date().transform((date) => date.toISOString());
 
 const addUserControllerSchema = z.object({
-  persId: z.string(), // Change to string to match your actual data
-  FirstName: z.string(),
-  LastName: z.string(),
-  Email: z.string().email(),
-  Phone: z.string(),
-  Password: z.string().min(6)
+  persId: z.string().max(20), // Adjust length to match your database
+  FirstName: z.string().max(50), // Adjust length to match your database
+  LastName: z.string().max(50), // Adjust length to match your database
+  Email: z.string().email().max(255), // Adjust length to match your database
+  Phone: z.string().max(20), // Adjust length to match your database
+  Password: z.string().min(6).max(100) // Adjust length to match your database
 });
 
 const subscriptionSchema = z.object({
@@ -29,10 +29,6 @@ const updateUserSchema = z.object({
   Password: z.string().min(6).optional()
 });
 
-const addCarSchema = z.object({
-  RegistrationID: z.string().min(1).max(11),
-  Model: z.string().min(1).max(45)
-});
 // HW_Alive Schema
 const hwAliveSchema = z.object({
   Fault: z.boolean().default(false)
@@ -40,11 +36,12 @@ const hwAliveSchema = z.object({
 
 // Cars Schema
 const carSchema = z.object({
-  idCars: z.number().int().optional(),
+  idCars: z.number().int().positive(), // Ensure `idCars` is a positive integer
   RegistrationID: z.string().length(11),
   Model: z.string().max(45),
   OwnerID: z.number().int().min(1)
 });
+const carsArraySchema = z.array(carSchema);
 
 // Areas Schema
 const areaSchema = z.object({
@@ -112,5 +109,5 @@ module.exports = {
   addUserControllerSchema,
   updateUserSchema,
   subscriptionSchema,
-  addCarSchema
+  carsArraySchema
 };
