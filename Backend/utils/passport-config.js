@@ -1,10 +1,14 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const passport = require('passport');
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const LocalStrategy = require('passport-local').Strategy; // Import LocalStrategy
 const bcrypt = require('bcrypt');
 const prisma = require('../prisma/prismaClient'); // Adjust the path to your Prisma client
-const dotenv = require('dotenv');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const User = require('../models/userModel'); // Adjust the path to your User model
 dotenv.config();
 
 const opts = {
@@ -64,6 +68,36 @@ passport.use(
       return done(error);
     }
   })
+);
+
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.CALLBACK_URL
+    },
+    async function (accessToken, refreshToken, profile, done) {
+      try {
+        // Find user by email
+        console.log('extracting user by email-prisma');
+        const user = await prisma.users.findUnique({
+          where: { Email: profile.emails[0].value } // Use the email from the Google profile
+        });
+
+        if (user) {
+          console.log('user exists');
+          // User exists, log them in
+          return done(null, user);
+        } else {
+          // User does not exist, handle it as an error or redirect to sign up page
+          return done(new Error('User not found'), null);
+        }
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  )
 );
 
 module.exports = passport;

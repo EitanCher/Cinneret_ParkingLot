@@ -192,6 +192,17 @@ async function createCars(userId, carsData, subscriptionPlanID) {
   }
 }
 
+const findUserByEmail = async (email) => {
+  try {
+    return await prisma.users.findUnique({
+      where: { Email: email }
+    });
+  } catch (err) {
+    console.error('Error finding user by email:', err.message);
+    throw err;
+  }
+};
+
 async function updateCarsModel(userID, carsData) {
   try {
     console.log('Start of try block in updateCarsModel');
@@ -269,5 +280,6 @@ module.exports = {
   getSubscriptions,
   createUser,
   createCars,
-  updateCarsModel
+  updateCarsModel,
+  findUserByEmail
 };

@@ -23,12 +23,6 @@ app.use((req, res, next) => {
   console.log(`Received ${req.method} request for ${req.url}`);
   next();
 });
-app.patch('/testupdate', (req, res) => {
-  console.log('PATCH /testupdate route hit');
-  console.log('Request Headers:', req.headers);
-  console.log('Request Body:', req.body);
-  res.json({ message: 'PATCH /testupdate route working' });
-});
 
 // Routes
 app.use('/api/users', userRouters);

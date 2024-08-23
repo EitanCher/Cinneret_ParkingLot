@@ -13,6 +13,14 @@ const {
   addCarsController,
   updateCars
 } = require('../controllers/userController');
+const { googleCallback } = require('../controllers/authController');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.REDIRECT_URI
+);
+
 const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
@@ -31,6 +39,14 @@ router.post('/login', login);
 router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
 router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
 router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
+router.get('/google/callback', googleCallback);
+
+router.get(
+  '/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email']
+  })
+);
 
 // Route to create a Stripe checkout session
 router.post('/create-checkout-session', passport.authenticate('jwt', { session: false }), createStripeSession);
