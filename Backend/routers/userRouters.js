@@ -13,6 +13,7 @@ const {
   addCarsController,
   updateCars
 } = require('../controllers/userController');
+const { getParkingLotCities, reserveParkingController } = require('../controllers/parkingController');
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(
@@ -25,20 +26,15 @@ const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 
+router.get('/parkinglots', getParkingLotCities); // More specific
 router.patch('/cars', passport.authenticate('jwt', { session: false }), updateCars);
-
-// router.patch('/cars', (req, res) => {
-//   console.log('PATCH /testupdate route hit');
-//   console.log('Request Headers:', req.headers);
-//   console.log('Request Body:', req.body);
-//   res.json({ message: 'PATCH /testupdate route working' });
-// });
 router.get('/subscriptions', getSubscriptionTiers);
 router.post('/register', addUserController);
 router.post('/login', login);
 router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
 router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
 router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
+router.post('/reservation', passport.authenticate('jwt', { session: false }), reserveParkingController);
 router.get('/google/callback', googleCallback);
 
 router.get(

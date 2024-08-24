@@ -12,11 +12,20 @@ model test_table {
   name String @db.VarChar(255)
 }
 
+model Cities {
+  idCities    Int     @id @default(autoincrement())
+  CityName    String  @unique @db.VarChar(45)
+  FullAddress String  @db.VarChar(255) // New field for the full address
+  Gates       Gates[]
+  Areas       Areas[] // Relation to Areas
+}
+
 model Areas {
   idAreas  Int     @id @default(autoincrement())
   AreaName String  @unique @db.VarChar(45)
-  Gates    Gates[]
-  Slots    Slots[]
+  CityID   Int
+  Cities   Cities  @relation(fields: [CityID], references: [idCities], onDelete: NoAction, onUpdate: NoAction)
+  Slots    Slots[] // Relation to Slots
 }
 
 model Borders {
@@ -27,29 +36,21 @@ model Borders {
 }
 
 model Cars {
-  idCars                     Int          @id @default(autoincrement())
-  RegistrationID             String       @unique @db.VarChar(11)
-  Model                      String       @db.VarChar(45)
-  OwnerID                    Int
-  Users                      Users        @relation(fields: [OwnerID], references: [idUsers], onDelete: NoAction, onUpdate: NoAction)
-  ParkingLog                 ParkingLog[]
-  Slots_Slots_SavedForToCars Slots[]      @relation("Slots_SavedForToCars")
-  Slots_Slots_TakenByToCars  Slots[]      @relation("Slots_TakenByToCars")
+  idCars         Int            @id @default(autoincrement())
+  RegistrationID String         @unique @db.VarChar(11)
+  Model          String         @db.VarChar(45)
+  OwnerID        Int
+  Users          Users          @relation(fields: [OwnerID], references: [idUsers], onDelete: NoAction, onUpdate: NoAction)
+  ParkingLog     ParkingLog[]
+  Reservations   Reservations[] @relation("CarReservations")
 }
 
 model Gates {
   idGates  Int     @id @default(autoincrement())
   Entrance Boolean
-  AreaID   Int
+  CityID   Int
   Fault    Boolean
-  Areas    Areas   @relation(fields: [AreaID], references: [idAreas], onDelete: Cascade, onUpdate: NoAction)
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model HW_Alive {
-  Fault Boolean @default(false)
-
-  @@ignore
+  Cities   Cities  @relation(fields: [CityID], references: [idCities], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model ParkingLog {
@@ -58,13 +59,9 @@ model ParkingLog {
   SlotID       Int
   Entrance     DateTime @db.Timestamptz(6)
   Exit         DateTime @db.Timestamptz(6)
-  ParkingStart DateTime @db.Timestamptz(6)
-  ParkingEnd   DateTime @db.Timestamptz(6)
-  SavingStart  DateTime @db.Timestamptz(6)
-  SavingEnd    DateTime @db.Timestamptz(6)
   Violation    Boolean
-  Cars         Cars     @relation(fields: [CarID], references: [idCars], onDelete: NoAction, onUpdate: NoAction)
-  Slots        Slots    @relation(fields: [SlotID], references: [idSlots], onDelete: NoAction, onUpdate: NoAction)
+  Cars         Cars     @relation(fields: [CarID], references: [idCars])
+  Slots        Slots    @relation(fields: [SlotID], references: [idSlots])
 }
 
 model SlotSizes {
@@ -74,32 +71,30 @@ model SlotSizes {
 }
 
 model Slots {
-  idSlots                            Int          @id @default(autoincrement())
+  idSlots                            Int            @id @default(autoincrement())
   Busy                               Boolean
-  Area                               Int
-  SavedFor                           Int
-  TakenBy                            Int
+  AreaID                             Int
   BorderLeft                         Int
   BorderRight                        Int
   Size                               Int
   Active                             Boolean
   Fault                              Boolean
   ParkingLog                         ParkingLog[]
-  Areas                              Areas        @relation(fields: [Area], references: [idAreas], onDelete: NoAction, onUpdate: NoAction)
-  Borders_Slots_BorderLeftToBorders  Borders      @relation("Slots_BorderLeftToBorders", fields: [BorderLeft], references: [idBorders], onDelete: NoAction, onUpdate: NoAction)
-  Borders_Slots_BorderRightToBorders Borders      @relation("Slots_BorderRightToBorders", fields: [BorderRight], references: [idBorders], onDelete: NoAction, onUpdate: NoAction)
-  Cars_Slots_SavedForToCars          Cars         @relation("Slots_SavedForToCars", fields: [SavedFor], references: [idCars], onDelete: NoAction, onUpdate: NoAction)
-  SlotSizes                          SlotSizes    @relation(fields: [Size], references: [idSlotSizes], onDelete: NoAction, onUpdate: NoAction)
-  Cars_Slots_TakenByToCars           Cars         @relation("Slots_TakenByToCars", fields: [TakenBy], references: [idCars], onDelete: NoAction, onUpdate: NoAction)
+  Areas                              Areas          @relation(fields: [AreaID], references: [idAreas], onDelete: NoAction, onUpdate: NoAction)
+  Borders_Slots_BorderLeftToBorders  Borders        @relation("Slots_BorderLeftToBorders", fields: [BorderLeft], references: [idBorders], onDelete: NoAction, onUpdate: NoAction)
+  Borders_Slots_BorderRightToBorders Borders        @relation("Slots_BorderRightToBorders", fields: [BorderRight], references: [idBorders], onDelete: NoAction, onUpdate: NoAction)
+  SlotSizes                          SlotSizes      @relation(fields: [Size], references: [idSlotSizes], onDelete: NoAction, onUpdate: NoAction)
+  Reservations                       Reservations[] @relation("SlotReservations")
 }
 
 model SubscriptionPlans {
-  idSubscriptionPlans Int                 @id @default(autoincrement())
-  Name                String              @unique @db.VarChar(45)
-  Price               Decimal             @db.Decimal(10, 2)
-  MaxCars             Int
-  Features            String[]
-  UserSubscriptions   UserSubscriptions[]
+  idSubscriptionPlans   Int                 @id @default(autoincrement())
+  Name                  String              @unique @db.VarChar(45)
+  Price                 Decimal             @db.Decimal(10, 2)
+  MaxCars               Int
+  MaxActiveReservations Int                 @default(0) // New field for max active reservations
+  Features              String[]
+  UserSubscriptions     UserSubscriptions[]
 }
 
 model UserSubscriptions {
@@ -127,31 +122,18 @@ model Users {
   Password          String              @db.VarChar(255)
   Cars              Cars[]
   UserSubscriptions UserSubscriptions[]
+  Reservations      Reservations[]      @relation("UserReservations")
 }
 
-// {
-//   "user": {
-//     "persId": "123456789",
-//     "FirstName": "John",
-//     "LastName": "Doe",
-//     "Phone": "+1234567890",
-//     "Email": "john.doe@example.com",
-//     "Password": "securePassword123"  // Required
-//   },
-//   "subscription": {
-//     "SubscriptionPlanID": 1,  // ID of the subscription plan
-//     "StartDate": "2024-01-01", // Subscription start date (ISO format)
-//     "EndDate": "2024-12-31",   // Subscription end date (ISO format)
-//     "Status": "active"         // Subscription status
-//   },
-//   "cars": [
-//     {
-//       "RegistrationID": "ABC1234",
-//       "Model": "Toyota Corolla"
-//     },
-//     {
-//       "RegistrationID": "XYZ5678",
-//       "Model": "Honda Civic"
-//     }
-//   ]
-// }
+model Reservations {
+  idReservation    Int      @id @default(autoincrement())
+  UserID           Int
+  CarID            Int
+  SlotID           Int
+  ReservationStart DateTime @db.Timestamptz(6)
+  ReservationEnd   DateTime @db.Timestamptz(6)
+
+  Slots Slots @relation("SlotReservations", fields: [SlotID], references: [idSlots])
+  Cars  Cars  @relation("CarReservations", fields: [CarID], references: [idCars])
+  Users Users @relation("UserReservations", fields: [UserID], references: [idUsers])
+}

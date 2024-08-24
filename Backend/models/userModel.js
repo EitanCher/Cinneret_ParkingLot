@@ -5,7 +5,7 @@ const { z } = require('zod');
 
 const { hashPassword } = require('../utils/passwordUtils');
 const { convertToISODate } = require('../utils/dateUtils');
-const { updateUserSchema, addUserControllerSchema, carSchema, carsArraySchema } = require('../db-postgres/zodSchema');
+const { updateUserSchema, addUserControllerSchema, carsArraySchema } = require('../db-postgres/zodSchema');
 const { promise } = require('zod');
 const saltRounds = 10;
 

@@ -43,71 +43,133 @@ const carSchema = z.object({
 });
 const carsArraySchema = z.array(carSchema);
 
-// Areas Schema
-const areaSchema = z.object({
-  idAreas: z.number().int().optional(),
-  AreaName: z.string().max(45)
+// City Schema
+const CitySchema = z.object({
+  idCities: z.number().int(),
+  CityName: z.string().max(45),
+  FullAddress: z.string().max(255)
 });
+const CityCreateSchema = CitySchema.omit({ idCities: true });
+const CityUpdateSchema = CitySchema.partial();
 
-// Gates Schema
-const gateSchema = z.object({
-  idGates: z.number().int(),
-  Entrance: z.boolean(),
-  AreaID: z.number().int().min(1),
-  Fault: z.boolean()
+// Area Schema
+const AreaSchema = z.object({
+  idAreas: z.number().int(),
+  AreaName: z.string().max(45),
+  CityID: z.number().int()
 });
+const AreaCreateSchema = AreaSchema.omit({ idAreas: true });
+const AreaUpdateSchema = AreaSchema.partial();
 
-// SlotSizes Schema
-const slotSizeSchema = z.object({
-  idSlotSizes: z.number().int().optional(),
-  Size: z.string().max(45)
-});
-
-// Borders Schema
-const borderSchema = z.object({
-  idBorders: z.number().int().optional(),
+// Border Schema
+const BorderSchema = z.object({
+  idBorders: z.number().int(),
   Violated: z.boolean()
 });
+const BorderCreateSchema = BorderSchema.omit({ idBorders: true });
+const BorderUpdateSchema = BorderSchema.partial();
 
-// Slots Schema
-const slotSchema = z.object({
-  idSlots: z.number().int().optional(),
+// Gate Schema
+const GateSchema = z.object({
+  idGates: z.number().int(),
+  Entrance: z.boolean(),
+  CityID: z.number().int(),
+  Fault: z.boolean()
+});
+const GateCreateSchema = GateSchema.omit({ idGates: true });
+const GateUpdateSchema = GateSchema.partial();
+
+// ParkingLog Schema
+const ParkingLogSchema = z.object({
+  idParkingLog: z.number().int(),
+  CarID: z.number().int(),
+  SlotID: z.number().int(),
+  Entrance: z.date(), // DateTime in Prisma
+  Exit: z.date(), // DateTime in Prisma
+  ParkingStart: z.date(), // DateTime in Prisma
+  ParkingEnd: z.date(), // DateTime in Prisma
+  SavingStart: z.date(), // DateTime in Prisma
+  SavingEnd: z.date(), // DateTime in Prisma
+  Violation: z.boolean()
+});
+const ParkingLogCreateSchema = ParkingLogSchema.omit({ idParkingLog: true });
+const ParkingLogUpdateSchema = ParkingLogSchema.partial();
+
+// SlotSize Schema
+const SlotSizeSchema = z.object({
+  idSlotSizes: z.number().int(),
+  Size: z.string().max(45)
+});
+const SlotSizeCreateSchema = SlotSizeSchema.omit({ idSlotSizes: true });
+const SlotSizeUpdateSchema = SlotSizeSchema.partial();
+
+// Slot Schema
+const SlotSchema = z.object({
+  idSlots: z.number().int(),
   Busy: z.boolean(),
-  Area: z.number().int().min(1),
-  SavedFor: z.number().int().min(1).optional(), // Marked optional based on relations
-  TakenBy: z.number().int().min(1).optional(), // Marked optional based on relations
-  BorderLeft: z.number().int().min(1),
-  BorderRight: z.number().int().min(1),
-  Size: z.number().int().min(1),
+  AreaID: z.number().int(),
+  SavedFor: z.number().int(),
+  TakenBy: z.number().int(),
+  BorderLeft: z.number().int(),
+  BorderRight: z.number().int(),
+  Size: z.number().int(),
   Active: z.boolean(),
   Fault: z.boolean()
 });
+const SlotCreateSchema = SlotSchema.omit({ idSlots: true });
+const SlotUpdateSchema = SlotSchema.partial();
 
-// ParkingLog Schema
-const parkingLogSchema = z.object({
-  idParkingLog: z.number().int().optional(),
-  CarID: z.number().int().min(1),
-  SlotID: z.number().int().min(1),
-  Entrance: z.coerce.date(), // Converts ISO strings to Date objects
-  Exit: z.coerce.date(),
-  ParkingStart: z.coerce.date(),
-  ParkingEnd: z.coerce.date(),
-  SavingStart: z.coerce.date(),
-  SavingEnd: z.coerce.date(),
-  Violation: z.boolean()
-});
+const ReservationBaseSchema = z
+  .object({
+    CarID: z.number().int().positive(), // Matches Prisma's CarID
+    UserID: z.number().int().positive(), // Matches Prisma's UserID
+    SlotID: z.number().int().positive(), // Matches Prisma's SlotID
+    ReservationStart: z.date().refine((date) => date > new Date(), {
+      message: 'Reservation start date must be in the future.'
+    }),
+    ReservationEnd: z.date().refine((date) => date > new Date(), {
+      message: 'Reservation end date must be in the future.'
+    })
+  })
+  .refine((data) => data.ReservationEnd > data.ReservationStart, {
+    message: 'Reservation end date must be after the start date.',
+    path: ['reservationEnd']
+  });
+
+// Create schema requires all fields
+const ReservationCreateSchema = ReservationBaseSchema;
+// Update schema makes all fields optional
+// const ReservationUpdateSchema = ReservationBaseSchema.partial();
 
 module.exports = {
   hwAliveSchema,
   carSchema,
-  areaSchema,
-  gateSchema,
-  slotSizeSchema,
-  borderSchema,
-  slotSchema,
-  parkingLogSchema,
+  carsArraySchema,
+  CitySchema,
+  CityCreateSchema,
+  CityUpdateSchema,
+  AreaSchema,
+  AreaCreateSchema,
+  AreaUpdateSchema,
+  BorderSchema,
+  BorderCreateSchema,
+  BorderUpdateSchema,
+  GateSchema,
+  GateCreateSchema,
+  GateUpdateSchema,
+  ParkingLogSchema,
+  ParkingLogCreateSchema,
+  ParkingLogUpdateSchema,
+  SlotSizeSchema,
+  SlotSizeCreateSchema,
+  SlotSizeUpdateSchema,
+  SlotSchema,
+  SlotCreateSchema,
+  SlotUpdateSchema,
   addUserControllerSchema,
   updateUserSchema,
   subscriptionSchema,
-  carsArraySchema
+  ReservationBaseSchema,
+  ReservationCreateSchema
+  // ReservationUpdateSchema
 };
