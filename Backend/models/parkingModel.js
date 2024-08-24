@@ -179,7 +179,8 @@ async function findAndBookSlot(cityId, carId, userId, reservationStart, reservat
           UserID: userId,
           ReservationStart: reservationStart,
           ReservationEnd: reservationEnd,
-          SlotID: slot.idSlots
+          SlotID: slot.idSlots,
+          Status: 'pending'
         }
       });
       return reservation;
@@ -198,3 +199,13 @@ module.exports = {
   findAndBookSlot
   // Add other functions as needed...
 };
+
+//TODO
+
+// check if user can add more reservations then max allowed
+// need to use web socket or something like that when a reservation is completed (maybe add back the status (active,pending etc) column )
+// if a user did not use his reservation AT ALL then there should be a violation (neet max strikes or something like that)
+// work on notifications for upcoming reservation, for violations, for late exit in case of a reservation
+//(remember to implement max hours for a reservation and max hours for regular parking)
+//user should be able to see his parking stats/ reservations stats. meaning when it starts when it ends, how long is left in case it already started
+//delete reservation once done
