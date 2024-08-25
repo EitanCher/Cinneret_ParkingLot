@@ -141,6 +141,11 @@ const ReservationCreateSchema = ReservationBaseSchema;
 // Update schema makes all fields optional
 // const ReservationUpdateSchema = ReservationBaseSchema.partial();
 
+const deleteReservationSchema = z.object({
+  idReservation: z.number().int().positive(), // Ensure this matches your expected type
+  idUsers: z.number().int().positive().optional() // Optional if not always provided
+});
+
 module.exports = {
   hwAliveSchema,
   carSchema,
@@ -170,6 +175,7 @@ module.exports = {
   updateUserSchema,
   subscriptionSchema,
   ReservationBaseSchema,
-  ReservationCreateSchema
+  ReservationCreateSchema,
+  deleteReservationSchema
   // ReservationUpdateSchema
 };

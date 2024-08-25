@@ -13,7 +13,11 @@ const {
   addCarsController,
   updateCars
 } = require('../controllers/userController');
-const { getParkingLotCities, reserveParkingController } = require('../controllers/parkingController');
+const {
+  getParkingLotCities,
+  reserveParkingController,
+  cancelReservationController
+} = require('../controllers/parkingController');
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(
@@ -26,15 +30,22 @@ const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 
-router.get('/parkinglots', getParkingLotCities); // More specific
+router.get('/parkinglots', getParkingLotCities);
+//im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
 router.patch('/cars', passport.authenticate('jwt', { session: false }), updateCars);
 router.get('/subscriptions', getSubscriptionTiers);
 router.post('/register', addUserController);
 router.post('/login', login);
 router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
-router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
 router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
 router.post('/reservation', passport.authenticate('jwt', { session: false }), reserveParkingController);
+//here also i decided to not use /:id in order to be able to keep the same controller and model to work with both admin and user
+//important- idReservation in the req.body
+//if anyone is signed in- we will know who it is and make sure that he can't delete a reservation that isnt his
+//on the other hand no one can access the admin route without the api key
+router.delete('/reservation', passport.authenticate('jwt', { session: false }), cancelReservationController);
+router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
+
 router.get('/google/callback', googleCallback);
 
 router.get(

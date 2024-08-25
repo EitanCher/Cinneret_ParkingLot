@@ -34,9 +34,6 @@ const checkReservations = async () => {
         ReservationEnd: {
           lt: new Date() // End time in the past
         }
-      },
-      include: {
-        Users: true // Include user for updating violations
       }
     });
     // Update violation count for users if any reservation violates any rule
@@ -48,10 +45,11 @@ const checkReservations = async () => {
         }
       });
       await prisma.reservations.deleteMany({
-        where: { idReservation: reservation.idReservation } // Delete reservation after violation update
+        where: { idReservation: reservations.idReservation } // Delete reservation after violation update
       });
     }
   } catch (error) {}
 };
 
-cron.schedule('0 0 * * *', checkReservations, checkExpiredSubscriptions);
+cron.schedule('0 0 * * *', checkExpiredSubscriptions); // Run daily at midnight
+cron.schedule('0 0 * * *', checkReservations); // Run daily at midnight

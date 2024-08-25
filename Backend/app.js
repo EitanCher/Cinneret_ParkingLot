@@ -3,6 +3,7 @@ require('./utils/cronJobs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const userRouters = require('./routers/userRouters');
+const adminRouters = require('./routers/adminRouters');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -27,7 +28,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/users', userRouters);
 app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
-
+app.use('api/admin', adminRouters);
 app.get('/', (req, res) => {
   res.send('Hello from Express Server');
 });

@@ -9,7 +9,8 @@ const {
   addUserControllerSchema,
   carSchema,
   carsArraySchema,
-  ReservationCreateSchema
+  ReservationCreateSchema,
+  deleteReservationSchema
 } = require('../db-postgres/zodSchema');
 const { promise } = require('zod');
 const saltRounds = 10;
@@ -191,21 +192,66 @@ async function findAndBookSlot(cityId, carId, userId, reservationStart, reservat
   }
 }
 
+const cancelReservation = async (idReservation, idUsers = null) => {
+  console.log('Validating Zod in model');
+
+  // Validate the data using Zod
+  const parsedData = deleteReservationSchema.parse({
+    idReservation,
+    idUsers
+  });
+
+  console.log('Done Zod validation');
+
+  // Extract validated data
+  const { idReservation: validatedIdReservation, idUsers: validatedIdUsers } = parsedData;
+
+  // Check for reservation in the database
+  const reservation = await prisma.reservations.findUnique({
+    where: { idReservation: validatedIdReservation }
+  });
+
+  if (!reservation) {
+    throw new Error('Reservation not found');
+  }
+
+  // Authorization check
+  if (validatedIdUsers && reservation.UserID !== validatedIdUsers) {
+    throw new Error('Unauthorized to cancel this reservation');
+  }
+
+  // Proceed with deletion
+  await prisma.reservations.delete({
+    where: { idReservation: validatedIdReservation }
+  });
+};
+
 module.exports = {
   getAllParkingLots,
   countActiveReservations,
   fetchAllCarIdsByUserID,
   maxReservationsByUser,
-  findAndBookSlot
-  // Add other functions as needed...
+  findAndBookSlot,
+  cancelReservation
 };
 
 //TODO
 
 // check if user can add more reservations then max allowed
-// need to use web socket or something like that when a reservation is completed (maybe add back the status (active,pending etc) column )
-// if a user did not use his reservation AT ALL then there should be a violation (neet max strikes or something like that)
 // work on notifications for upcoming reservation, for violations, for late exit in case of a reservation
 //(remember to implement max hours for a reservation and max hours for regular parking)
 //user should be able to see his parking stats/ reservations stats. meaning when it starts when it ends, how long is left in case it already started
 //delete reservation once done
+
+//once frontend is half ready start working on notifications
+
+//when user drives in- we need to check if he has reservation.
+//if not-parking end in parkingLog is set to the max which was predefined
+//otherwise it's set to whatever the reservation is currently
+//in that case we should add another field to parkingLog called maxEnd or something.
+//because the endDate it has right now could be triggered by him just leaving
+
+//max durations for reservations and non reservations-local or db?
+
+//go through the code and make sure that models throw exceptions that are properly caught by the controllers
+//cancel reservation flow is a good example
