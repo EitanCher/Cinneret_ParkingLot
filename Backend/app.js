@@ -1,61 +1,39 @@
-// import express from "express";
-// import { router } from "./routers/user";
-const express = require("express");
-const userRouter = require("./routers/user");
-const adminRouter = require("./routers/admin");
-const helmet = require("helmet");
-const cookieParser = require("cookie-parser");
-const csurf = require("csurf");
+require('dotenv').config('./.env');
+require('./utils/cronJobs');
+const express = require('express');
+const bodyParser = require('body-parser');
+const userRouters = require('./routers/userRouters');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+
 const app = express();
 const port = process.env.PORT || 3001;
+const passport = require('./utils/passport-config');
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-//--------------------------------------------------------------------------------------------------------------------------------//
-// Use Helmet to protect against well-known web vulnerabilities
 app.use(helmet());
+app.use(cors()); // Enable CORS if needed
+app.use(passport.initialize());
 
-// Define a Content Security Policy (CSP)
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'trusted-scripts.com'"],
-      styleSrc: ["'self'", "'trusted-styles.com'"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "'fonts.gstatic.com'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
-    },
-  })
-);
-app.get("/", (req, res) => {
-  res.send("Hello from Express Server");
+// Logging Middleware
+app.use((req, res, next) => {
+  console.log(`Received ${req.method} request for ${req.url}`);
+  next();
 });
 
-app.use("/api/users", userRouter);
+// Routes
+app.use('/api/users', userRouters);
+app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
 
-// app.get("/users", (req, res) => {
-//   res.json(users);
-// });
-
-// app.post("/users", (req, res) => {
-//   const name = req.body.name;
-//   const userExist = users.find((user) => user.name === name);
-
-//   if (userExist) {
-//     return res.status(500).json({ message: "Name already exists" });
-//   }
-
-//   users.push({ name, age: 33 });
-//   return res.status(200).json(users);
-// });
-
-const PORT = process.env.PORT ?? 3001;
+app.get('/', (req, res) => {
+  res.send('Hello from Express Server');
+});
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
 
 // Defer Until Core Functionality is Stable:
