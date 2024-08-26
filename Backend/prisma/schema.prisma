@@ -59,6 +59,7 @@ model ParkingLog {
   SlotID        Int
   Entrance      DateTime      @db.Timestamptz(6)
   Exit          DateTime      @db.Timestamptz(6)
+  NeedToExitBy  DateTime      @db.Timestamptz(6)
   Violation     Boolean
   ReservationID Int? // New field to link to Reservations
   Cars          Cars          @relation(fields: [CarID], references: [idCars])

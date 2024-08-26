@@ -208,6 +208,7 @@ async function getSubscriptionTiers(req, res) {
   }
 }
 
+// TODO: when building frontend part, remember this is a bulk edit
 const updateCars = async (req, res) => {
   console.log('Received PATCH request for /api/users/cars');
   console.log('User:', req.user); // Log authenticated user

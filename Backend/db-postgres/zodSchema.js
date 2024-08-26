@@ -146,6 +146,10 @@ const deleteReservationSchema = z.object({
   idUsers: z.number().int().positive().optional() // Optional if not always provided
 });
 
+const setExitTimeModelSchema = z.object({
+  idCars: z.number().int().positive(), // Assuming idCars is a positive integer
+  exitTime: z.instanceof(Date) // Validate that exitTime is a Date object
+});
 module.exports = {
   hwAliveSchema,
   carSchema,
@@ -176,6 +180,7 @@ module.exports = {
   subscriptionSchema,
   ReservationBaseSchema,
   ReservationCreateSchema,
-  deleteReservationSchema
+  deleteReservationSchema,
+  setExitTimeModelSchema
   // ReservationUpdateSchema
 };

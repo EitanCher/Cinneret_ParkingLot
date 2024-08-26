@@ -1,18 +1,17 @@
-require('dotenv').config('./.env');
-require('./utils/cronJobs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const userRouters = require('./routers/userRouters');
 const adminRouters = require('./routers/adminRouters');
 const helmet = require('helmet');
-const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const passport = require('./utils/passport-config');
 
 const app = express();
 const port = process.env.PORT || 3001;
-const passport = require('./utils/passport-config');
 
-// Middleware
+//!!!! WARNING never move this from here. needs to be above use json
+app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
@@ -25,10 +24,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Raw body middleware for Stripe webhook
+
 // Routes
 app.use('/api/users', userRouters);
-app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
-app.use('api/admin', adminRouters);
+app.use('/api/admin', adminRouters);
 app.get('/', (req, res) => {
   res.send('Hello from Express Server');
 });

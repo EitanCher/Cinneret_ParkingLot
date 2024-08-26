@@ -15,8 +15,13 @@ const {
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
-  reserveParkingController,
-  cancelReservationController
+  // reserveParkingController,
+  bookSlotController,
+  findAvailableSlotController,
+  cancelReservationController,
+  getParkingHistory,
+  calculateTotalParkingTimeByUser,
+  calculateAverageParkingTimeByUser
 } = require('../controllers/parkingController');
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
@@ -38,12 +43,21 @@ router.post('/register', addUserController);
 router.post('/login', login);
 router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
 router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
-router.post('/reservation', passport.authenticate('jwt', { session: false }), reserveParkingController);
+router.get('/parking/total-time', passport.authenticate('jwt', { session: false }), calculateTotalParkingTimeByUser);
+router.get(
+  '/parking/average-duration',
+  passport.authenticate('jwt', { session: false }),
+  calculateAverageParkingTimeByUser
+);
+router.post('/parking/reservation', passport.authenticate('jwt', { session: false }), bookSlotController);
 //here also i decided to not use /:id in order to be able to keep the same controller and model to work with both admin and user
 //important- idReservation in the req.body
 //if anyone is signed in- we will know who it is and make sure that he can't delete a reservation that isnt his
 //on the other hand no one can access the admin route without the api key
-router.delete('/reservation', passport.authenticate('jwt', { session: false }), cancelReservationController);
+router.delete('/parking/reservation', passport.authenticate('jwt', { session: false }), cancelReservationController);
+//use params
+router.get('/parking/find-best-slot', passport.authenticate('jwt', { session: false }), findAvailableSlotController);
+router.get('/parking/history', passport.authenticate('jwt', { session: false }), getParkingHistory);
 router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
 
 router.get('/google/callback', googleCallback);
@@ -54,11 +68,11 @@ router.get(
     scope: ['profile', 'email']
   })
 );
-
-// Route to create a Stripe checkout session
-router.post('/create-checkout-session', passport.authenticate('jwt', { session: false }), createStripeSession);
 // Route to handle Stripe webhook events
 router.post('/webhook', handleCheckoutSessionCompleted);
+// Route to create a Stripe checkout session
+router.post('/create-checkout-session', passport.authenticate('jwt', { session: false }), createStripeSession);
+
 router.get('/webhook', (req, res) => {
   res.send('hello from ngrok');
 });
