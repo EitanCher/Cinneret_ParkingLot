@@ -195,7 +195,13 @@ async function createCars(userId, carsData, subscriptionPlanID) {
 const findUserByEmail = async (email) => {
   try {
     return await prisma.users.findUnique({
-      where: { Email: email }
+      where: { Email: email },
+      select: {
+        idUsers: true,
+        Email: true,
+        role: true // Explicitly select the role field
+        // Add other fields you may need
+      }
     });
   } catch (err) {
     console.error('Error finding user by email:', err.message);

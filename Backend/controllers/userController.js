@@ -123,8 +123,15 @@ const addUserController = async (req, res) => {
     const user = await createUser(sanitizedUserData);
 
     // Generate JWT token
-    const token = jwt.sign({ id: user.idUsers }, process.env.JWT_SECRET, { expiresIn: '72h' });
-
+    const token = jwt.sign(
+      {
+        id: user.idUsers,
+        email: user.Email,
+        role: user.role // Include the role in the token payload
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '72h' } // Set token expiration time to 72 hours
+    );
     // Respond with success and user ID along with JWT token
     res.status(201).json({
       message: 'User created successfully. Proceed to payment to select a subscription.',
@@ -188,8 +195,15 @@ const login = (req, res, next) => {
 
     // Generate JWT token
     //TODO store the token in the frontend
-    const token = jwt.sign({ id: user.idUsers }, process.env.JWT_SECRET, { expiresIn: '72h' });
-
+    const token = jwt.sign(
+      {
+        id: user.idUsers,
+        email: user.Email,
+        role: user.role // Include the role in the token payload
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '72h' } // Set token expiration time to 72 hours
+    );
     // Send response with token
     res.status(200).json({ token });
   })(req, res, next); // Pass req, res, and next to the middleware

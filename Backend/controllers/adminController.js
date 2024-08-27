@@ -1,55 +1,91 @@
 const xss = require('xss');
-const {
-  deleteUserById,
-  updateUserById,
-  getSubscriptions,
-  createUser
-} = require('../models/userModel');
-const {
-  sanitizeAndValidateData,
-  handleZodErrorResponse,
-  logAndRespondWithError
-} = require('../utils/validationUtils');
+const { deleteUserById, updateUserById, getSubscriptions, createUser } = require('../models/userModel');
+const { getUsersWithActiveSubscriptions } = require('../models/adminModel');
+const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
-const { updateUserSchema } = require('../db-postgres/zodSchema');
-
+const { updateUserSchema, CityCreateSchema, CityUpdateSchema } = require('../db-postgres/zodSchema');
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
-const jwt = require('jsonwebtoken');
-const passport = require('../utils/passport-config'); // Import from the correct path
 
-const bcrypt = require('bcrypt');
-const saltRounds = 10;
-async function getUsersWithActiveSubscriptions() {
+async function addParkingLot(req, res) {
   try {
-    const users = await prisma.users.findMany({
-      where: {
-        UserSubscriptions: {
-          some: {
-            Status: 'active', // Assuming 'active' is the status for active subscriptions
-            EndDate: {
-              gte: new Date() // Ensure subscription end date is in the future or is ongoing
-            }
-          }
-        }
-      },
-      include: {
-        UserSubscriptions: {
-          where: {
-            Status: 'active',
-            EndDate: {
-              gte: new Date()
-            }
-          },
-          include: {
-            SubscriptionPlans: true // Include subscription plan details if needed
-          }
-        }
-      }
+    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress']);
+    const { CityName, FullAddress } = sanitizedData;
+
+    // Validate input with schema
+    CityCreateSchema.parse({ CityName, FullAddress });
+
+    // Create the city record in the database
+    const city = await prisma.cities.create({
+      data: { CityName, FullAddress }
     });
-    return users;
+
+    if (!city) {
+      return res.status(500).json({ message: 'Failed to add city' });
+    }
+
+    // Return the created city details
+    return res.status(201).json({
+      CityName: city.CityName,
+      FullAddress: city.FullAddress
+    });
   } catch (error) {
-    console.error('Error fetching users with active subscriptions:', error.message);
-    throw error;
+    console.error('Error adding city:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
+
+async function updateParkingLot(req, res) {
+  try {
+    // Sanitize input
+    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress']);
+
+    const { CityName, FullAddress } = sanitizedData; // Extract parameters from sanitized data
+
+    // Validate input with schema
+    CityUpdateSchema.parse({ CityName, FullAddress });
+
+    // Update the city record in the database
+    const updatedCity = await prisma.cities.update({
+      where: { id: idCities }, // Assuming 'id' is the primary key field in the 'cities' table
+      data: { CityName, FullAddress }
+    });
+
+    if (!updatedCity) {
+      return res.status(404).json({ message: 'City not found' });
+    }
+
+    // Return the updated city details
+    return res.status(200).json({
+      idCities: updatedCity.id,
+      CityName: updatedCity.CityName,
+      FullAddress: updatedCity.FullAddress
+    });
+  } catch (error) {
+    console.error('Error updating city:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+async function areaIdsByCityID(req, res) {
+  try {
+    const { idCities } = req.params;
+    const areaIds = await prisma.areas.findMany({
+      where: { CityID: idCities },
+      select: { idAreas: true }
+    });
+
+    if (!areaIds) {
+      return res.status(404).json({ message: 'City not found' });
+    }
+
+    // Return the area IDs associated with the city
+    return res.status(200).json({ areaIds: areaIds.map((area) => area.idAreas) });
+  } catch (err) {}
+}
+
+module.exports = {
+  addParkingLot,
+  updateParkingLot,
+  areaIdsByCityID
+};

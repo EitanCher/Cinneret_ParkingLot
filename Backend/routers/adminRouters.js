@@ -1,20 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const {
-  updateUser,
-  deleteUser,
-  getSubscriptionTiers,
-  addUserController,
-  login,
-  addCarsController,
-  updateCars
-} = require('../controllers/userController');
-const {
-  getParkingLotCities,
-  reserveParkingController,
-  cancelReservationController,
-  setExitTimeController
-} = require('../controllers/parkingController');
+const { getParkingLotCities } = require('../controllers/parkingController');
+
+const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(
@@ -22,10 +10,31 @@ const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_SECRET,
   process.env.REDIRECT_URI
 );
-const { apiKeyAuth } = require('../utils/apiKeyAuth');
+const { addParkingLot, updateParkingLot, areaIdsByCityID } = require('../controllers/adminController');
+const { apiKeyAuth } = require('../middlewares/apiKeyAuth');
 const passport = require('passport');
-const { createStripeSession } = require('../controllers/stripeCheckoutController');
-const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
+const { checkAdminRole } = require('../middlewares/isAdmin');
+
+router.post(
+  '/parking/add-parking-lot',
+  passport.authenticate('jwt', { session: false }),
+  checkAdminRole,
+  addParkingLot
+);
+router.put(
+  '/parking/update-parking-lot',
+  passport.authenticate('jwt', { session: false }),
+  checkAdminRole,
+  updateParkingLot
+);
+router.get(
+  '/parking/all-parking-lots',
+  passport.authenticate('jwt', { session: false }),
+  checkAdminRole,
+  getParkingLotCities
+);
+
+router.get('/parking/area/:cityId', passport.authenticate('jwt', { session: false }), checkAdminRole, areaIdsByCityID);
 
 //System endpints
 

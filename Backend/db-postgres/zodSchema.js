@@ -181,6 +181,10 @@ module.exports = {
   ReservationBaseSchema,
   ReservationCreateSchema,
   deleteReservationSchema,
-  setExitTimeModelSchema
+  setExitTimeModelSchema,
+  CityCreateSchema,
+  CityUpdateSchema,
+  AreaCreateSchema,
+  AreaUpdateSchema
   // ReservationUpdateSchema
 };

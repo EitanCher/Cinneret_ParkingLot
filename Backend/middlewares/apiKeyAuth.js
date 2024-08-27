@@ -1,5 +1,6 @@
-require('dotenv').config();
-
+require('dotenv').config(); // Load environment variablesconst express = require('express');
+const express = require('express');
+const app = express();
 const apiKeyAuth = (req, res, next) => {
   const apiKey = req.headers['api-key'];
 
