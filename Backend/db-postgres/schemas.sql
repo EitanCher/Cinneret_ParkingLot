@@ -776,3 +776,7 @@ ALTER TABLE ONLY "ParkingLot_DB"."UserSubscriptions"
 -- PostgreSQL database dump complete
 --
 
+
+-- need to add taken by to slots. 
+--need to program that fault will switch active to false
+--need to add trigger for num parking slots

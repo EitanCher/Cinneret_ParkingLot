@@ -505,7 +505,8 @@ module.exports = {
   setExitTimeModel,
   fetchParkingHistoryByUserId,
   fetchTotalParkingTimeByUser,
-  fetchAverageParkingTimeByUser
+  fetchAverageParkingTimeByUser,
+  getAreaIdsByCityId
 };
 
 //TODO

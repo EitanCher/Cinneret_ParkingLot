@@ -35,6 +35,11 @@ router.delete('/parking/reservation', apiKeyAuth, cancelReservationController);
 
 //once a car enters the parking lot we need to assign carid,entrance,needtoexitby and reservationid to the parking log.
 //slot id assigned when he enters the slot
+
+// when car enters the parking lot we need to designate a lot because some may be reserved.
+//find a slot that is avilable right now for the longest time (up to max reservation time) and designate it to the car
+//show the car the maximum time he can park for.
+//slot cant be a reserved one
 router.post('/parking/log/exittime/:idCars', apiKeyAuth, setExitTimeController);
 
 module.exports = router;
