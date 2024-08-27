@@ -9,7 +9,6 @@ const bcrypt = require('bcrypt');
 const prisma = require('../prisma/prismaClient'); // Adjust the path to your Prisma client
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/userModel'); // Adjust the path to your User model
-dotenv.config();
 
 const opts = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

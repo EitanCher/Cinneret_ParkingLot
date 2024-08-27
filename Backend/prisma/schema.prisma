@@ -54,14 +54,17 @@ model Gates {
 }
 
 model ParkingLog {
-  idParkingLog Int      @id @default(autoincrement())
-  CarID        Int
-  SlotID       Int
-  Entrance     DateTime @db.Timestamptz(6)
-  Exit         DateTime @db.Timestamptz(6)
-  Violation    Boolean
-  Cars         Cars     @relation(fields: [CarID], references: [idCars])
-  Slots        Slots    @relation(fields: [SlotID], references: [idSlots])
+  idParkingLog  Int           @id @default(autoincrement())
+  CarID         Int
+  SlotID        Int
+  Entrance      DateTime      @db.Timestamptz(6)
+  Exit          DateTime      @db.Timestamptz(6)
+  NeedToExitBy  DateTime      @db.Timestamptz(6)
+  Violation     Boolean
+  ReservationID Int? // New field to link to Reservations
+  Cars          Cars          @relation(fields: [CarID], references: [idCars])
+  Slots         Slots         @relation(fields: [SlotID], references: [idSlots])
+  Reservations  Reservations? @relation(fields: [ReservationID], references: [idReservation]) // Link to Reservations
 }
 
 model SlotSizes {
@@ -123,17 +126,19 @@ model Users {
   Cars              Cars[]
   UserSubscriptions UserSubscriptions[]
   Reservations      Reservations[]      @relation("UserReservations")
+  violations        Int                 @default(0) // New field to track violations
 }
 
 model Reservations {
-  idReservation    Int      @id @default(autoincrement())
+  idReservation    Int          @id @default(autoincrement())
   UserID           Int
   CarID            Int
   SlotID           Int
-  ReservationStart DateTime @db.Timestamptz(6)
-  ReservationEnd   DateTime @db.Timestamptz(6)
-
-  Slots Slots @relation("SlotReservations", fields: [SlotID], references: [idSlots])
-  Cars  Cars  @relation("CarReservations", fields: [CarID], references: [idCars])
-  Users Users @relation("UserReservations", fields: [UserID], references: [idUsers])
+  ReservationStart DateTime     @db.Timestamptz(6)
+  ReservationEnd   DateTime     @db.Timestamptz(6)
+  Status           String       @default("pending") @db.VarChar(20) // Add status field
+  Slots            Slots        @relation("SlotReservations", fields: [SlotID], references: [idSlots])
+  Cars             Cars         @relation("CarReservations", fields: [CarID], references: [idCars])
+  Users            Users        @relation("UserReservations", fields: [UserID], references: [idUsers])
+  ParkingLogs      ParkingLog[] // Relation to ParkingLog
 }

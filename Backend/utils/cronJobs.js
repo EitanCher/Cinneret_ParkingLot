@@ -6,8 +6,7 @@
 const cron = require('node-cron');
 const prisma = require('../prisma/prismaClient'); // Adjust path as needed
 
-cron.schedule('0 0 * * *', async () => {
-  // Runs daily at midnight
+const checkExpiredSubscriptions = async () => {
   try {
     console.log('test');
     // any subscriptions with an EndDate before today will be marked as expired.
@@ -24,4 +23,33 @@ cron.schedule('0 0 * * *', async () => {
   } catch (error) {
     console.error('Error updating subscription statuses:', error.message);
   }
-});
+};
+
+const checkReservations = async () => {
+  try {
+    // Fetch reservations that are pending and past their end time
+    const reservations = await prisma.reservations.findMany({
+      where: {
+        Status: 'pending',
+        ReservationEnd: {
+          lt: new Date() // End time in the past
+        }
+      }
+    });
+    // Update violation count for users if any reservation violates any rule
+    for (const reservation of reservations) {
+      await prisma.users.updateMany({
+        where: { idUsers: reservation.UserID },
+        data: {
+          violations: { increment: 1 } // Increment violation count by 1
+        }
+      });
+      await prisma.reservations.deleteMany({
+        where: { idReservation: reservations.idReservation } // Delete reservation after violation update
+      });
+    }
+  } catch (error) {}
+};
+
+cron.schedule('0 0 * * *', checkExpiredSubscriptions); // Run daily at midnight
+cron.schedule('0 0 * * *', checkReservations); // Run daily at midnight
