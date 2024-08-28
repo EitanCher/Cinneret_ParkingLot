@@ -10,7 +10,17 @@ const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_SECRET,
   process.env.REDIRECT_URI
 );
-const { addParkingLot, updateParkingLot, areaIdsByCityID } = require('../controllers/adminController');
+const {
+  addParkingLot,
+  updateParkingLot,
+  areaIdsByCityID,
+  addArea,
+  updateArea,
+  removeArea,
+  deleteSlotsByIdRangeController,
+  deactivateSlot,
+  addSlotsToArea
+} = require('../controllers/adminController');
 const { apiKeyAuth } = require('../middlewares/apiKeyAuth');
 const passport = require('passport');
 const { checkAdminRole } = require('../middlewares/isAdmin');
@@ -34,8 +44,23 @@ router.get(
   getParkingLotCities
 );
 
-router.get('/parking/area/:cityId', passport.authenticate('jwt', { session: false }), checkAdminRole, areaIdsByCityID);
-
+//NEEDS TESTING
+router.post('/parking/areas', passport.authenticate('jwt', { session: false }), checkAdminRole, addArea);
+router.delete('/parking/areas', passport.authenticate('jwt', { session: false }), checkAdminRole, removeArea);
+router.get('/parking/areas/:cityId', passport.authenticate('jwt', { session: false }), checkAdminRole, areaIdsByCityID);
+router.delete(
+  '/parking/slots/range',
+  passport.authenticate('jwt', { session: false }),
+  checkAdminRole,
+  deleteSlotsByIdRangeController
+);
+router.post(
+  '/parking/slots/deactivate/:id',
+  passport.authenticate('jwt', { session: false }),
+  checkAdminRole,
+  deactivateSlot
+);
+router.post('/parking/slots/add', passport.authenticate('jwt', { session: false }), checkAdminRole, addSlotsToArea);
 //System endpints
 
 //eitan hits this route once a car gets out of the parking lot. will need to check if he had a reservation provide idCars

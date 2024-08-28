@@ -150,6 +150,15 @@ const setExitTimeModelSchema = z.object({
   idCars: z.number().int().positive(), // Assuming idCars is a positive integer
   exitTime: z.instanceof(Date) // Validate that exitTime is a Date object
 });
+
+const rangeSchema = z
+  .object({
+    startId: z.number().int().nonnegative(),
+    endId: z.number().int().nonnegative()
+  })
+  .refine((data) => data.startId <= data.endId, {
+    message: 'startId must be less than or equal to endId'
+  });
 module.exports = {
   hwAliveSchema,
   carSchema,
@@ -185,6 +194,7 @@ module.exports = {
   CityCreateSchema,
   CityUpdateSchema,
   AreaCreateSchema,
-  AreaUpdateSchema
+  AreaUpdateSchema,
+  rangeSchema
   // ReservationUpdateSchema
 };

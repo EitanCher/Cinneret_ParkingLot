@@ -5,9 +5,10 @@ const { z } = require('zod');
 
 const { hashPassword } = require('../utils/passwordUtils');
 const { convertToISODate } = require('../utils/dateUtils');
-const { updateUserSchema, addUserControllerSchema, carsArraySchema } = require('../db-postgres/zodSchema');
+const { updateUserSchema, addUserControllerSchema, carsArraySchem, rangeSchema } = require('../db-postgres/zodSchema');
 const { promise } = require('zod');
 const saltRounds = 10;
+const idSchema = z.number().int().positive();
 
 async function getUsersWithActiveSubscriptions() {
   try {
@@ -43,6 +44,33 @@ async function getUsersWithActiveSubscriptions() {
   }
 }
 
+//NEEDS TESTING
+async function addSlots(idAreas, numOfSlots) {
+  try {
+    idSchema.parse(idAreas);
+    idSchema.parse(numOfSlots);
+    // Prepare new slots data
+    const newSlots = Array.from({ length: numOfSlots }).map(() => ({
+      AreaID: idAreas,
+      Busy: false, //HAS DEFAULT VALUES ANYWAY SO CAN DROP
+      Active: true, //HAS DEFAULT VALUES ANYWAY SO CAN DROP
+      Fault: false, //HAS DEFAULT VALUES ANYWAY SO CAN DROP
+      BorderRight: Math.floor(Math.random() * 100) /// NEED TO DECIDE WHAT TO DO WITH THIS
+    }));
+
+    const result = await prisma.slots.createMany({
+      data: newSlots
+    });
+    if (!result.count) {
+      throw new Error('Failed to insert slots into the database.');
+    }
+    return result;
+  } catch (err) {
+    console.error('Error inserting slots:', err.message);
+    throw new Error(`Error adding slots: ${err.message}`);
+  }
+}
 module.exports = {
-  getUsersWithActiveSubscriptions
+  getUsersWithActiveSubscriptions,
+  addSlots
 };

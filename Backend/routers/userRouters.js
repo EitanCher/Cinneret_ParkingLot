@@ -11,7 +11,8 @@ const {
   addUserController,
   login,
   addCarsController,
-  updateCars
+  updateCars,
+  deleteCarById
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -43,6 +44,7 @@ router.post('/register', addUserController);
 router.post('/login', login);
 router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
 router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
+router.delete('/cars/:id', passport.authenticate('jwt', { session: false }), deleteCarById);
 router.get('/parking/total-time', passport.authenticate('jwt', { session: false }), calculateTotalParkingTimeByUser);
 router.get(
   '/parking/average-duration',
