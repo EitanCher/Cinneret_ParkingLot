@@ -21,7 +21,7 @@ private:
 	WiFiMulti wifiMulti;
     	WebsocketsClient wsClient;
 
-    // Declared to be further passed into constructor:
+	// Declared to support the constructor syntax:
 	IPAddress local_IP;
 
 
