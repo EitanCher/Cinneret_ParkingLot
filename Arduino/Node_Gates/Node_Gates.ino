@@ -1,20 +1,22 @@
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <ArduinoWebsockets.h>
 #include <KinneretParkingLot.h>
 
 // A switch between Entrance / Exit mode of the Gate. Set to enable using one board for both cases due to HW restrictions of the project
-#define GATE_SWITCH 4
+#define GATE_SWITCH 2
+#define SWITCH_EXIT 4
 // HC-SR04 (ultrasonic sensor) pins:
-#define TRIG_PIN_ENTR 19
-#define ECHO_PIN_ENTR 18
-#define TRIG_PIN_EXIT 5
-#define ECHO_PIN_EXIT 17
+#define PIN_TRIG_ENTR 19
+#define PIN_ECHO_ENTR 18
+#define PIN_TRIG_EXIT 5
+#define PIN_ECHO_EXIT 17
 // Distance threshold in centimeters:
 #define THRESHOLD_GATE 20
 #define THRESHOLD_SLOT 20
 
-//MyLotNode myClient;
-IPAddress local_IP(192, 168, 2, 255); // Manually set for current device (Ultrasonic Sensor on Entry). Has to be verified not to conflict with other devices.
+//Create an object for Client:
+IPAddress local_IP(192, 168, 1, 200); // Manually set for current device (Ultrasonic Sensor on Entry). Has to be verified not to conflict with other devices.
 MyLotNode myClient(local_IP);
 
 void setup() {
@@ -23,16 +25,17 @@ void setup() {
   
   // Initialize the pins:
   pinMode(GATE_SWITCH, INPUT_PULLUP);
-  pinMode(TRIG_PIN_ENTR, OUTPUT);
-  pinMode(ECHO_PIN_ENTR, INPUT);
-  pinMode(TRIG_PIN_EXIT, OUTPUT);
-  pinMode(ECHO_PIN_EXIT, INPUT);
+  pinMode(SWITCH_EXIT, INPUT_PULLUP);
+  pinMode(PIN_TRIG_ENTR, OUTPUT);
+  pinMode(PIN_ECHO_ENTR, INPUT);
+  pinMode(PIN_TRIG_EXIT, OUTPUT);
+  pinMode(PIN_ECHO_EXIT, INPUT);
 
   //Initiate the WIFI connection:
   myClient.networkSetup();
 
   // Connect to the server:
-  myClient.connectWebSocket();
+  myClient.connectWebSocket();  
 }
 
 void loop() {
@@ -42,18 +45,16 @@ void loop() {
   int gateState = digitalRead(GATE_SWITCH);
   
   // Check the mode of the Gate:
-  if (gateState == LOW)  // GATE_SWITCH pin is connected to ground
+  if (gateState == LOW) { // GATE_SWITCH pin is connected to ground
     Serial.println("Acting as Entry Gate -------------------------------");
-  else Serial.println("Acting as Exit Gate -------------------------------");
-
-  // Read the ultrasonic on Entry gate and send to server if an object detected:
-  uint16_t distanceEntry = myClient.getDistance(TRIG_PIN_ENTR, ECHO_PIN_ENTR);
-	myClient.sendDistance("entry", THRESHOLD_GATE, distanceEntry);
+    // Read the ultrasonic on Entry gate and send to server if an object detected:
+    myClient.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
+  } else {
+    Serial.println("Acting as Exit Gate -------------------------------");
+    // Read the ultrasonic on Exit gate and send to server if an object detected:
+    myClient.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
+  }
   
-  // Read the ultrasonic on Exit gate and send to server if an object detected:
-  uint16_t distanceExit = myClient.getDistance(TRIG_PIN_EXIT, ECHO_PIN_EXIT);
-	myClient.sendDistance("exit", THRESHOLD_GATE, distanceExit);
-
   delay(2000);
 }
 
