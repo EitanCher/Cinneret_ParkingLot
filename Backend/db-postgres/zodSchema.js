@@ -13,12 +13,26 @@ const addUserControllerSchema = z.object({
   Password: z.string().min(6).max(100) // Adjust length to match your database
 });
 
-const subscriptionSchema = z.object({
+const userSubscriptionSchema = z.object({
   SubscriptionPlanID: z.number(),
   StartDate: z.string(),
   EndDate: z.string(),
   Status: z.string().optional()
 });
+
+const userSubscriptionDateSchema = z.object({
+  StartDate: z.string(),
+  EndDate: z.string()
+});
+const createSubscriptionPlanSchema = z.object({
+  name: z.string().min(1, 'Name is required'), // Name is a required string
+  price: z.number().positive('Price must be a positive number'), // Price must be a positive number
+  maxCars: z.number().int().positive('MaxCars must be a positive integer'), // MaxCars must be a positive integer
+  maxActiveReservations: z.number().int().nonnegative('MaxActiveReservations cannot be negative'), // MaxActiveReservations must be a non-negative integer
+  features: z.array(z.string()).nonempty('Features array cannot be empty') // Features is an array of non-empty strings
+});
+
+const updateSubscriptionPlanSchema = createSubscriptionPlanSchema.partial();
 
 const updateUserSchema = z.object({
   persId: z.string().optional(), // Change to string
@@ -95,30 +109,26 @@ const ParkingLogSchema = z.object({
 const ParkingLogCreateSchema = ParkingLogSchema.omit({ idParkingLog: true });
 const ParkingLogUpdateSchema = ParkingLogSchema.partial();
 
-// SlotSize Schema
-const SlotSizeSchema = z.object({
-  idSlotSizes: z.number().int(),
-  Size: z.string().max(45)
-});
-const SlotSizeCreateSchema = SlotSizeSchema.omit({ idSlotSizes: true });
-const SlotSizeUpdateSchema = SlotSizeSchema.partial();
-
 // Slot Schema
 const SlotSchema = z.object({
   idSlots: z.number().int(),
   Busy: z.boolean(),
   AreaID: z.number().int(),
-  SavedFor: z.number().int(),
-  TakenBy: z.number().int(),
-  BorderLeft: z.number().int(),
   BorderRight: z.number().int(),
-  Size: z.number().int(),
   Active: z.boolean(),
   Fault: z.boolean()
 });
 const SlotCreateSchema = SlotSchema.omit({ idSlots: true });
-const SlotUpdateSchema = SlotSchema.partial();
 
+const updateSlotSchema = z.object({
+  BorderRight: z.number().optional(),
+  Active: z.boolean().optional() // Active status, true or false
+});
+const updateCriteriaSchema = z.object({
+  cityId: z.number().int().min(1),
+  areaId: z.number().int().optional(),
+  active: z.boolean().optional()
+});
 const ReservationBaseSchema = z
   .object({
     CarID: z.number().int().positive(), // Matches Prisma's CarID
@@ -159,6 +169,43 @@ const rangeSchema = z
   .refine((data) => data.startId <= data.endId, {
     message: 'startId must be less than or equal to endId'
   });
+const viewSlotsSchema = z.object({
+  cityId: z
+    .string()
+    .nonempty({ message: 'cityId is required' })
+    .refine((value) => !isNaN(Number(value)), { message: 'cityId must be a number' })
+    .transform((value) => Number(value)), // Converts string to number
+  active: z
+    .string()
+    .optional()
+    .transform((value) => (value === 'true' ? true : value === 'false' ? false : undefined)), // Converts 'true'/'false' to boolean
+  areaId: z
+    .string()
+    .optional()
+    .refine((value) => !isNaN(Number(value)), { message: 'areaId must be a number' })
+    .transform((value) => (value ? Number(value) : undefined)) // Converts string to number
+});
+
+const deleteSlotsCriteriaSchema = z.object({
+  cityId: z.number().int(),
+  areaId: z.number().int().optional(),
+  active: z.boolean().optional()
+});
+
+const UserCriteriaSchema = z
+  .object({
+    status: z.string().optional(),
+    fname: z.string().optional(),
+    lname: z.string().optional(),
+    subscriptionTier: z.string().optional(),
+    email: z.string().optional(),
+    violations: z.number().int().optional()
+  })
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'At least one criteria field is required'
+  });
+const IdSchema = z.number().int().positive();
+
 module.exports = {
   hwAliveSchema,
   carSchema,
@@ -178,15 +225,13 @@ module.exports = {
   ParkingLogSchema,
   ParkingLogCreateSchema,
   ParkingLogUpdateSchema,
-  SlotSizeSchema,
-  SlotSizeCreateSchema,
-  SlotSizeUpdateSchema,
+  updateSlotSchema,
+  updateCriteriaSchema,
   SlotSchema,
   SlotCreateSchema,
-  SlotUpdateSchema,
   addUserControllerSchema,
   updateUserSchema,
-  subscriptionSchema,
+  subscriptionSchema: userSubscriptionSchema,
   ReservationBaseSchema,
   ReservationCreateSchema,
   deleteReservationSchema,
@@ -195,6 +240,14 @@ module.exports = {
   CityUpdateSchema,
   AreaCreateSchema,
   AreaUpdateSchema,
-  rangeSchema
+  rangeSchema,
+  createSubscriptionPlanSchema,
+  updateSubscriptionPlanSchema,
+  userSubscriptionDateSchema,
+  viewSlotsSchema,
+  deleteSlotsCriteriaSchema,
+  UserCriteriaSchema,
+  IdSchema
+
   // ReservationUpdateSchema
 };

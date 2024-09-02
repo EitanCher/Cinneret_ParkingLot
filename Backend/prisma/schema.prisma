@@ -16,15 +16,15 @@ model Cities {
   idCities    Int     @id @default(autoincrement())
   CityName    String  @unique @db.VarChar(45)
   FullAddress String  @db.VarChar(255)
-  Areas       Areas[]
-  Gates       Gates[]
+  Areas       Areas[] @relation("CityAreas") // Remove onDelete from here
+  Gates       Gates[] @relation("CityGates") // Remove onDelete from here
 }
 
 model Areas {
   idAreas  Int     @id @default(autoincrement())
   AreaName String  @unique @db.VarChar(45)
   CityID   Int
-  Cities   Cities  @relation(fields: [CityID], references: [idCities], onDelete: NoAction, onUpdate: NoAction)
+  Cities   Cities  @relation("CityAreas", fields: [CityID], references: [idCities], onDelete: Cascade) // Specify onDelete here
   Slots    Slots[]
 }
 
@@ -43,7 +43,10 @@ model Gates {
   Entrance Boolean
   Fault    Boolean
   CityID   Int
-  Cities   Cities  @relation(fields: [CityID], references: [idCities], onDelete: Cascade, onUpdate: NoAction)
+  Cities   Cities  @relation("CityGates", fields: [CityID], references: [idCities], onDelete: Cascade) // Specify onDelete here
+
+  GateIP   String @unique @db.VarChar(15) // New column for Gate IP
+  CameraIP String @unique @db.VarChar(15) // New column for Camera IP
 }
 
 model ParkingLog {
@@ -61,15 +64,18 @@ model ParkingLog {
 }
 
 model Slots {
-  idSlots      Int            @id @default(autoincrement())
-  Busy         Boolean?       @default(false) // Optional, defaults to false
-  BorderRight  Int
-  Active       Boolean?       @default(true) // Optional, defaults to true
-  Fault        Boolean?       @default(false) // Optional, defaults to false
-  AreaID       Int
+  idSlots     Int      @id @default(autoincrement())
+  Busy        Boolean? @default(false) // Optional, defaults to false
+  BorderRight Int
+  Active      Boolean? @default(true) // Optional, defaults to true
+  Fault       Boolean? @default(false) // Optional, defaults to false
+  AreaID      Int
+
+  SlotIP       String         @unique @db.VarChar(15) // New column for Gate IP
+  CameraIP     String         @unique @db.VarChar(15) // New column for Camera IP
   ParkingLog   ParkingLog[]
   Reservations Reservations[] @relation("SlotReservations")
-  Areas        Areas          @relation(fields: [AreaID], references: [idAreas], onDelete: NoAction, onUpdate: NoAction)
+  Areas        Areas          @relation(fields: [AreaID], references: [idAreas], onDelete: Cascade) // Specify onDelete here
 }
 
 model SubscriptionPlans {

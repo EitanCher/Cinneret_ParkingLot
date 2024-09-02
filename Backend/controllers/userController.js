@@ -1,11 +1,4 @@
-const {
-  deleteUserById,
-  updateUserById,
-  getSubscriptions,
-  createUser,
-  createCars,
-  updateCarsModel
-} = require('../models/userModel');
+const { deleteUserById, updateUserById, getSubscriptions, createUser, createCars, updateCarsModel } = require('../models/userModel');
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
@@ -90,8 +83,7 @@ const deleteUser = async (req, res) => {
     console.log('type of req.user.id: ' + typeof idFromToken);
     console.log('req.params.id: ' + id);
     console.log('req.user.id: ' + idFromToken);
-    if (id !== idFromToken.toString())
-      return res.status(403).json({ message: 'You are not authorized to delete this account' });
+    if (id !== idFromToken.toString()) return res.status(403).json({ message: 'You are not authorized to delete this account' });
 
     const result = await deleteUserById(id); // Make sure to await the result
     if (result.success) {
@@ -110,14 +102,7 @@ const addUserController = async (req, res) => {
 
   try {
     // Sanitize the input data
-    const sanitizedUserData = sanitizeObject(userData, [
-      'persId',
-      'FirstName',
-      'LastName',
-      'Email',
-      'Phone',
-      'Password'
-    ]);
+    const sanitizedUserData = sanitizeObject(userData, ['persId', 'FirstName', 'LastName', 'Email', 'Phone', 'Password']);
 
     // Create user
     const user = await createUser(sanitizedUserData);
@@ -315,8 +300,6 @@ const deleteCarById = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
-//update subscription plans
 
 module.exports = {
   updateUser,

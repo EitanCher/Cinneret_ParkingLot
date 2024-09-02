@@ -28,11 +28,8 @@ const getParkingLotCities = async (req, res) => {
     // Fetch the list of cities
     const parkingLots = await getAllParkingLots();
 
-    // Extract CityName values into a simple array
-    const cityNames = parkingLots.cities.map((city) => city.CityName);
-
     // Respond with the array of city names
-    res.json(cityNames);
+    res.json(parkingLots);
   } catch (error) {
     console.error('Error getting parking lots:', error.message);
     res.status(500).json({ error: 'Server error' });
