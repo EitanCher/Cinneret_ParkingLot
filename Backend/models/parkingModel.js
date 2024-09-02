@@ -28,7 +28,8 @@ const getAllParkingLots = async () => {
     console.log('start of try block in model');
     const cities = await prisma.cities.findMany({
       select: {
-        CityName: true
+        CityName: true,
+        FullAddress: true
       }
     });
     return { cities };
@@ -210,9 +211,7 @@ async function findBestSlot(idCities, reservationStart) {
       }
     }
 
-    return bestSlot
-      ? { success: true, slot: bestSlot, maxDuration }
-      : { success: false, message: 'No suitable slot found.' };
+    return bestSlot ? { success: true, slot: bestSlot, maxDuration } : { success: false, message: 'No suitable slot found.' };
   } catch (err) {
     console.error('Error finding best slot:', err.message);
     return { success: false, message: 'An error occurred while finding the best slot.' };
@@ -352,10 +351,7 @@ const setExitTimeModel = async (idCars, exitTime) => {
 };
 
 //NEEDS TESTING
-const fetchParkingHistoryByUserId = async (
-  idUsers,
-  { startDate, endDate, registration, slotNumber, carModel, violationStatus }
-) => {
+const fetchParkingHistoryByUserId = async (idUsers, { startDate, endDate, registration, slotNumber, carModel, violationStatus }) => {
   try {
     // Validate idUsers
     idUsersSchema.parse(idUsers);
@@ -455,8 +451,10 @@ const fetchTotalParkingTimeByUser = async (idUsers) => {
 //NEEDS TESTING
 const fetchAverageParkingTimeByUser = async (idUsers) => {
   try {
-    // Fetch the parking logs for the user
-    const parkingLogs = await prisma.parkingLog.findMany({
+    const totalParkingTime = await fetchTotalParkingTimeByUser(idUsers);
+
+    // Fetch the number of parking logs for the user
+    const parkingLogsCount = await prisma.parkingLog.count({
       where: {
         Cars: {
           OwnerID: idUsers
@@ -465,25 +463,12 @@ const fetchAverageParkingTimeByUser = async (idUsers) => {
     });
 
     // If no logs are found, return null
-    if (!parkingLogs || parkingLogs.length === 0) {
+    if (parkingLogsCount === 0) {
       return null;
     }
 
-    // Calculate total parking time and number of logs
-    let totalDuration = 0;
-    let count = 0;
-
-    for (let log of parkingLogs) {
-      const duration = log.Exit ? log.ExitTime.getTime() - log.Entrance.getTime() : 0;
-      if (duration > 0) {
-        // Only consider valid durations
-        totalDuration += duration;
-        count++;
-      }
-    }
-
     // Compute the average duration in milliseconds
-    const averageDuration = count > 0 ? totalDuration / count : 0;
+    const averageDuration = totalParkingTime / parkingLogsCount;
 
     // Return the average parking time in seconds
     return averageDuration / 1000; // Convert milliseconds to seconds
@@ -539,3 +524,5 @@ module.exports = {
 //real time parking lot available spaces
 
 //Integration with Calendar: Sync parking history with calendar events or reminders.
+
+//admin should have quick buttons like open gate, deactivate slot etc etc etc

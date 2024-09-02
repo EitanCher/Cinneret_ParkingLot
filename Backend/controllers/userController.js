@@ -1,11 +1,4 @@
-const {
-  deleteUserById,
-  updateUserById,
-  getSubscriptions,
-  createUser,
-  createCars,
-  updateCarsModel
-} = require('../models/userModel');
+const { deleteUserById, updateUserById, getSubscriptions, createUser, createCars, updateCarsModel } = require('../models/userModel');
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
@@ -90,8 +83,7 @@ const deleteUser = async (req, res) => {
     console.log('type of req.user.id: ' + typeof idFromToken);
     console.log('req.params.id: ' + id);
     console.log('req.user.id: ' + idFromToken);
-    if (id !== idFromToken.toString())
-      return res.status(403).json({ message: 'You are not authorized to delete this account' });
+    if (id !== idFromToken.toString()) return res.status(403).json({ message: 'You are not authorized to delete this account' });
 
     const result = await deleteUserById(id); // Make sure to await the result
     if (result.success) {
@@ -110,14 +102,7 @@ const addUserController = async (req, res) => {
 
   try {
     // Sanitize the input data
-    const sanitizedUserData = sanitizeObject(userData, [
-      'persId',
-      'FirstName',
-      'LastName',
-      'Email',
-      'Phone',
-      'Password'
-    ]);
+    const sanitizedUserData = sanitizeObject(userData, ['persId', 'FirstName', 'LastName', 'Email', 'Phone', 'Password']);
 
     // Create user
     const user = await createUser(sanitizedUserData);
@@ -271,7 +256,50 @@ const getUserCarsController = async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-//update subscription plans
+
+// add delete cars controller
+
+const deleteCarById = async (req, res) => {
+  console.log('Received DELETE request for /api/users/cars/:idCars');
+  console.log('User:', req.user); // Log authenticated user
+  console.log('Request Params:', req.params); // Log request parameters
+
+  // Extract car ID from request parameters
+  const { idCars } = req.params;
+  const userId = req.user.idUsers; // User ID from JWT token
+
+  try {
+    console.log('start of try block in deleteCarById controller');
+
+    // Retrieve the car to check ownership
+    const car = await prisma.cars.findUnique({
+      where: { idCars: parseInt(idCars, 10) }
+    });
+
+    if (!car) {
+      return res.status(404).json({ message: 'Car not found' });
+    }
+
+    // Check if the car belongs to the authenticated user
+    if (car.OwnerID !== userId) {
+      return res.status(403).json({ message: 'Forbidden: You do not own this car' });
+    }
+
+    // Delete the car from the database
+    const deletedCar = await prisma.cars.delete({
+      where: { idCars: parseInt(idCars, 10) } // Ensure idCars is an integer
+    });
+
+    // Respond with success
+    res.status(200).json({
+      message: 'Car deleted successfully',
+      deletedCar
+    });
+  } catch (err) {
+    console.error('Error deleting car:', err.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
 
 module.exports = {
   updateUser,
@@ -280,5 +308,6 @@ module.exports = {
   addUserController,
   login,
   addCarsController,
-  updateCars
+  updateCars,
+  deleteCarById
 };

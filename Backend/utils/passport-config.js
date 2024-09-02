@@ -22,7 +22,7 @@ passport.use(
       const user = await prisma.users.findUnique({
         where: { idUsers: jwt_payload.id }
       });
-
+      console.log('user in jwtstrategy', user);
       if (!user) {
         console.log('User not found');
         return done(null, false, { message: 'User not found' });

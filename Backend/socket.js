@@ -14,6 +14,7 @@ const availableSpotsMap = new Map();
 
 async function countAvailableSpots(cityID) {
   try {
+    console.log('try block countavailablespots');
     const areaIds = await getAreaIdsByCityId(cityID); // Await the result of getAreaIdsByCityId
 
     const availableSpots = await prisma.slots.count({

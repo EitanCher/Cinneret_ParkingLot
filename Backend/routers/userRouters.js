@@ -11,7 +11,8 @@ const {
   addUserController,
   login,
   addCarsController,
-  updateCars
+  updateCars,
+  deleteCarById
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -25,11 +26,7 @@ const {
 } = require('../controllers/parkingController');
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.REDIRECT_URI
-);
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.REDIRECT_URI);
 
 const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
@@ -43,12 +40,9 @@ router.post('/register', addUserController);
 router.post('/login', login);
 router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
 router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
+router.delete('/cars/:id', passport.authenticate('jwt', { session: false }), deleteCarById);
 router.get('/parking/total-time', passport.authenticate('jwt', { session: false }), calculateTotalParkingTimeByUser);
-router.get(
-  '/parking/average-duration',
-  passport.authenticate('jwt', { session: false }),
-  calculateAverageParkingTimeByUser
-);
+router.get('/parking/average-duration', passport.authenticate('jwt', { session: false }), calculateAverageParkingTimeByUser);
 router.post('/parking/reservation', passport.authenticate('jwt', { session: false }), bookSlotController);
 //here also i decided to not use /:id in order to be able to keep the same controller and model to work with both admin and user
 //important- idReservation in the req.body
@@ -59,8 +53,9 @@ router.delete('/parking/reservation', passport.authenticate('jwt', { session: fa
 router.get('/parking/find-best-slot', passport.authenticate('jwt', { session: false }), findAvailableSlotController);
 router.get('/parking/history', passport.authenticate('jwt', { session: false }), getParkingHistory);
 router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
-
 router.get('/google/callback', googleCallback);
+
+/// add a middleware to check if subscription is active
 
 router.get(
   '/google',
