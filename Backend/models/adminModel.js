@@ -275,10 +275,10 @@ async function calculateIncomeByTimeFrame(startDate, endDate) {
   }
 }
 
-async function viewSlotsByStatusAreaCity(cityId, active, areaId) {
+async function viewSlotsByCriteria(cityId, active, areaId, busy) {
   try {
     // Validate input using the Zod schema
-    const validatedInput = viewSlotsSchema.parse({ cityId, active, areaId });
+    const validatedInput = viewSlotsSchema.parse({ cityId, active, areaId, busy });
 
     // Construct the where clause based on validated filters
     const whereClause = {
@@ -291,6 +291,10 @@ async function viewSlotsByStatusAreaCity(cityId, active, areaId) {
 
     if (validatedInput.areaId !== undefined) {
       whereClause.AreaID = validatedInput.areaId; // Use validated number
+    }
+
+    if (validatedInput.busy !== undefined) {
+      whereClause.Busy = validatedInput.busy; // Use validated boolean value
     }
 
     // Fetch the slots based on the constructed where clause
@@ -382,19 +386,44 @@ async function updateSlotsByCriteria({ cityId, areaId, active, updates }) {
 async function deleteSlotsByCriteria(criteria) {
   // Validate the criteria using Zod
   const validatedCriteria = deleteSlotsCriteriaSchema.parse(criteria);
+  console.log('Validated Criteria:', validatedCriteria);
 
   try {
+    // Find all area IDs in the city if AreaID is not provided
+    const areaIds = validatedCriteria.AreaID
+      ? [validatedCriteria.AreaID] // Use the provided AreaID if available
+      : await prisma.areas
+          .findMany({
+            where: {
+              CityID: validatedCriteria.cityId
+            },
+            select: {
+              idAreas: true
+            }
+          })
+          .then((areas) => areas.map((area) => area.idAreas));
+
+    // Debugging: Log areaIds and criteria
+    console.log('Area IDs:', areaIds);
+
     // Build the query filters based on the validated criteria
     const filters = {
-      CityID: validatedCriteria.cityId,
-      ...(validatedCriteria.areaId !== undefined && { AreaID: validatedCriteria.areaId }),
-      ...(validatedCriteria.active !== undefined && { Active: validatedCriteria.active })
+      AreaID: {
+        in: areaIds
+      },
+      ...(validatedCriteria.Active !== undefined && { Active: validatedCriteria.Active }) // Ensure Active filter is correctly applied
     };
+
+    // Debugging: Log filters to be used
+    console.log('Filters:', filters);
 
     // Perform the deletion
     const deletedSlots = await prisma.slots.deleteMany({
       where: filters
     });
+
+    // Log the number of deleted slots
+    console.log(`Deleted ${deletedSlots.count} slots`);
 
     return deletedSlots;
   } catch (error) {
@@ -501,7 +530,7 @@ module.exports = {
   calculateAvgParkingTimeForAll,
   calculateMostActiveUsers,
   calculateIncomeByTimeFrame,
-  viewSlotsByStatusAreaCity,
+  viewSlotsByCriteria,
   updateSlotByID,
   updateSlotsByCriteria,
   deleteSlotsByCriteria,

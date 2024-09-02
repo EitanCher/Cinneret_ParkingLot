@@ -171,27 +171,20 @@ const rangeSchema = z
   });
 const viewSlotsSchema = z.object({
   cityId: z
-    .string()
-    .nonempty({ message: 'cityId is required' })
-    .refine((value) => !isNaN(Number(value)), { message: 'cityId must be a number' })
-    .transform((value) => Number(value)), // Converts string to number
-  active: z
-    .string()
-    .optional()
-    .transform((value) => (value === 'true' ? true : value === 'false' ? false : undefined)), // Converts 'true'/'false' to boolean
-  areaId: z
-    .string()
-    .optional()
-    .refine((value) => !isNaN(Number(value)), { message: 'areaId must be a number' })
-    .transform((value) => (value ? Number(value) : undefined)) // Converts string to number
+    .number()
+    .int()
+    .positive()
+    .refine((value) => value > 0, { message: 'cityId must be a positive number' }),
+  active: z.boolean().optional(),
+  areaId: z.number().int().positive().optional(),
+  busy: z.boolean().optional() // Adding the busy criterion
 });
 
 const deleteSlotsCriteriaSchema = z.object({
-  cityId: z.number().int(),
-  areaId: z.number().int().optional(),
-  active: z.boolean().optional()
+  cityId: z.number().int().positive(), // Required and must be a positive integer
+  AreaID: z.number().int().positive().optional(), // Optional positive integer
+  Active: z.boolean().optional() // Optional boolean
 });
-
 const UserCriteriaSchema = z
   .object({
     status: z.string().optional(),

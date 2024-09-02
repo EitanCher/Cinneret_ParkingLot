@@ -16,7 +16,7 @@ const {
   removeSubscriptionController,
   removeParkingLot,
   mostActiveUsersController,
-  slotsByStatusAreaCity,
+  viewSlotsByCriteriaController,
   updateIndividualSlot,
   updateSlotsByCriteriaController,
   deleteSlotsByStatusAreaCity,
@@ -45,14 +45,15 @@ router.get('/parking/all-parking-lots', getParkingLotCities); //Tested || OK
 
 router.post('/parking/areas', addArea); //Tested || OK
 router.delete('/parking/areas/:idAreas', removeArea); //Tested || OK
-router.get('/parking/areas/:cityId', areasByCityID);
+router.get('/parking/areas/:cityId', areasByCityID); //Tested || OK
 
-router.delete('/parking/slots/:slotID', deleteSlotByIDController);
-router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity);
-router.delete('/parking/slots/range', deleteSlotsByIdRangeController);
+router.delete('/parking/slots/:idSlots', deleteSlotByIDController); //Tested || OK
+router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity); //Tested || OK
+
+router.delete('/parking/slots/range', deleteSlotsByIdRangeController); //NEEDS TESTING
 router.patch('/parking/slots/bulk-update', updateSlotsByCriteriaController); //this already has a toggle for status tbh
 router.post('/parking/slots/changestatus/:id', toggleSlot); //activate/deactivate
-router.get('/parking/slots', slotsByStatusAreaCity);
+router.get('/parking/slots', viewSlotsByCriteriaController); //Tested || OK
 router.patch('/parking/slots/update/:idSlots', updateIndividualSlot);
 router.post('/parking/slots/add', addSlotsToArea);
 

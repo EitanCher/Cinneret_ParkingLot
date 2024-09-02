@@ -10,7 +10,7 @@ const {
   calculateAvgParkingTimeForAll,
   calculateMostActiveUsers,
   calculateIncomeByTimeFrame,
-  viewSlotsByStatusAreaCity,
+  viewSlotsByCriteria,
   updateSlotByID,
   deleteSlotsByCriteria,
   updateSlotsByCriteria,
@@ -399,24 +399,36 @@ const deleteSlotsByIdRangeController = async (req, res) => {
     res.status(400).json({ message: err.errors ? err.errors : 'Invalid input' });
   }
 };
-//NEEDS TESTING
 // TODO view slots- add criteria (busy)
-async function slotsByStatusAreaCity(req, res) {
+async function viewSlotsByCriteriaController(req, res) {
   try {
-    const { active, cityId, areaId } = req.query;
-    if (!active && !cityId && !areaId) {
-      return res.status(400).json({ error: 'At least one filter parameter is required.' });
+    // Parse query parameters
+    console.log('req query active:', req.query.active);
+    console.log('req query cityId:', req.query.cityId);
+    console.log('req query areaId:', req.query.areaId);
+    console.log('req query busy:', req.query.busy);
+
+    const active = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
+    const cityId = req.query.cityId ? parseInt(req.query.cityId, 10) : undefined;
+    const areaId = req.query.areaId ? parseInt(req.query.areaId, 10) : undefined;
+    const busy = req.query.busy === 'true' ? true : req.query.busy === 'false' ? false : undefined;
+
+    // Log parsed values for debugging
+    console.log('Parsed Query Params:', { cityId, active, areaId, busy });
+
+    // Check for required parameters
+    if (!cityId) {
+      return res.status(400).json({ error: 'cityId is required.' });
     }
 
-    const result = await viewSlotsByStatusAreaCity(active, cityId, areaId);
-
+    const result = await viewSlotsByCriteria(cityId, active, areaId, busy);
     res.status(200).json(result);
   } catch (error) {
     console.error('Error viewing slots:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }
-//NEEDS TESTING
+
 async function updateIndividualSlot(req, res) {
   try {
     const { idSlots } = req.params;
@@ -464,17 +476,23 @@ async function updateSlotsByCriteriaController(req, res) {
 //NEEDS TESTING
 async function deleteSlotsByStatusAreaCity(req, res) {
   try {
-    const { cityId } = req.params;
-    const { areaId, active } = req.query;
-    if (!cityId) {
+    const { cityID } = req.params;
+    const { AreaID, Active } = req.query;
+
+    if (!cityID) {
       return res.status(400).json({ error: 'City is required' });
     }
+
+    // Create criteria object using the correct field names
     const criteria = {
-      cityId: parseInt(cityId, 10),
-      areaId: areaId ? parseInt(areaId, 10) : undefined,
-      active: active !== undefined ? active === 'true' : undefined
+      cityId: parseInt(cityID, 10),
+      AreaID: AreaID ? parseInt(AreaID, 10) : undefined,
+      Active: Active !== undefined ? Active === 'true' : undefined
     };
+
+    console.log('Criteria in controller:', criteria);
     const result = await deleteSlotsByCriteria(criteria);
+
     if (result.count === 0) {
       return res.status(404).json({ message: 'No slots found to delete' });
     }
@@ -485,10 +503,12 @@ async function deleteSlotsByStatusAreaCity(req, res) {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }
+
 // NEEDS TESTING
 async function deleteSlotByIDController(req, res) {
   try {
     const { idSlots } = req.params;
+
     const result = await deleteSlotByID(idSlots);
 
     if (!result) {
@@ -571,7 +591,7 @@ module.exports = {
   avgParkingTimeForAll,
   mostActiveUsersController,
   incomeByTimeFrame,
-  slotsByStatusAreaCity,
+  viewSlotsByCriteriaController,
   updateIndividualSlot,
   updateSlotsByCriteriaController,
   deleteSlotsByStatusAreaCity,
