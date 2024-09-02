@@ -4,7 +4,7 @@ const { getParkingLotCities } = require('../controllers/parkingController');
 const {
   addParkingLot,
   updateParkingLot,
-  areaIdsByCityID,
+  areasByCityID,
   addArea,
   updateArea,
   removeArea,
@@ -44,8 +44,8 @@ router.get('/parking/all-parking-lots', getParkingLotCities); //Tested || OK
 //NEEDS TESTING
 
 router.post('/parking/areas', addArea); //Tested || OK
-router.delete('/parking/areas/:idAreas', removeArea);
-router.get('/parking/areas/:cityId', areaIdsByCityID);
+router.delete('/parking/areas/:idAreas', removeArea); //Tested || OK
+router.get('/parking/areas/:cityId', areasByCityID);
 
 router.delete('/parking/slots/:slotID', deleteSlotByIDController);
 router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity);

@@ -129,22 +129,33 @@ async function removeParkingLot(req, res) {
 }
 
 //NEEDS TESTING
-async function areaIdsByCityID(req, res) {
+async function areasByCityID(req, res) {
   try {
     const { idCities } = req.params;
-    const areaIds = await prisma.areas.findMany({
+    const areas = await prisma.areas.findMany({
       where: { CityID: idCities },
-      select: { idAreas: true }
+      select: { idAreas: true, AreaName: true }
     });
 
-    if (!areaIds) {
+    if (areas.length === 0) {
       return res.status(404).json({ message: 'City not found' });
     }
 
-    // Return the area IDs associated with the city
-    return res.status(200).json({ areaIds: areaIds.map((area) => area.idAreas) });
-  } catch (err) {}
+    // Return the area IDs and names associated with the city
+    return res.status(200).json({
+      areas: areas.map((area) => ({
+        idAreas: area.idAreas,
+        AreaName: area.AreaName
+      }))
+    });
+  } catch (err) {
+    // Handle the error
+    // Handle the error
+    console.error(err);
+    return res.status(500).json({ message: 'An error occurred while retrieving areas.' });
+  }
 }
+
 //NEEDS TESTING
 
 async function addArea(req, res) {
@@ -547,7 +558,7 @@ async function createGate(req, res) {}
 module.exports = {
   addParkingLot,
   updateParkingLot,
-  areaIdsByCityID,
+  areasByCityID,
   addArea,
   removeArea,
   deleteSlotsByIdRangeController,
