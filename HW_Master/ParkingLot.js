@@ -2,13 +2,12 @@ const path = require('path');
 const express = require('express');
 const webSocket = require('ws');
 const app = express();
+const myDBPool = require('./db_config');
 
 const WS_PORT = 5555;
 const HTTP_PORT = 8000;
 
 const wsServer = new webSocket.Server({port: WS_PORT}, ()=>console.log(`Websocket server is listening at ${WS_PORT}`));
-//const wsServer = new WebSocket.Server({ noServer: true });
-
 
 // Get local IP address =======================
 const os = require('os');
@@ -29,28 +28,39 @@ function getLocalIPAddress() {
 console.log('Local IP Address:', getLocalIPAddress());
 // =============================================
 
-let lotClients = {
-    clientsEntry :      [{ip: '192.168.1.2', wsc: null, isActive: true, isConnected: true}],
-    clientsEntryCam :   [{ip: '192.168.1.3', wsc: null, isActive: true, isConnected: true}],
-    clientsExit :       [{ip: '192.168.1.4', wsc: null, isActive: true, isConnected: true}],
-    clientsExitCam :    [{ip: '192.168.1.5', wsc: null, isActive: true, isConnected: true}],
-    clientsSlot :       [{ip: '192.168.1.6', wsc: null, isActive: true, isConnected: true}, {ip: '192.168.1.7', wsc: null, isActive: true, isConnected: true}],
-    clientsSlotCam :    [{ip: '192.168.1.8', wsc: null, isActive: true, isConnected: true}, {ip: '192.168.1.9', wsc: null, isActive: true, isConnected: true}]
-}
+let lotClients = {gates: [], gateCams: [], slots: [], slotCams: []};    // Empty arrays - to enable push command in fetchNodesData()
+fetchNodesData();
 
-function findClientByIP(ip) {
+
+function findNodePair(inputIP) {
+    // Map the nodes pairs:
+    const pairsMap = {
+        gates: 'gateCams',
+        gateCams: 'gates',
+        slots: 'slotCams',
+        slotCams: 'slots'
+    };
+    
     for (const key in lotClients) {
-        const myClient = lotClients[key].find(item => item.ip === ip);
-        if (myClient) 
-          return myClient;
+        // Find the metadata of the connected client by its IP:
+        const client1 = lotClients[key].find(item => item.ip === inputIP);
+        if (client1) {
+            // Find metadata of the corresponding client (same index as client1 but in the correspoing array)
+            const myIndex = lotClients[key].indexOf(client1);
+            const correspondingKey = pairsMap[key];
+            const client2 = lotClients[correspondingKey][myIndex];
+            return [client1, client2];
+        }
     }
     return null;
-  }
+}
 
 // WebSocket server logic
 wsServer.on('connection', (ws, req) => {
     const ip = req.socket.remoteAddress.replace('::ffff:', ''); // Get client IP address
-    const myClientDict = findClientByIP(ip);    // Get Client's metadata from lotClients
+    const clientsPair = findNodePair(ip);
+    const clientDict_1 = clientsPair[0];    // Get the connected Client's metadata from lotClients
+    const clientDict_2 = clientsPair[1];    // Get the corresponding Client's metadata from lotClients
 
     
     console.log('New client connected:', ip);
@@ -58,33 +68,13 @@ wsServer.on('connection', (ws, req) => {
     ws.on('message', (data) => {
         const message = data.toString();
         console.log('Received:', message);
-  
-        if (myClientDict.isActive && message === 'entry_event') {
+        
+        if (!clientDict_1.isConnected) clientDict_1.isConnected = true;
+        if (clientDict_1.isActive && message === 'entry_event') {
             console.log("trigggger");
-            /*if (secondClient) {
-                secondClient.send('Trigger action');
-            }*/
-            // Send a message to the ESP32 camera client to take a snapshot
-            /*
-            if (clientCamEntry) {
-                clientCamEntry.send('TRIGGER');
-                console.log('TRIGGER command sent to Entry camera client.');
-            } else { console.log('Entry camera client not connected.'); }
-        } else if (message === 'CAMERA_CONNECTED') {
-            clientCamEntry = ws;
-            console.log('Camera client identified.');
-            */
         }
     });
-  /*
-    // Identify the second ESP32 client
-    ws.on('message', (message) => {
-      if (message === 'I am the second client') {
-        secondClient = ws;
-        console.log('Second client connected');
-      }
-    });*/
-  
+    
     // Handle client disconnection
     ws.on('close', () => {
         console.log('Client disconnected.');
@@ -95,37 +85,55 @@ wsServer.on('connection', (ws, req) => {
         }
     });
 });
-  
-  
-/*  
-// WebSocket server logic
-    wsServer.on('connection', (ws, req) => {
-    console.log('Connected');
-    lotClients.push(ws);
 
-    // If there is a message from one of the clients, send it to all the clients:
-    ws.on('message', data => {
-        lotClients.forEach((ws, i) => {
-            if(ws.readyState === ws.OPEN) {
-                ws.send(data);
-            } 
-            // If a client doesn't have an opened connection, remove it from the array:
-            else {
-                lotClients.splice(i, 1);
-            }
-        })
-    });
-});
-*/
+async function fetchNodesData() {
+    try {
+        await myDBPool.connect();
+        const res1 = await myDBPool.query('SELECT \"Fault\", \"CameraIP\", \"GateIP\" FROM \"Gates\";');
+        console.log(res1.rows); // Display the result
+        const res2 = await myDBPool.query('SELECT \"Fault\", \"CameraIP\", \"SlotIP\" FROM \"Slots\";');
 
-// Serve HTML file:
-const server = app.get('/entry_us', (req, res) => res.sendFile(path.resolve(__dirname, './index.html')));
-// Listen for client's HTTP connection:
-app.listen(HTTP_PORT, ()=>console.log(`HTTP server is listening at ${HTTP_PORT}`));
+        // Store gates' and gateCams metadata:
+        res1.rows.forEach(row => {
+            let myGateDict = {};
+            let myGateCamDict = {};
+            myGateDict.ip =    row.GateIP;
+            myGateCamDict.ip = row.CameraIP;
+            myGateDict.wsc =    null;
+            myGateCamDict.wsc = null;
+            myGateDict.isFault =    row.Fault;
+            myGateCamDict.isFault = row.Fault;
+            myGateDict.isConnected =    false;
+            myGateCamDict.isConnected = false;
+            
+            lotClients.gates.push(myGateDict); // Add the Gate dictionary into 'gates' array
+            lotClients.gateCams.push(myGateCamDict); // Add the Gate Cam dictionary into 'gateCams' array
+        });
 
-server.on('upgrade', (request, socket, head) => {
-    wsServer.handleUpgrade(request, socket, head, (ws) => {
-        wsServer.emit('connection', ws, request);
-    });
-});
+        // Store slots' and slotCams metadata:
+        res2.rows.forEach(row => {
+            let mySlotDict = {};
+            let mySlotCamDict = {};
+            mySlotDict.ip =    row.GateIP;
+            mySlotCamDict.ip = row.CameraIP;
+            mySlotDict.wsc =    null;
+            mySlotCamDict.wsc = null;
+            mySlotDict.isFault =    row.Fault;
+            mySlotCamDict.isFault = row.Fault;
+            mySlotDict.isConnected =    false;
+            mySlotCamDicts.isConnected = false;
+            
+            lotClients.slots.push(mySlotDict); // Add the Slot dictionary into 'slots' array
+            lotClients.slotCams.push(mySlotCamDict); // Add the Slot Cam dictionary into 'slotCams' array
+        });
+
+    } catch (err) {
+        console.error('Error executing query', err.stack);
+    } finally {
+        // Close the database connection
+        await myDBPool.end();
+  }
+}
+
+
   
