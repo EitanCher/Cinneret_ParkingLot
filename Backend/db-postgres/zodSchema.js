@@ -25,11 +25,11 @@ const userSubscriptionDateSchema = z.object({
   EndDate: z.string()
 });
 const createSubscriptionPlanSchema = z.object({
-  name: z.string().min(1, 'Name is required'), // Name is a required string
-  price: z.number().positive('Price must be a positive number'), // Price must be a positive number
-  maxCars: z.number().int().positive('MaxCars must be a positive integer'), // MaxCars must be a positive integer
-  maxActiveReservations: z.number().int().nonnegative('MaxActiveReservations cannot be negative'), // MaxActiveReservations must be a non-negative integer
-  features: z.array(z.string()).nonempty('Features array cannot be empty') // Features is an array of non-empty strings
+  name: z.string().min(1, 'Name is required'),
+  price: z.number().positive('Price must be a positive number'),
+  maxCars: z.number().int().positive('MaxCars must be a positive integer'),
+  maxActiveReservations: z.number().int().nonnegative('MaxActiveReservations cannot be negative'),
+  features: z.array(z.string()).nonempty('Features array cannot be empty')
 });
 
 const updateSubscriptionPlanSchema = createSubscriptionPlanSchema.partial();
@@ -185,18 +185,17 @@ const deleteSlotsCriteriaSchema = z.object({
   AreaID: z.number().int().positive().optional(), // Optional positive integer
   Active: z.boolean().optional() // Optional boolean
 });
-const UserCriteriaSchema = z
-  .object({
-    status: z.string().optional(),
-    fname: z.string().optional(),
-    lname: z.string().optional(),
-    subscriptionTier: z.string().optional(),
-    email: z.string().optional(),
-    violations: z.number().int().optional()
-  })
-  .refine((data) => Object.values(data).some((value) => value !== undefined), {
-    message: 'At least one criteria field is required'
-  });
+const UserCriteriaSchema = z.object({
+  subscriptionStatus: z.string().optional(),
+  SubscriptionPlanName: z.string().optional(),
+  FirstName: z.string().optional(),
+  LastName: z.string().optional(),
+  Phone: z.string().optional(),
+  Email: z.string().optional(),
+  Violations: z.number().optional(),
+  Role: z.string().optional()
+});
+
 const IdSchema = z.number().int().positive();
 
 module.exports = {

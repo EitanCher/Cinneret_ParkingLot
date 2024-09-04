@@ -16,7 +16,8 @@ const {
   updateSlotsByCriteria,
   deleteSlotByID,
   getUsersByCriteria,
-  toggleSubscriptionStatusById
+  toggleSubscriptionStatusById,
+  getAllUsers
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -250,19 +251,21 @@ async function toggleSlot(req, res) {
 //NEEDS TESTING  || ALREADY REFACTORED WITH A MODEL
 async function addSubscriptionController(req, res) {
   try {
-    const sanitizedData = sanitizeObject(req.body, ['Name', 'Features']);
-    const { Price, MaxCars, MaxActiveReservations } = req.body;
-    const { Name, Features } = sanitizedData;
-    const Data = {
-      Name,
-      Price,
-      MaxCars,
-      MaxActiveReservations,
-      Features
+    const { Name, Price, MaxCars, MaxActiveReservations, Features } = req.body;
+    const data = {
+      name: Name,
+      price: Price,
+      maxCars: MaxCars,
+      maxActiveReservations: MaxActiveReservations,
+      features: Features
     };
-    const subscription = await addSubscription(Data);
 
-    // Return the created subscription details
+    // Validate the input data with the Zod schema
+    createSubscriptionPlanSchema.parse(data);
+
+    // Call the model function to add subscription
+    const subscription = await addSubscription(data);
+
     return res.status(201).json({
       idSubscriptionPlans: subscription.idSubscriptionPlans,
       Name: subscription.Name,
@@ -273,13 +276,16 @@ async function addSubscriptionController(req, res) {
     });
   } catch (err) {
     console.error('Error adding subscription:', err);
-    return res.status(400).json({ message: 'Invalid data', errors: err.message });
+    return res.status(400).json({ message: 'Invalid data', errors: err.errors });
   }
 }
 
 async function updateSubscriptionController(req, res) {
   try {
-    const idSubscriptionPlans = req.params.idSubscriptionPlans;
+    const idSubscriptionPlans = parseInt(req.params.idSubscriptionPlans, 10); // Convert to integer
+    if (isNaN(idSubscriptionPlans)) {
+      return res.status(400).json({ message: 'Invalid subscriptionId' });
+    }
     const sanitizedData = sanitizeObject(req.body, ['Name', 'Features']);
     const { Name, Features } = sanitizedData;
     const { Price, MaxCars, MaxActiveReservations } = req.body;
@@ -288,7 +294,10 @@ async function updateSubscriptionController(req, res) {
     if (!result) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
-    return res.status(200).json(result);
+    return res.status(200).json({
+      message: 'Subscription plan updated successfully',
+      subscription: result
+    });
   } catch (error) {
     console.error('Error updating subscription:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
@@ -297,7 +306,11 @@ async function updateSubscriptionController(req, res) {
 
 async function removeSubscriptionController(req, res) {
   try {
-    const idSubscriptionPlans = req.params.idSubscriptionPlans;
+    const idSubscriptionPlans = parseInt(req.params.idSubscriptionPlans, 10);
+    console.log('id in controller:' + idSubscriptionPlans);
+    if (isNaN(idSubscriptionPlans)) {
+      return res.status(400).json({ message: 'Invalid subscription ID' });
+    }
     const result = await deleteSubscriptionPlanByID(idSubscriptionPlans);
     if (!result) {
       return res.status(404).json({ message: 'Subscription not found' });
@@ -344,7 +357,16 @@ async function incomeByTimeFrame(req, res) {
 //NEEDS TESTING
 async function mostActiveUsersController(req, res) {
   try {
-    const result = await calculateMostActiveUsers(numUsers); //recieves  OwnerID: 2,FirstName: 'Jane',LastName: 'Smith',Email: 'jane.smith@example.com',logCount: 120
+    // Extract numUsers from query parameters or set a default value
+    const numUsers = parseInt(req.query.numUsers, 10) || 10; // Default to 10 if not provided
+
+    // Validate numUsers to ensure it's a positive number
+    if (isNaN(numUsers) || numUsers <= 0) {
+      return res.status(400).json({ message: 'Invalid number of users' });
+    }
+
+    // Call the function to calculate the most active users
+    const result = await calculateMostActiveUsers(numUsers);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error calculating most active users:', error);
@@ -352,7 +374,6 @@ async function mostActiveUsersController(req, res) {
   }
 }
 
-// NEEDS TESTING
 async function addSlotsToArea(req, res) {
   try {
     const { idAreas, numOfSlots } = req.body;
@@ -432,6 +453,7 @@ async function viewSlotsByCriteriaController(req, res) {
 async function updateIndividualSlot(req, res) {
   try {
     const { idSlots } = req.params;
+    console.log('idslots in controller:' + idSlots);
     const { BorderRight, Active } = req.body;
     const result = await updateSlotByID(idSlots, { BorderRight, Active });
 
@@ -449,7 +471,7 @@ async function updateIndividualSlot(req, res) {
 async function updateSlotsByCriteriaController(req, res) {
   try {
     const { cityId, areaId, active } = req.query;
-    const { borderRight, activeStatus } = req.body;
+    const { BorderRight, Active } = req.body;
 
     // Call the model function to update slots
     const result = await updateSlotsByCriteria({
@@ -457,8 +479,8 @@ async function updateSlotsByCriteriaController(req, res) {
       areaId: areaId ? Number(areaId) : undefined,
       active: active ? JSON.parse(active) : undefined,
       updates: {
-        BorderRight: borderRight,
-        Active: activeStatus
+        BorderRight: BorderRight,
+        Active: Active
       }
     });
 
@@ -522,24 +544,30 @@ async function deleteSlotByIDController(req, res) {
 //NEEDS TESTING
 async function viewUsersByCriteria(req, res) {
   try {
-    const { subscriptionStatus, SubscriptionPlanName, FirstName, LastName, Phone, Email, Violations } = req.query;
+    console.log('Request Query:', req.query);
+
+    // Extract query parameters
+    const { status, fname, lname, subscriptionTier, email, violations, role } = req.query;
+    console.log('Extracted Query Parameters:', { status, fname, lname, subscriptionTier, email, violations, role });
+
+    // Build the criteria object with consistent naming
     const criteria = {
-      ...(validatedParams.subscriptionStatus && { subscriptionStatus: validatedParams.subscriptionStatus }),
-      ...(validatedParams.SubscriptionPlanName && { SubscriptionPlanName: validatedParams.SubscriptionPlanName }),
-      ...(validatedParams.FirstName && { FirstName: validatedParams.FirstName }),
-      ...(validatedParams.LastName && { LastName: validatedParams.LastName }),
-      ...(validatedParams.Phone && { Phone: validatedParams.Phone }),
-      ...(validatedParams.Email && { Email: validatedParams.Email }),
-      ...(validatedParams.Violations !== undefined && { Violations: validatedParams.Violations })
+      ...(status && { subscriptionStatus: status }), // Ensure this matches the model
+      ...(fname && { FirstName: fname }), // Ensure this matches the model
+      ...(lname && { LastName: lname }), // Ensure this matches the model
+      ...(subscriptionTier && { SubscriptionPlanName: subscriptionTier }), // Ensure this matches the model
+      ...(email && { Email: email }), // Ensure this matches the model
+      ...(violations !== undefined && { Violations: parseInt(violations, 10) }), // Ensure this matches the model
+      ...(role && { Role: role }) // Ensure this matches the model
     };
+
+    console.log('Criteria object:', criteria);
 
     // Ensure that at least one criteria is present
     if (Object.keys(criteria).length === 0) {
       return res.status(400).json({ error: 'At least one criteria must be provided' });
     }
-    if (users.length === 0) {
-      return res.status(404).json({ message: 'No users found matching the criteria' });
-    }
+
     // Fetch users by criteria
     const users = await getUsersByCriteria(criteria);
 
@@ -550,6 +578,7 @@ async function viewUsersByCriteria(req, res) {
     return res.status(500).json({ error: 'An error occurred while fetching users' });
   }
 }
+
 async function toggleUserSubscriptionStatus(req, res) {
   try {
     // Extract the ID from the URL parameters

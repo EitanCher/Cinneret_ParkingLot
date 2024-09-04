@@ -17,7 +17,8 @@ const {
   updateCriteriaSchema,
   deleteSlotsCriteriaSchema,
   UserCriteriaSchema,
-  IdSchema
+  IdSchema,
+  createSubscriptionPlanSchema
 } = require('../db-postgres/zodSchema');
 const { promise } = require('zod');
 const saltRounds = 10;
@@ -57,7 +58,6 @@ async function getUsersWithActiveSubscriptions() {
   }
 }
 
-//NEEDS TESTING
 async function addSlotsBulk(idAreas, numOfSlots) {
   try {
     idSchema.parse(idAreas);
@@ -86,11 +86,15 @@ async function addSlotsBulk(idAreas, numOfSlots) {
 
 async function addSubscription(data) {
   try {
-    createSubscriptionPlanSchema.parse({
-      data
-    });
+    // The schema is already validated in the controller function
     const subscription = await prisma.subscriptionPlans.create({
-      data
+      data: {
+        Name: data.name,
+        Price: data.price,
+        MaxCars: data.maxCars,
+        MaxActiveReservations: data.maxActiveReservations,
+        Features: data.features
+      }
     });
     return subscription;
   } catch (err) {
@@ -150,6 +154,7 @@ async function updateSubscriptionPlanByID(idSubscriptionPlans, data) {
 
 async function deleteSubscriptionPlanByID(idSubscriptionPlans) {
   try {
+    console.log('id is ' + idSubscriptionPlans);
     const existingSubscription = await getSubscriptionPlanByID(idSubscriptionPlans);
     if (!existingSubscription) {
       return res.status(404).json({ message: 'Subscription plan not found' });
@@ -193,6 +198,11 @@ async function calculateAvgParkingTimeForAll() {
   }
 }
 
+function convertBigIntToString(data) {
+  //for postgres count(*)
+  return JSON.parse(JSON.stringify(data, (key, value) => (typeof value === 'bigint' ? value.toString() : value)));
+}
+
 async function calculateMostActiveUsers(numOfUsers) {
   try {
     // Validate numOfUsers to ensure it's a number and avoid SQL injection
@@ -202,27 +212,26 @@ async function calculateMostActiveUsers(numOfUsers) {
 
     // Fetch owners and count their parking logs
     const topOwners = await prisma.$queryRaw`
-    SELECT
-      Cars.OwnerID,
-      Users.FirstName,
-      Users.LastName,
-      Users.Email,
-      COUNT(*) AS logCount
-    FROM parkingLog
-    JOIN Cars ON parkingLog.CarID = Cars.idCars
-    JOIN Users ON Cars.OwnerID = Users.idUsers
-    GROUP BY
-      Cars.OwnerID,
-      Users.FirstName,
-      Users.LastName,
-      Users.Email
-    ORDER BY logCount DESC
-    LIMIT ${numOfUsers};
-
-
+      SELECT
+        "Cars"."OwnerID",
+        "Users"."FirstName",
+        "Users"."LastName",
+        "Users"."Email",
+        COUNT(*) AS logCount
+      FROM "ParkingLog"
+      JOIN "Cars" ON "ParkingLog"."CarID" = "Cars"."idCars"
+      JOIN "Users" ON "Cars"."OwnerID" = "Users"."idUsers"
+      GROUP BY
+        "Cars"."OwnerID",
+        "Users"."FirstName",
+        "Users"."LastName",
+        "Users"."Email"
+      ORDER BY logCount DESC
+      LIMIT ${numOfUsers};
     `;
 
-    return topOwners; // This will be a list of owners with their log counts
+    // Convert any BigInt to String
+    return convertBigIntToString(topOwners);
   } catch (err) {
     console.error('Error calculating most active users:', err);
     throw new Error('Unable to calculate most active users');
@@ -318,10 +327,20 @@ async function viewSlotsByCriteria(cityId, active, areaId, busy) {
 
 async function updateSlotByID(idSlots, { BorderRight, Active }) {
   try {
+    // Ensure idSlots is parsed correctly
+    const slotId = parseInt(idSlots, 10); // Convert to number if necessary
+
     const validatedInput = updateSlotSchema.parse({ BorderRight, Active });
+
+    // Check if slotId is valid
+    if (isNaN(slotId)) {
+      throw new Error('Invalid slot ID');
+    }
+
     const existingSlot = await prisma.slots.findUnique({
-      where: { idSlots: validatedInput.idSlots }
+      where: { idSlots: slotId } // Use slotId here
     });
+
     if (!existingSlot) {
       throw new Error('Slot not found');
     }
@@ -339,9 +358,10 @@ async function updateSlotByID(idSlots, { BorderRight, Active }) {
     }
 
     const updatedSlot = await prisma.slots.update({
-      where: { idSlots: validatedInput.idSlots },
+      where: { idSlots: slotId }, // Use slotId here
       data: fieldsToUpdate
     });
+
     return updatedSlot;
   } catch (error) {
     console.error('Error updating slot:', error);
@@ -354,11 +374,14 @@ async function updateSlotsByCriteria({ cityId, areaId, active, updates }) {
     // Validate criteria and update data
     const validatedCriteria = updateCriteriaSchema.parse({ cityId, areaId, active });
     const validatedUpdates = updateSlotSchema.parse(updates);
-
+    console.log('validated city : ' + validatedCriteria.cityId);
+    console.log('validated updates :', JSON.stringify(validatedUpdates, null, 2));
     // Build the criteria for selecting slots
     const updateCriteria = {
-      CityID: validatedCriteria.cityId,
-      ...(validatedCriteria.areaId && { AreaID: validatedCriteria.areaId }),
+      Areas: {
+        ...(validatedCriteria.cityId && { CityID: validatedCriteria.cityId }),
+        ...(validatedCriteria.areaId && { idAreas: validatedCriteria.areaId })
+      },
       ...(validatedCriteria.active !== undefined && { Active: validatedCriteria.active })
     };
 
@@ -377,12 +400,17 @@ async function updateSlotsByCriteria({ cityId, areaId, active, updates }) {
       data: updateData
     });
 
+    if (updatedSlots.count === 0) {
+      return { message: 'No slots found matching the criteria' };
+    }
+
     return updatedSlots;
   } catch (error) {
     console.error('Error updating slots by criteria:', error);
     throw new Error('Internal Server Error');
   }
 }
+
 async function deleteSlotsByCriteria(criteria) {
   // Validate the criteria using Zod
   const validatedCriteria = deleteSlotsCriteriaSchema.parse(criteria);
@@ -455,36 +483,40 @@ async function deleteSlotByID(idSlots) {
 }
 async function getUsersByCriteria(criteria) {
   try {
-    // Validate criteria using Zod
+    console.log('Raw Criteria:', criteria); // Log raw criteria
+
+    // Validate the criteria using the Zod schema
     const validatedParams = UserCriteriaSchema.parse(criteria);
+    console.log('Validated Params:', JSON.stringify(validatedParams, null, 2)); // Log validated params
 
-    // Destructure the validated criteria object
-    const { subscriptionStatus, SubscriptionPlanName, FirstName, LastName, Phone, Email, Violations } = validatedParams;
+    // Destructure the validated parameters
+    const { subscriptionStatus, SubscriptionPlanName, FirstName, LastName, Phone, Email, Violations, Role } = validatedParams;
+    console.log('Destructured Values:', { subscriptionStatus, SubscriptionPlanName, FirstName, LastName, Phone, Email, Violations, Role });
 
-    // Construct the Prisma query
+    // Query the database using Prisma
     const users = await prisma.users.findMany({
       where: {
         AND: [
-          // Include conditions only if the respective field is provided
-          ...(subscriptionStatus || SubscriptionPlanName
-            ? [
-                {
-                  UserSubscriptions: {
-                    some: {
-                      Status: subscriptionStatus || undefined,
+          ...(Role ? [{ Role }] : []),
+          ...(FirstName ? [{ FirstName: { equals: FirstName } }] : []), // Ensure exact match for FirstName
+          ...(LastName ? [{ LastName }] : []),
+          ...(Phone ? [{ Phone }] : []),
+          ...(Email ? [{ Email }] : []),
+          ...(Violations !== undefined ? [{ Violations: Violations }] : []), // Exact match
+          {
+            UserSubscriptions: {
+              some: {
+                ...(subscriptionStatus ? { Status: subscriptionStatus } : {}),
+                ...(SubscriptionPlanName
+                  ? {
                       SubscriptionPlans: {
-                        Name: SubscriptionPlanName || undefined
+                        Name: SubscriptionPlanName
                       }
                     }
-                  }
-                }
-              ]
-            : []),
-          ...(FirstName ? { FirstName } : {}),
-          ...(LastName ? { LastName } : {}),
-          ...(Phone ? { Phone } : {}),
-          ...(Email ? { Email } : {}),
-          ...(Violations !== undefined ? { violations: { gte: Violations } } : {})
+                  : {})
+              }
+            }
+          }
         ]
       },
       include: {
@@ -518,6 +550,27 @@ async function toggleSubscriptionStatusById(idUserSubscriptions) {
     throw new Error(error.message || 'Internal Server Error');
   }
 }
+
+async function getAllUsers() {
+  try {
+    // Fetch all users without any criteria
+    const users = await prisma.users.findMany({
+      include: {
+        UserSubscriptions: {
+          include: {
+            SubscriptionPlans: true
+          }
+        }
+      }
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    throw new Error('Error fetching all users');
+  }
+}
+
 //get sub id by sub name
 
 module.exports = {
@@ -536,5 +589,6 @@ module.exports = {
   deleteSlotsByCriteria,
   deleteSlotByID,
   getUsersByCriteria,
-  toggleSubscriptionStatusById
+  toggleSubscriptionStatusById,
+  getAllUsers
 };

@@ -71,8 +71,8 @@ model Slots {
   Fault       Boolean? @default(false) // Optional, defaults to false
   AreaID      Int
 
-  SlotIP       String         @unique @db.VarChar(15) // New column for Gate IP
-  CameraIP     String         @unique @db.VarChar(15) // New column for Camera IP
+  SlotIP       String?        @unique @db.VarChar(15) // Make nullable
+  CameraIP     String?        @unique @db.VarChar(15) // Make nullable
   ParkingLog   ParkingLog[]
   Reservations Reservations[] @relation("SlotReservations")
   Areas        Areas          @relation(fields: [AreaID], references: [idAreas], onDelete: Cascade) // Specify onDelete here
@@ -110,8 +110,8 @@ model Users {
   Phone             String              @db.VarChar(20)
   Email             String              @unique @db.VarChar(100)
   Password          String              @db.VarChar(255)
-  violations        Int                 @default(0)
-  role              String              @default("user") @db.VarChar(50)
+  Violations        Int                 @default(0)
+  Role              String              @default("user") @db.VarChar(50)
   Cars              Cars[]
   Reservations      Reservations[]      @relation("UserReservations")
   UserSubscriptions UserSubscriptions[]
