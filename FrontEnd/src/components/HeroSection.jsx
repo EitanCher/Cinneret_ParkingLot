@@ -1,4 +1,13 @@
 import React from 'react';
+import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button } from '@nextui-org/react';
+import backgroundImage1 from '../assets/images/pexels-rickyrecap-1563256.jpg'; // Adjust the path as needed
+import backgroundImage2 from '../assets/images/pexels-camcasey-1722183.jpg'; // Adjust the path as needed
+import backgroundImage3 from '../assets/images/pexels-joshsorenson-139303.jpg'; // Adjust the path as needed
+import backgroundImage4 from '../assets/images/pexels-pixabay-40142.jpg'; // Adjust the path as needed
+import backgroundImage5 from '../assets/images/pexels-pixabay-417192.jpg'; // Adjust the path as needed
+import backgroundImage6 from '../assets/images/pexels-rickyrecap-1563256 (1).jpg'; // Adjust the path as needed
+import backgroundImage7 from '../assets/images/pexels-rickyrecap-1563256 copy.jpg'; // Adjust the path as needed
+import backgroundImage8 from '../assets/images/pexels-rickyrecap-1604141.jpg'; // Adjust the path as needed
 
 const HeroSection = () => {
   return (
@@ -7,8 +16,7 @@ const HeroSection = () => {
         <div
           className='flex min-h-[480px] flex-col gap-6 bg-cover bg-center bg-no-repeat rounded-xl items-start justify-end px-4 md:px-10 pb-10'
           style={{
-            backgroundImage:
-              'linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%), url("https://cdn.usegalileo.ai/stability/c6dcf5ac-74d4-4a1a-b026-0b6d3516b783.png")'
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%), url(${backgroundImage8})`
           }}
         >
           <div className='flex flex-col gap-2 text-left font-sans'>

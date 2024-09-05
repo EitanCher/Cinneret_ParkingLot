@@ -23,9 +23,9 @@ const HowItWorks = () => {
             }}
           ></div>
           <div>
-            <p className='text-[#111118] text-base font-sans font-medium leading-normal'>Pay by zone</p>
+            <p className='text-[#111118] text-base font-sans font-medium leading-normal'>Chose a parking lot</p>
             <p className='text-[#636388] text-sm font-normal leading-normal'>
-              Use the app to enter the zone number displayed on the parking meter and start a parking session.
+              Our parking lots are spread throughout the entire country. Pick the closest one to you.
             </p>
           </div>
         </div>
@@ -38,10 +38,8 @@ const HowItWorks = () => {
             }}
           ></div>
           <div>
-            <p className='text-[#111118] text-base font-medium leading-normal font-sans'>Find parking</p>
-            <p className='text-[#636388] text-sm font-normal leading-normal'>
-              Use the app to find parking spaces at participating locations and get real-time updates on parking availability.
-            </p>
+            <p className='text-[#111118] text-base font-medium leading-normal font-sans'>Reserve </p>
+            <p className='text-[#636388] text-sm font-normal leading-normal'>Use the app to book a pariking spot in advance (optional)</p>
           </div>
         </div>
         <div className='flex flex-col gap-3 pb-3'>
