@@ -1,5 +1,6 @@
-import React from 'react';
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button } from '@nextui-org/react';
+import React, { useState } from 'react';
+import { Navbar, NavbarBrand, NavbarMenuToggle, NavbarMenuItem, NavbarMenu, NavbarContent, NavbarItem, Button } from '@nextui-org/react';
+
 import { Link, useLocation } from 'react-router-dom'; // Import useLocation from react-router-dom
 
 const Header = () => {
@@ -7,17 +8,25 @@ const Header = () => {
 
   // Function to determine if the current path matches the given path
   const isActivePath = (path) => location.pathname === path;
-
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuItems = [
+    { name: 'Home', path: '/' },
+    { name: 'Cities', path: '/cities' },
+    { name: 'Subscriptions', path: '/subscriptions' }
+  ];
   return (
-    <Navbar isBordered isBlurred={true}>
-      <NavbarBrand>
-        <div className='flex items-center gap-4'>
-          <svg viewBox='0 0 48 48' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-4 h-4 text-[#111118]'>
-            <path d='M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z' fill='currentColor'></path>
-          </svg>
-          <p className='text-[#111118] text-lg font-bold leading-tight tracking-[-0.015em]'>ParkNow</p>
-        </div>{' '}
-      </NavbarBrand>
+    <Navbar isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen} isBordered isBlurred={true}>
+      <NavbarContent>
+        <NavbarMenuToggle aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} className='sm:hidden' />
+        <NavbarBrand>
+          <div className='flex items-center gap-4'>
+            <svg viewBox='0 0 48 48' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-4 h-4 text-[#111118]'>
+              <path d='M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z' fill='currentColor'></path>
+            </svg>
+            <p className='text-[#111118] text-lg font-bold leading-tight tracking-[-0.015em]'>ParkNow</p>
+          </div>{' '}
+        </NavbarBrand>
+      </NavbarContent>
       <NavbarContent className='hidden sm:flex gap-4' justify='center'>
         <NavbarItem isActive={isActivePath('/')}>
           <Link to='/' color='foreground'>
@@ -47,6 +56,22 @@ const Header = () => {
           </Button>
         </NavbarItem>
       </NavbarContent>
+
+      <NavbarMenu>
+        {menuItems.map((item, index) => (
+          <NavbarMenuItem key={`${item}-${index}`}>
+            <Link
+              onClick={() => setIsMenuOpen(false)}
+              color={index === 2 ? 'primary' : index === menuItems.length - 1 ? 'danger' : 'foreground'}
+              className='w-full'
+              to={item.path}
+              size='lg'
+            >
+              {item.name}
+            </Link>
+          </NavbarMenuItem>
+        ))}
+      </NavbarMenu>
     </Navbar>
   );
 };

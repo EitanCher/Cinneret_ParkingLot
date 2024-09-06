@@ -75,7 +75,7 @@ const Subscriptions = () => {
                 <span className='text-[#0e0e1b] text-base font-bold leading-tight'>/Year</span>
               </p>
               <Button as={Link} to={'/signup/' + sub.Name} color='primary'>
-                Button
+                Subscribe
               </Button>
               {sub.Features && sub.Features.length > 0 && (
                 <ul className='list-disc  mt-4'>
