@@ -20,20 +20,17 @@ const Header = () => {
       </NavbarBrand>
       <NavbarContent className='hidden sm:flex gap-4' justify='center'>
         <NavbarItem isActive={isActivePath('/')}>
-          <Link
-            to='/'
-            className={`text-blue-500 ${isActivePath('/') ? 'font-bold' : ''}`} // Apply styles conditionally
-          >
+          <Link to='/' color='foreground'>
             Home
           </Link>
         </NavbarItem>
         <NavbarItem isActive={isActivePath('/cities')}>
-          <Link to='/cities' className={`text-blue-500 ${isActivePath('/cities') ? 'font-bold' : ''}`}>
+          <Link to='/cities' color='foreground'>
             Cities
           </Link>
         </NavbarItem>
         <NavbarItem isActive={isActivePath('/subscriptions')}>
-          <Link to='/subscriptions' className={`text-blue-500 ${isActivePath('/subscriptions') ? 'font-bold' : ''}`}>
+          <Link to='/subscriptions' color='foreground'>
             Subscriptions
           </Link>
         </NavbarItem>

@@ -61,7 +61,8 @@ const carsArraySchema = z.array(carSchema);
 const CitySchema = z.object({
   idCities: z.number().int(),
   CityName: z.string().max(45),
-  FullAddress: z.string().max(255)
+  FullAddress: z.string().max(255),
+  pictureUrl: z.string().url() // Validates that pictureUrl is a valid URL
 });
 const CityCreateSchema = CitySchema.omit({ idCities: true });
 const CityUpdateSchema = CitySchema.partial();

@@ -22,6 +22,7 @@ const saltRounds = 10;
 
 const maxDurationReservation = 24;
 const maxDurationParkingNoReservation = 6;
+
 const getParkingLotCities = async (req, res) => {
   try {
     console.log('start of try block in parking controller');

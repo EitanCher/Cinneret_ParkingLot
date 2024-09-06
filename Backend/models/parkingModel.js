@@ -29,7 +29,8 @@ const getAllParkingLots = async () => {
     const cities = await prisma.cities.findMany({
       select: {
         CityName: true,
-        FullAddress: true
+        FullAddress: true,
+        pictureUrl: true
       }
     });
     return { cities };

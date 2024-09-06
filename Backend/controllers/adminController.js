@@ -36,17 +36,58 @@ const {
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 
+async function updateCityPicture(req, res) {
+  try {
+    const { idCities } = parseInt(req.params.idCities, 10);
+    const stringFields = ['pictureUrl'];
+    const sanitizedData = sanitizeObject(req.body, stringFields);
+    const { pictureUrl } = sanitizedData;
+    CityUpdateSchema.parse({ idCities, pictureUrl });
+
+    const city = await prisma.cities.findUnique({
+      where: {
+        idCities: idCities
+      }
+    });
+    if (!city) return res.status(404).json({ message: 'City not found' });
+
+    // Update the city picture in the database
+    const updatedCity = await prisma.cities.update({
+      where: {
+        idCities: idCities
+      },
+      data: { pictureUrl }
+    });
+
+    return res.status(200).json({
+      message: 'City picture updated successfully',
+      CityName: updatedCity.CityName,
+      FullAddress: updatedCity.FullAddress,
+      pictureUrl: updatedCity.pictureUrl
+    });
+  } catch (error) {
+    console.error('Error updating city picture:', error);
+
+    // Improved error handling
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ message: 'Validation Error', errors: error.errors });
+    }
+
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
 async function addParkingLot(req, res) {
   try {
-    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress']);
-    const { CityName, FullAddress } = sanitizedData;
+    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress', 'pictureUrl']);
+    const { CityName, FullAddress, pictureUrl } = sanitizedData;
 
     // Validate input with schema
-    CityCreateSchema.parse({ CityName, FullAddress });
+    CityCreateSchema.parse({ CityName, FullAddress, pictureUrl });
 
     // Create the city record in the database
     const city = await prisma.cities.create({
-      data: { CityName, FullAddress }
+      data: { CityName, FullAddress, pictureUrl }
     });
 
     if (!city) {
@@ -56,13 +97,15 @@ async function addParkingLot(req, res) {
     // Return the created city details
     return res.status(201).json({
       CityName: city.CityName,
-      FullAddress: city.FullAddress
+      FullAddress: city.FullAddress,
+      pictureUrl: city.pictureUrl
     });
   } catch (error) {
     console.error('Error adding city:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
+
 //NEEDS TESTING
 async function updateParkingLot(req, res) {
   try {
@@ -626,5 +669,6 @@ module.exports = {
   deleteSlotsByStatusAreaCity,
   deleteSlotByIDController,
   viewUsersByCriteria,
-  toggleUserSubscriptionStatus
+  toggleUserSubscriptionStatus,
+  updateCityPicture
 };

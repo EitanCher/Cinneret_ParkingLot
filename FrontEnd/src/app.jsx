@@ -4,7 +4,8 @@ import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
 import ReadyToPark from './components/ReadyToPark';
-import Cities from './components/Cities'; // Importing the Cities component
+import Cities from './components/Cities';
+import Subscriptions from './components/Subscriptions';
 
 const App = () => {
   return (
@@ -31,6 +32,9 @@ const App = () => {
 
               {/* Cities Route */}
               <Route path='/cities' element={<Cities />} />
+
+              {/* Subscriptions Route */}
+              <Route path='/subscriptions' element={<Subscriptions />} />
             </Routes>
           </div>
         </div>

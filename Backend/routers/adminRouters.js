@@ -21,7 +21,8 @@ const {
   updateSlotsByCriteriaController,
   deleteSlotsByStatusAreaCity,
   deleteSlotByIDController,
-  viewUsersByCriteria
+  viewUsersByCriteria,
+  updateCityPicture
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -40,6 +41,7 @@ router.post('/parking/add-parking-lot', addParkingLot); // OK
 router.put('/parking/update-parking-lot/:idCities', updateParkingLot); // OK
 router.delete('/parking/parkinglot/:idCities', removeParkingLot); // OK
 router.get('/parking/all-parking-lots', getParkingLotCities); // OK
+router.patch('/parking/picture/:idCities', updateCityPicture);
 
 router.post('/parking/areas', addArea); //OK
 router.delete('/parking/areas/:idAreas', removeArea); //OK
