@@ -12,7 +12,8 @@ const {
   login,
   addCarsController,
   updateCars,
-  deleteCarById
+  deleteCarById,
+  getUserDetails
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -24,14 +25,15 @@ const {
   calculateTotalParkingTimeByUser,
   calculateAverageParkingTimeByUser
 } = require('../controllers/parkingController');
+
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.REDIRECT_URI);
-
 const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 
+router.get('/details', passport.authenticate('jwt', { session: false }), getUserDetails);
 router.get('/parkinglots', getParkingLotCities);
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
 router.patch('/cars', passport.authenticate('jwt', { session: false }), updateCars);
@@ -53,19 +55,16 @@ router.delete('/parking/reservation', passport.authenticate('jwt', { session: fa
 router.get('/parking/find-best-slot', passport.authenticate('jwt', { session: false }), findAvailableSlotController);
 router.get('/parking/history', passport.authenticate('jwt', { session: false }), getParkingHistory);
 router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
+
+///TODO****** add a middleware to check if subscription is active
 router.get('/google/callback', googleCallback);
-
-/// add a middleware to check if subscription is active
-
 router.get(
   '/google',
   passport.authenticate('google', {
     scope: ['profile', 'email']
   })
 );
-// Route to handle Stripe webhook events
 router.post('/webhook', handleCheckoutSessionCompleted);
-// Route to create a Stripe checkout session
 router.post('/create-checkout-session', passport.authenticate('jwt', { session: false }), createStripeSession);
 
 router.get('/webhook', (req, res) => {

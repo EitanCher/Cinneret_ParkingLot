@@ -47,7 +47,7 @@ const Subscriptions = () => {
   }
 
   return (
-    <div className='relative'>
+    <div className='relative '>
       <div className='p-4 md:p-4'>
         <div
           className='flex min-h-[480px] flex-col gap-6 bg-cover bg-center bg-no-repeat rounded-xl items-start justify-end px-4 md:px-10 pb-10'
@@ -65,7 +65,7 @@ const Subscriptions = () => {
           </div>
         </div>
       </div>
-      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto px-4'>
         {subscriptions.map((sub, index) => (
           <Card isFooterBlurred radius='lg' className='border-none' shadow='sm' key={index}>
             <CardBody className='p-6'>

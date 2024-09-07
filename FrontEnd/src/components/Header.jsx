@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Navbar, NavbarBrand, NavbarMenuToggle, NavbarMenuItem, NavbarMenu, NavbarContent, NavbarItem, Button } from '@nextui-org/react';
-
-import { Link, useLocation } from 'react-router-dom'; // Import useLocation from react-router-dom
-
+import { useAuth } from '../Context/authContext';
+import { Link, useLocation } from 'react-router-dom';
 const Header = () => {
-  const location = useLocation(); // Get the current location
+  const { isAuthenticated, loading, logoutUser } = useAuth(); // Get authentication status and loading state from context
+  const location = useLocation();
 
-  // Function to determine if the current path matches the given path
   const isActivePath = (path) => location.pathname === path;
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
   const menuItems = [
     { name: 'Home', path: '/' },
     { name: 'Cities', path: '/cities' },
     { name: 'Subscriptions', path: '/subscriptions' }
   ];
+
   return (
     <Navbar isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen} isBordered isBlurred={true}>
       <NavbarContent>
@@ -24,7 +25,7 @@ const Header = () => {
               <path d='M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z' fill='currentColor'></path>
             </svg>
             <p className='text-[#111118] text-lg font-bold leading-tight tracking-[-0.015em]'>ParkNow</p>
-          </div>{' '}
+          </div>
         </NavbarBrand>
       </NavbarContent>
       <NavbarContent className='hidden sm:flex gap-4' justify='center'>
@@ -44,29 +45,37 @@ const Header = () => {
           </Link>
         </NavbarItem>
       </NavbarContent>
-      <NavbarContent justify='end'>
-        <NavbarItem>
-          <Button as={Link} color='primary' to='/login' variant='shadow'>
-            Log In{' '}
-          </Button>
-        </NavbarItem>
-        <NavbarItem>
-          <Button as={Link} color='default' to='/signup' variant='shadow'>
-            Sign Up
-          </Button>
-        </NavbarItem>
-      </NavbarContent>
+      <NavbarContent
+        className={`transition-opacity duration-500 ease-in-out ${loading ? 'opacity-0 invisible' : 'opacity-100 visible'}`}
+        justify='end'
+      >
+        {!loading && !isAuthenticated && (
+          <>
+            <NavbarItem>
+              <Button as={Link} color='primary' to='/login' variant='shadow'>
+                Log In
+              </Button>
+            </NavbarItem>
+            <NavbarItem>
+              <Button as={Link} color='default' to='/signup' variant='shadow'>
+                Sign Up
+              </Button>
+            </NavbarItem>
+          </>
+        )}
 
+        {!loading && isAuthenticated && (
+          <NavbarItem>
+            <Button color='danger' onClick={logoutUser} variant='solid'>
+              Log Out
+            </Button>
+          </NavbarItem>
+        )}
+      </NavbarContent>
       <NavbarMenu>
         {menuItems.map((item, index) => (
-          <NavbarMenuItem key={`${item}-${index}`}>
-            <Link
-              onClick={() => setIsMenuOpen(false)}
-              color={index === 2 ? 'primary' : index === menuItems.length - 1 ? 'danger' : 'foreground'}
-              className='w-full'
-              to={item.path}
-              size='lg'
-            >
+          <NavbarMenuItem key={`${item.name}-${index}`}>
+            <Link onClick={() => setIsMenuOpen(false)} color={index === 2 ? 'primary' : 'foreground'} className='w-full' to={item.path} size='lg'>
               {item.name}
             </Link>
           </NavbarMenuItem>

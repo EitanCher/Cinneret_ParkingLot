@@ -26,7 +26,7 @@ const verifyGoogleUser = async (code) => {
         {
           id: user.idUsers,
           email: user.Email,
-          role: user.role // Add the role to the JWT payload
+          role: user.Role // Add the role to the JWT payload
         },
         process.env.JWT_SECRET,
         {

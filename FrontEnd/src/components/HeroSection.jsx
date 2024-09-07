@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Image } from '@nextui-org/react';
-
+import { useAuth } from '../Context/authContext';
 import backgroundImage8 from '../assets/images/HeroSection.jpg'; // Adjust the path as needed
 
 const HeroSection = () => {
+  const { isAuthenticated, loading } = useAuth(); // Get authentication status and loading state from context
+
   return (
     <div className='relative'>
       <div className='p-4 md:p-4'>
@@ -23,13 +25,17 @@ const HeroSection = () => {
               spot.
             </h2>
           </div>
-          <div className='flex flex-wrap gap-3'>
-            <Button as={Link} color='primary' to='/login' variant='shadow'>
-              Log In{' '}
-            </Button>
-            <Button as={Link} color='default' to='/subscriptions' variant='shadow'>
-              Sign Up
-            </Button>
+          <div className='flex flex-wrap gap-3  '>
+            {!isAuthenticated && (
+              <>
+                <Button as={Link} color='primary' to='/login' variant='shadow'>
+                  Log In{' '}
+                </Button>
+                <Button as={Link} color='default' to='/subscriptions' variant='shadow'>
+                  Sign Up
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

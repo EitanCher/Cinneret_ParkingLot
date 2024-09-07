@@ -22,18 +22,14 @@ passport.use(
       const user = await prisma.users.findUnique({
         where: { idUsers: jwt_payload.id }
       });
-      console.log('user in jwtstrategy', user);
       if (!user) {
-        console.log('User not found');
         return done(null, false, { message: 'User not found' });
       }
 
       if (user.Active === false) {
-        console.log('User is not active');
         return done(null, false, { message: 'User is not active' });
       }
 
-      console.log('User found and active');
       return done(null, user);
     } catch (err) {
       console.error('Error in JWT strategy:', err.message);
@@ -78,6 +74,9 @@ passport.use(
     },
     async function (accessToken, refreshToken, profile, done) {
       try {
+        console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+        console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET);
+
         // Find user by email
         console.log('extracting user by email-prisma');
         const user = await prisma.users.findUnique({

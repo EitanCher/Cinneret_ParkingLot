@@ -179,7 +179,6 @@ const login = (req, res, next) => {
     if (!user) return res.status(401).json({ message: info.message });
 
     // Generate JWT token
-    //TODO store the token in the frontend
     const token = jwt.sign(
       {
         id: user.idUsers,
@@ -189,8 +188,16 @@ const login = (req, res, next) => {
       process.env.JWT_SECRET,
       { expiresIn: '72h' } // Set token expiration time to 72 hours
     );
-    // Send response with token
-    res.status(200).json({ token });
+
+    // Send response with token and user data
+    res.status(200).json({
+      token,
+      user: {
+        id: user.idUsers,
+        email: user.Email,
+        role: user.role // Include other user data as needed
+      }
+    });
   })(req, res, next); // Pass req, res, and next to the middleware
 };
 
@@ -256,6 +263,26 @@ const getUserCarsController = async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+const getUserDetails = async (req, res) => {
+  try {
+    const userId = req.user.idUsers;
+    console.log('userid in controller:', userId);
+
+    const user = await prisma.users.findUnique({
+      where: { idUsers: userId }
+    });
+
+    if (!user) {
+      console.log('user not found');
+      return res.status(404).send('User not found');
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
 
 // add delete cars controller
 
@@ -309,5 +336,6 @@ module.exports = {
   login,
   addCarsController,
   updateCars,
-  deleteCarById
+  deleteCarById,
+  getUserDetails
 };
