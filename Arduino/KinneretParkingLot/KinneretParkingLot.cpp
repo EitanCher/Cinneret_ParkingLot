@@ -24,7 +24,7 @@ void MyLotNode::networkSetup() {
 	Serial.println(WiFi.localIP());
 }
 
-void MyLotNode::connectWebSocket() {
+void MyLotNode::defineWSClient() {
 	while(!wsClient.connect(this->websocket_server, this->websocket_port, "/")) {
 		delay(100);
 		Serial.println(this->websocket_port);
@@ -32,6 +32,13 @@ void MyLotNode::connectWebSocket() {
 		Serial.println(".... Attempting to connect to websocket server ....");
 	}
 	Serial.println("Websocket server connected");
+}
+
+void MyLotNode::rollcall() {
+	if(wsClient.available()) 
+		wsClient.send("ACTIVE");
+	else 
+		this->defineWSClient();
 }
 
 void MyLotNode::readDistance(int myTrig, int myEcho) {
@@ -44,7 +51,7 @@ void MyLotNode::readDistance(int myTrig, int myEcho) {
   delayMicroseconds(10);
   digitalWrite(myTrig, LOW);
 
-  // Read the echo time
+  // Read the echo time:
   duration = pulseIn(myEcho, HIGH); //Returns the length of the pulse in microseconds or 0 if no complete pulse was received within the timeout
 
   // Calculate the distance in centimeters
@@ -65,5 +72,4 @@ void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int m
     wsClient.send(msg_event);
   }
   else if (this->distance == 0) wsClient.send(msg_zero);
-  //else wsClient.send("no_object");
 }
