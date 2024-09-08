@@ -8,7 +8,7 @@ import Cities from './components/Cities';
 import Subscriptions from './components/Subscriptions';
 import Login from './components/Login';
 import AuthProvider from './Context/authContext'; // Import your AuthProvider
-
+import SignUp from './components/SignUp';
 const App = () => {
   return (
     <Router>
@@ -41,6 +41,9 @@ const App = () => {
 
                 {/* Login Route */}
                 <Route path='/login' element={<Login />} />
+
+                {/* Login Route */}
+                <Route path='/signup' element={<SignUp />} />
               </Routes>
             </div>
           </div>

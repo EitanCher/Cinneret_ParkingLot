@@ -78,7 +78,6 @@ passport.use(
         });
 
         if (user) {
-          console.log('User exists');
           return done(null, user);
         } else {
           // Optionally create a new user

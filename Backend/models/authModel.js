@@ -9,6 +9,8 @@ const { findUserByEmail } = require('./userModel');
 
 const verifyGoogleUser = async (code) => {
   try {
+    const redirect_uri = process.env.CALLBACK_URL;
+    console.log('redirect_uri: ' + redirect_uri);
     const { tokens } = await client.getToken({ code, redirect_uri: process.env.CALLBACK_URL });
     const userInfo = await client.verifyIdToken({
       idToken: tokens.id_token,

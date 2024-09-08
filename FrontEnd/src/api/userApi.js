@@ -2,7 +2,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 // Create an axios instance with a base URL
-const api = axios.create({
+export const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/users`,
   headers: {
     'Content-Type': 'application/json'
@@ -58,6 +58,35 @@ export const fetchSubscriptions = async () => {
   }
 };
 
+export const signUpUser = async (persId, firstName, lastName, email, phone, password) => {
+  try {
+    console.log('Payload being sent:', {
+      persId: persId,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: phone,
+      password: password
+    });
+    const response = await api.post(
+      '/signup',
+      {
+        persId: persId,
+        FirstName: firstName,
+        LastName: lastName,
+        Email: email,
+        Phone: phone,
+        Password: password
+      },
+      { withCredentials: true }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error during signup:', error);
+    throw error;
+  }
+};
 export const login = async (Email, Password) => {
   try {
     const response = await api.post(

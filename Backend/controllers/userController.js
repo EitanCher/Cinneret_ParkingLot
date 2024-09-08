@@ -97,39 +97,55 @@ const deleteUser = async (req, res) => {
 };
 
 const stringFields = ['FirstName', 'LastName', 'Email', 'Phone', 'SubscriptionPlanID', 'StartDate', 'EndDate'];
+
 const addUserController = async (req, res) => {
   const userData = req.body; // Adjust based on how user data is sent
-
+  console.log('user data in controller: ', req.body);
   try {
     // Sanitize the input data
     const sanitizedUserData = sanitizeObject(userData, ['persId', 'FirstName', 'LastName', 'Email', 'Phone', 'Password']);
 
     // Create user
     const user = await createUser(sanitizedUserData);
+    // Ensure user was created successfully
+    if (!user || !user.idUsers) {
+      return res.status(400).json({ message: 'User creation failed' });
+    }
 
-    // Generate JWT token
+    // Generate JWT token with a 2-hour expiration
     const token = jwt.sign(
       {
         id: user.idUsers,
         email: user.Email,
-        role: user.role // Include the role in the token payload
+        role: user.Role // Include the role in the token payload
       },
       process.env.JWT_SECRET,
-      { expiresIn: '72h' } // Set token expiration time to 72 hours
+      { expiresIn: '2h' } // Set token expiration time to 2 hours
     );
-    // Respond with success and user ID along with JWT token
+
+    // Set the token in a secure, HTTP-only cookie with a 30-day max age
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'Strict', // Prevent CSRF attacks
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
+    // Respond with success and user ID
     res.status(201).json({
       message: 'User created successfully. Proceed to payment to select a subscription.',
-      userId: user.idUsers,
-      token
+      userId: user.idUsers
     });
   } catch (error) {
+    console.error('Error:', error.message);
+
+    // Respond with appropriate status code and message
     if (error.name === 'ZodError') {
       return res.status(400).json({
         message: `Validation error: ${error.errors.map((e) => e.message).join(', ')}`
       });
     }
-    console.error('Error:', error.message);
+
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };

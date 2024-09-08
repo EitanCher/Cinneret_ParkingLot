@@ -12,7 +12,7 @@ const googleCallback = async (req, res, next) => {
         sameSite: 'Strict', // Consider 'Lax' for local development
         maxAge: 3600000 // 1 hour
       });
-
+      console.log('about to redirect in google callback controller');
       res.redirect(`${process.env.FRONTEND_URL}`);
     } else {
       res.status(400).send('User not found');

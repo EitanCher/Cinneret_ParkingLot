@@ -49,7 +49,7 @@ router.get('/parkinglots', getParkingLotCities);
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
 router.patch('/cars', authenticateJWT, updateCars);
 router.get('/subscriptions', getSubscriptionTiers);
-router.post('/register', addUserController);
+router.post('/signup', addUserController);
 router.post('/login', login);
 router.post('/logout', authenticateJWT, logout);
 router.patch('/:id', authenticateJWT, updateUser);

@@ -110,7 +110,6 @@ async function getSubscriptions() {
 async function createUser(userData) {
   try {
     // Validate userData with the Zod schema
-
     const validatedData = addUserControllerSchema.parse(userData);
 
     // Proceed with hashing password and creating the user in the database

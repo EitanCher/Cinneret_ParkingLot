@@ -19,8 +19,8 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID; // Make sure this matches
-    const redirectUri = encodeURIComponent('http://localhost:3001/api/users/google/callback');
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const redirectUri = encodeURIComponent(import.meta.env.VITE_CALLBACK_URL);
     const scope = 'profile email';
     const responseType = 'code';
 
@@ -31,7 +31,7 @@ const Login = () => {
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=${responseType}&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 
-    window.location.href = googleAuthUrl;
+    window.location.replace(googleAuthUrl); // Using replace instead of href
   };
 
   const handleLogin = async (e) => {
