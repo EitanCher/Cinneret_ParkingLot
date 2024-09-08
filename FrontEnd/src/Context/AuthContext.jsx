@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-
 import Cookies from 'js-cookie';
-import { login, fetchUserDetails } from '../api/userApi';
+import { useNavigate } from 'react-router-dom';
+
+import { login, fetchUserDetails, logout } from '../api/userApi';
 
 const AuthContext = createContext();
 
@@ -9,29 +10,24 @@ const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const checkAuth = async () => {
-    const token = Cookies.get('authToken');
-    console.log(`Auth token: ${token}`);
-    if (token) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const checkAuth = async () => {
       try {
-        const userData = await fetchUserDetails(token);
-        console.log('Fetched user data:', userData);
+        console.log('Checking authentication...');
+        const userData = await fetchUserDetails();
+        console.log('User data received:', userData);
         setIsAuthenticated(true);
         setUser(userData);
       } catch (error) {
-        console.error('Error in checkAuth:', error);
+        console.error('Authentication check failed:', error);
         setIsAuthenticated(false);
         setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-    setLoading(false);
-  };
+    };
 
-  useEffect(() => {
     checkAuth();
   }, []);
 
@@ -43,12 +39,11 @@ const AuthProvider = ({ children }) => {
 
   const loginUser = async (email, password) => {
     try {
-      const response = await login(email, password);
-      const { token, ...userData } = response;
-      Cookies.set('authToken', token, { expires: 7 });
+      const response = await login(email, password); // Backend handles setting the cookie
+      const { user } = response; // Get user data from response
       setIsAuthenticated(true);
-      setUser(userData);
-      return { token, ...userData };
+      setUser(user);
+      return user;
     } catch (error) {
       console.error('Login error:', error);
       setIsAuthenticated(false);
@@ -57,11 +52,22 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const logoutUser = () => {
-    Cookies.remove('authToken');
-    setIsAuthenticated(false);
-    setUser(null);
-    console.log('user logged out');
+  const logoutUser = async () => {
+    try {
+      const response = await logout(); // Call the imported logout function
+      console.log('Response int auth context:', response.status);
+      if (response.status === 200) {
+        // Check for success status from backend
+        setIsAuthenticated(false);
+        setUser(null);
+        console.log('User logged out');
+        navigate('/'); // Redirect to the home page after logout
+      } else {
+        console.error('Logout failed in auth context, user might still be logged in.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return <AuthContext.Provider value={{ isAuthenticated, user, loginUser, logoutUser, loading }}>{children}</AuthContext.Provider>;

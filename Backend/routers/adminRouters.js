@@ -29,13 +29,13 @@ const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.REDIRECT_URI);
-
 const { apiKeyAuth } = require('../middlewares/apiKeyAuth');
 const passport = require('passport');
 const { checkAdminRole } = require('../middlewares/isAdmin');
 const { toggleSubscriptionStatusById } = require('../models/adminModel');
+const { authenticateJWT } = require('../middlewares/authenticateJWT');
 
-router.use(passport.authenticate('jwt', { session: false }));
+router.use(authenticateJWT);
 router.use(checkAdminRole);
 
 router.post('/parking/add-parking-lot', addParkingLot); // OK

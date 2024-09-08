@@ -6,7 +6,7 @@ const adminRouters = require('./routers/adminRouters');
 const helmet = require('helmet');
 const cors = require('cors');
 const passport = require('./utils/passport-config');
-
+const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -15,14 +15,15 @@ app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
-app.use(cors()); // Enable CORS if needed
-app.use(passport.initialize());
+// CORS configuration
+const corsOptions = {
+  origin: process.env.FRONTEND_URL, // Use the environment variable for the frontend URL
+  credentials: true // Allow credentials (cookies)
+};
 
-// Logging Middleware
-app.use((req, res, next) => {
-  console.log(`Received ${req.method} request for ${req.url}`);
-  next();
-});
+app.use(cors(corsOptions));
+app.use(passport.initialize());
+app.use(cookieParser());
 
 // Routes
 app.use('/api/users', userRouters);

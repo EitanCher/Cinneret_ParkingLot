@@ -183,22 +183,49 @@ const login = (req, res, next) => {
       {
         id: user.idUsers,
         email: user.Email,
-        role: user.role // Include the role in the token payload
+        role: user.role
       },
       process.env.JWT_SECRET,
-      { expiresIn: '72h' } // Set token expiration time to 72 hours
+      { expiresIn: '2h' }
     );
 
-    // Send response with token and user data
+    // Set cookie
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 2592000000 // 30 days
+    });
+
+    // Send user data
     res.status(200).json({
-      token,
       user: {
         id: user.idUsers,
         email: user.Email,
-        role: user.role // Include other user data as needed
+        role: user.role
       }
     });
-  })(req, res, next); // Pass req, res, and next to the middleware
+  })(req, res, next);
+};
+
+//might not need it
+const logout = (req, res) => {
+  console.log('Logout process started in controller');
+  try {
+    res.cookie('jwt', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 0 // Set to 0 to immediately expire the cookie
+    });
+
+    // Optionally log additional information or perform cleanup here
+    console.log('before res.status');
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'Failed to log out. Please try again later.' });
+  }
 };
 
 //TODO
@@ -263,21 +290,28 @@ const getUserCarsController = async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 const getUserDetails = async (req, res) => {
   try {
-    const userId = req.user.idUsers;
-    console.log('userid in controller:', userId);
+    console.log('start of try block in getUserDetails controller');
+    const user = req.user; // Correctly getting userId
+    console.log('userID in getUserDetails controller:', user);
+    if (!user) {
+      // Check if userId is undefined or null
+      console.log('User ID is not found');
+      return res.status(404).send('User ID is not provided');
+    }
 
-    const user = await prisma.users.findUnique({
-      where: { idUsers: userId }
+    const resultUser = await prisma.users.findUnique({
+      where: { idUsers: user.id }
     });
 
-    if (!user) {
-      console.log('user not found');
+    if (!resultUser) {
+      console.log('User not found');
       return res.status(404).send('User not found');
     }
 
-    res.json(user);
+    res.json(resultUser);
   } catch (error) {
     console.error('Error fetching user details:', error);
     res.status(500).send('Internal Server Error');
@@ -337,5 +371,6 @@ module.exports = {
   addCarsController,
   updateCars,
   deleteCarById,
-  getUserDetails
+  getUserDetails,
+  logout
 };

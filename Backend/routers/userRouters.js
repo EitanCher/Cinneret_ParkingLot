@@ -13,7 +13,8 @@ const {
   addCarsController,
   updateCars,
   deleteCarById,
-  getUserDetails
+  getUserDetails,
+  logout
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -25,36 +26,47 @@ const {
   calculateTotalParkingTimeByUser,
   calculateAverageParkingTimeByUser
 } = require('../controllers/parkingController');
-
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.REDIRECT_URI);
 const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
+const { authenticateJWT } = require('../middlewares/authenticateJWT');
 
-router.get('/details', passport.authenticate('jwt', { session: false }), getUserDetails);
+router.get(
+  '/details',
+  (req, res, next) => {
+    console.log(`Incoming request to ${req.url}`);
+    next();
+  },
+
+  authenticateJWT,
+  getUserDetails
+);
 router.get('/parkinglots', getParkingLotCities);
+
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
-router.patch('/cars', passport.authenticate('jwt', { session: false }), updateCars);
+router.patch('/cars', authenticateJWT, updateCars);
 router.get('/subscriptions', getSubscriptionTiers);
 router.post('/register', addUserController);
 router.post('/login', login);
-router.patch('/:id', passport.authenticate('jwt', { session: false }), updateUser);
-router.post('/cars', passport.authenticate('jwt', { session: false }), addCarsController);
-router.delete('/cars/:id', passport.authenticate('jwt', { session: false }), deleteCarById);
-router.get('/parking/total-time', passport.authenticate('jwt', { session: false }), calculateTotalParkingTimeByUser);
-router.get('/parking/average-duration', passport.authenticate('jwt', { session: false }), calculateAverageParkingTimeByUser);
-router.post('/parking/reservation', passport.authenticate('jwt', { session: false }), bookSlotController);
+router.post('/logout', authenticateJWT, logout);
+router.patch('/:id', authenticateJWT, updateUser);
+router.post('/cars', authenticateJWT, addCarsController);
+router.delete('/cars/:id', authenticateJWT, deleteCarById);
+router.get('/parking/total-time', authenticateJWT, calculateTotalParkingTimeByUser);
+router.get('/parking/average-duration', authenticateJWT, calculateAverageParkingTimeByUser);
+router.post('/parking/reservation', authenticateJWT, bookSlotController);
 //here also i decided to not use /:id in order to be able to keep the same controller and model to work with both admin and user
 //important- idReservation in the req.body
 //if anyone is signed in- we will know who it is and make sure that he can't delete a reservation that isnt his
 //on the other hand no one can access the admin route without the api key
-router.delete('/parking/reservation', passport.authenticate('jwt', { session: false }), cancelReservationController);
+router.delete('/parking/reservation', authenticateJWT, cancelReservationController);
 //use params
-router.get('/parking/find-best-slot', passport.authenticate('jwt', { session: false }), findAvailableSlotController);
-router.get('/parking/history', passport.authenticate('jwt', { session: false }), getParkingHistory);
-router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteUser);
+router.get('/parking/find-best-slot', authenticateJWT, findAvailableSlotController);
+router.get('/parking/history', authenticateJWT, getParkingHistory);
+router.delete('/:id', authenticateJWT, deleteUser);
 
 ///TODO****** add a middleware to check if subscription is active
 router.get('/google/callback', googleCallback);
@@ -65,7 +77,7 @@ router.get(
   })
 );
 router.post('/webhook', handleCheckoutSessionCompleted);
-router.post('/create-checkout-session', passport.authenticate('jwt', { session: false }), createStripeSession);
+router.post('/create-checkout-session', authenticateJWT, createStripeSession);
 
 router.get('/webhook', (req, res) => {
   res.send('hello from ngrok');

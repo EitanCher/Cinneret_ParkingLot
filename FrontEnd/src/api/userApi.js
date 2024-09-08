@@ -6,55 +6,35 @@ const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/users`,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true // Ensure cookies are sent with requests
 });
 
-export const fetchUserDetails = async (token) => {
-  try {
-    // Make a GET request to the /user/details endpoint with the token in the Authorization header
-    const response = await api.get('/details', {
-      headers: {
-        Authorization: `Bearer ${token}` // Include the token in the Authorization header
-      }
-    });
-    return response.data; // Return the user details from the response
-  } catch (error) {
-    console.error('Error fetching user details:', error);
-    throw error; // Re-throw the error for the calling code to handle
-  }
-};
 //add total spaces to each city
 
-api.interceptors.request.use(
-  (config) => {
-    // Retrieve the token from cookies
-    const token = Cookies.get('authToken');
-    if (token) {
-      // Attach token to the request headers
-      config.headers['Authorization'] = `Bearer ${token}`;
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      console.error('Unauthorized access - maybe need to refresh token or login again');
     }
-    return config;
-  },
-  (error) => {
-    // Handle request errors
     return Promise.reject(error);
   }
 );
 
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    // Handle specific status codes or errors
-    if (error.response && error.response.status === 401) {
-      // Handle unauthorized errors, e.g., redirect to login page
-      console.error('Unauthorized access - maybe need to refresh token or login again');
-      // You can also redirect the user to the login page here
-    }
-    return Promise.reject(error);
+export const fetchUserDetails = async () => {
+  try {
+    console.log('fetched user details function triggered');
+    const response = await api.get('/details');
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    console.log('response.data in fetchUserDetails is:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    throw error;
   }
-);
+};
 
 // Function to fetch cities data
 export const fetchCities = async () => {
@@ -80,13 +60,33 @@ export const fetchSubscriptions = async () => {
 
 export const login = async (Email, Password) => {
   try {
-    const response = await api.post('/login', {
-      Email: Email,
-      Password: Password
-    });
-    return response.data; // Return the response data
+    const response = await api.post(
+      '/login',
+      {
+        Email: Email,
+        Password: Password
+      },
+      { withCredentials: true }
+    ); // Ensure cookies are sent and received
+    return response.data;
   } catch (error) {
-    console.error('Error during login:', error); // Log the error
-    throw error; // Re-throw the error for the component to handle
+    console.error('Error during login:', error);
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  try {
+    const response = await api.post('/logout', {}, { withCredentials: true });
+    // Check the response status to ensure the logout was successful
+    console.log('Response:', response.status);
+    if (response.status == 200) {
+      return response; // Return response data if needed
+    } else {
+      throw new Error('Logout failed on the server side. (userapi)');
+    }
+  } catch (error) {
+    console.error('Error during logout request:', error);
+    throw error; // Re-throw the error to handle it in the calling function
   }
 };

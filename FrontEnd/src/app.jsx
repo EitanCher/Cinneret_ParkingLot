@@ -11,8 +11,8 @@ import AuthProvider from './Context/authContext'; // Import your AuthProvider
 
 const App = () => {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <div
           className='relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden'
           style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}
@@ -45,8 +45,8 @@ const App = () => {
             </div>
           </div>
         </div>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 };
 
