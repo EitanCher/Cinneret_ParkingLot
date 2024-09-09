@@ -52,6 +52,9 @@ void setup() {
 }
 
 void loop() {
+    myClient_Entry.handle();
+    myClient_Exit.handle();
+
   // Perform rollcall for the clients:
   if (millis() - myTimer >= myClient_Entry.getInterval()) {
     myClient_Entry.rollcall();  
@@ -84,3 +87,4 @@ void loop() {
   
   delay(2000);
 }
+
