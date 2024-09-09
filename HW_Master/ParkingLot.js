@@ -30,14 +30,26 @@ wsServer.on('connection', (ws, req) => {
     const ip = req.socket.remoteAddress.replace('::ffff:', ''); // Get client IP address
     console.log('New client connected:', ip);
     // Store the client in allBoards and return data of itself and its node-"partner"
-    const nodePair = connectionStore(ip, ws);
-    const boardData_1 = nodePair[0];    // Get dictionary of connected board's data
-    const boardData_2 = nodePair[1];    // Get dictionary of corresponding board's data
-    
+    connectionStore(ip, ws);
+   
+    /*
+    // Send a ping to the client every 30 seconds:
+    setInterval(() => {
+        if (ws.readyState === webSocket.OPEN) {
+            console.log(`Sending ping to client ${ip}`);
+            ws.ping();
+        }
+    }, 30000);
+    */
+
     ws.on('message', (data) => {
         const message = data.toString();
         console.log('Received:', message);
         
+        const nodePair = getNodePair(ip);
+        const boardData_1 = nodePair[0];    // Get dictionary of connected board's data
+        const boardData_2 = nodePair[1];    // Get dictionary of corresponding board's data
+
         if (!boardData_1.isFault) {
             if (!boardData_1.isConnected) boardData_1.isConnected = true;
 
@@ -45,7 +57,9 @@ wsServer.on('connection', (ws, req) => {
                 case 'entry_event':
                 case 'OBJECT_DETECTED':
                     console.log("Message accepted")
-                    if(boardData_1.wsc.available)
+                    console.log(boardData_1.wsc.readyState)
+                    if(boardData_1.wsc.readyState === webSocket.OPEN)
+                    //if(boardData_1.wsc.available)
                         console.log("AVAILABLE")
                     if(boardData_2.wsc != null) {
                             boardData_2.wsc.send('TAKE_PICTURE');
@@ -61,7 +75,7 @@ wsServer.on('connection', (ws, req) => {
   
     // Handle client disconnection
     ws.on('close', () => {
-        console.log('Client disconnected.');
+        console.log('Client disconnected');
     });
 });
 
@@ -76,40 +90,6 @@ setTimeout(() => {
                 board.send(`INITIAL_CONNECTION_ESTABLISHED`);
         });
 }, 5000);  // 5-second delay
-  
-/*  
-// WebSocket server logic
-    wsServer.on('connection', (ws, req) => {
-    console.log('Connected');
-    lotClients.push(ws);
-
-    // If there is a message from one of the clients, send it to all the clients:
-    ws.on('message', data => {
-        lotClients.forEach((ws, i) => {
-            if(ws.readyState === ws.OPEN) {
-                ws.send(data);
-            } 
-            // If a client doesn't have an opened connection, remove it from the array:
-            else {
-                lotClients.splice(i, 1);
-            }
-        })
-    });
-});
-*/
-
-// Serve HTML file:
-const server = app.get('/entry_us', (req, res) => res.sendFile(path.resolve(__dirname, './index.html')));
-// Listen for client's HTTP connection:
-app.listen(HTTP_PORT, ()=>console.log(`HTTP server is listening at ${HTTP_PORT}`));
-
-server.on('upgrade', (request, socket, head) => {
-    wsServer.handleUpgrade(request, socket, head, (ws) => {
-        wsServer.emit('connection', ws, request);
-    });
-});
-
-
 
 async function fetchBoardsDataOnInit() {
     console.log("Fetching data from the DB..................")
@@ -159,7 +139,6 @@ async function fetchBoardsDataOnInit() {
         console.log("Boards data after \"Fetch\":")
         console.log(allBoards);
         console.log("*******   Fetch done   *********************")
-//        scanConnectedBoards();
     } catch (err) {
         console.error('Error executing query', err.stack);
     } finally {
@@ -169,32 +148,19 @@ async function fetchBoardsDataOnInit() {
 }
 
 function connectionStore(inputIP, inputConn) {
-    // Map the nodes pairs:
-    const pairsMap = {
-        gates: 'gateCams',
-        gateCams: 'gates',
-        slots: 'slotCams',
-        slotCams: 'slots'
-    };
-    
+    console.log("Clients already connected:");
     for (const boardsArray in allBoards) {
         const myArray = allBoards[boardsArray];
         for (const boardDict of myArray){
-            console.log(boardDict.ip);
+            if(boardDict.isConnected) console.log(boardDict.ip);
             // Find the metadata of the connected board by its IP:
             if(boardDict.ip === inputIP){
                 boardDict.isConnected = true;
                 // Store the connection object:
                 boardDict.wsc = inputConn;
-                // Find corresponding board (Camera for Node / Node for Camera):
-                const myIndex = myArray.indexOf(boardDict);
-                const correspondingArray = pairsMap[boardsArray];
-                const correspondingBoard = allBoards[correspondingArray][myIndex];
-                return [boardDict, correspondingBoard];
             }
         }
     }
-    return null;
 }
 
 function getLocalIPAddress() {
@@ -212,6 +178,28 @@ function getLocalIPAddress() {
     return '127.0.0.1'; // Fallback to loopback address
 }
 
+function getNodePair(inputIP) {
+    // Map the nodes pairs:
+    const pairsMap = {
+        gates: 'gateCams',
+        gateCams: 'gates',
+        slots: 'slotCams',
+        slotCams: 'slots'
+    };
 
-    
+    // Find corresponding board (Camera for Node / Node for Camera):
+    for (const boardsArray in allBoards) {
+        const myArray = allBoards[boardsArray];
+        for (const boardDict of myArray){
+            if(boardDict.ip === inputIP){
+                const myIndex = myArray.indexOf(boardDict);
+                const correspondingArray = pairsMap[boardsArray];
+                const correspondingBoard = allBoards[correspondingArray][myIndex];
+                return [boardDict, correspondingBoard];
+            }
+        }
+    }
+    console.log(`No peer found for client ${inputIP}`);
+    return null;
+}
 
