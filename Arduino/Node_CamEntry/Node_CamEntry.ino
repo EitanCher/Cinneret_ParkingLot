@@ -1,70 +1,29 @@
-#include <WiFi.h>
 #include <esp32cam.h>
-#include <WebSocketsClient.h>
+#include <WiFi.h>
+#include <WiFiMulti.h>
+#include <ArduinoWebsockets.h>
+#include <KinneretParkingLot.h>
 
-//const char* WIFI_SSID = "Kinneret Colledge";
-//const char* WIFI_PASS = "";
-//const char* WIFI_SSID = "inanforever";
-//const char* WIFI_PASS = "0509232623";
-const char* WIFI_SSID = "myWIFI";
-const char* WIFI_PASS = "12345678";
+// Local IP is manually set for current device (Camera on Entry). 
+// The IP has to be verified not to conflict with other devices.
+// The IP has to match the relevant data in the DB
+IPAddress local_IP(192, 168, 1, 4);
 
-IPAddress local_IP(192, 168, 1, 254); // Manually set for current device (Camera Node Board). Has to be verified not to conflict with other devices.
-IPAddress gateway(192, 168, 1, 1);    // Router's IP address (has to be verified for each network but certain conventions are common)
-IPAddress subnet(255, 255, 255, 0);   // Subnet mask for the local network
-
-const char* server_IP = "192.168.4.1";
-//const char* server_IP = "192.168.0.123";
-WebSocketsClient webSocket;
-
+#define PIN_FLASH 4
+unsigned long myTimer;
 static auto loRes = esp32cam::Resolution::find(320, 240);
 static auto midRes = esp32cam::Resolution::find(350, 530);
 static auto hiRes = esp32cam::Resolution::find(800, 600);
 
-// Capture and send an image:
-void serveJpg() {
-  auto frame = esp32cam::capture();
-  if (frame == nullptr) {
-    Serial.println("CAPTURE FAIL");
-    return;
-  }
-  
-  Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(), static_cast<int>(frame->size()));
-  
-  //When server receives "START_OF_JPEG", it should start writing the incoming binary data to a file until it receives "END_OF_JPEG".
-  String startOfFile = "START_OF_JPEG";
-  String endOfFile = "END_OF_JPEG";
-  webSocket.sendTXT(startOfFile);
-  webSocket.sendBIN(frame->data(), frame->size());
-  webSocket.sendTXT(endOfFile);
-}
 
-void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch(type) {
-    case WStype_DISCONNECTED:
-      Serial.println("Disconnected from WebSocket server");
-      delay(500); 
-		  break;
-    case WStype_CONNECTED:
-      Serial.println("Connected to WebSocket server");
-      delay(500); 
-      break;
-    case WStype_TEXT:
-      Serial.printf("Received text: %s\n", payload);
-      if (strcmp((char *)payload, "TRIGGER_ENTRANCE") == 0) {
-        // Activate the flash:
-        doFlash();
-
-        // Capture an image
-        serveJpg();
-      }
-      delay(500); 
-      break;
-  }
-}
+// === Create objects for Clients: ==========================================
+MyLotNode myCameraClient(local_IP);
 
 void setup() {
   Serial.begin(9600);
+  delay(1000);
+  Serial.println("\n\nStarting....................");
+  pinMode(PIN_FLASH, OUTPUT); //Support flash
 
   //Set up the camera:
   {
@@ -78,50 +37,59 @@ void setup() {
     bool camOk = Camera.begin(cfg);
     Serial.println(camOk ? "CAMERA OK" : "CAMERA FAIL");
   }
-  pinMode(4, OUTPUT);
+  
+  // Connect to WIFI:
+  myCameraClient.networkSetup();
 
-  // Configure static IP for this Camera-Node:
-  if (!WiFi.config(local_IP, gateway, subnet)) {
-    Serial.println("STA Failed to configure");
-  }
+  // Connect to the server:
+  myCameraClient.defineWSClient();  
 
-  connectWIFI();
+  doFlash();
 
-  // Initialize WebSocket client
-  //webSocket.begin("192.168.1.1", 81);
-  webSocket.begin(server_IP, 81);
-  webSocket.onEvent(webSocketEvent);
-  webSocket.connect();
-
-  //Avoid overwhelming the server with too many reconnection attempts in a short period if the network is unstable:
-  //webSocket.setReconnectInterval(1000);
+  myTimer = millis();
 }
 
 void loop() {
-  // Handle WebSocket communication:
-  webSocket.loop();
+  // Perform rollcall:
+  if (millis() - myTimer >= myCameraClient.getInterval()) {
+    myCameraClient.rollcall();  
+    myTimer = millis();
+  }
 
-  //delay(500); 
+  if (myCameraClient.isShotRequired()) {
+    Serial.println("PICTURE REQUEST DETECTED ====================");
+    doFlash();
+    myCameraClient.setShotRequire(false);
+  }
+  else {
+    Serial.println("isShotRequired = FALSE");
+  }
+  delay(1000);
 }
 
-void connectWIFI() {
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  //WiFi.begin(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("Connecting  to WiFi...");
+// Capture and send an image:
+void serveJpg() {
+  auto frame = esp32cam::capture();
+  if (frame == nullptr) {
+    Serial.println("CAPTURE FAIL");
+    return;
   }
-  Serial.println("Connected to WiFi");
-
-  Serial.print("Local IP: ");
-  Serial.println(WiFi.localIP());
+  
+  Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(), static_cast<int>(frame->size()));
+  /*
+  //When message "TAKE_PICTURE" received, start writing the incoming binary data to a file until it receives "END_OF_JPEG".
+  String startOfFile = "START_OF_JPEG";
+  String endOfFile = "END_OF_JPEG";
+  webSocket.sendTXT(startOfFile);
+  webSocket.sendBIN(frame->data(), frame->size());
+  webSocket.sendTXT(endOfFile);
+  */
 }
 
 void doFlash(){
-  digitalWrite(4, LOW); //Turn on
+  digitalWrite(PIN_FLASH, HIGH); //Turn on
+  delay (1000);
+  digitalWrite(PIN_FLASH, LOW); //Turn off
   delay (500);
-  digitalWrite(4, HIGH); //Turn off
-  delay (4000);
 }
+
