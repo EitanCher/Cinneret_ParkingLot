@@ -25,36 +25,43 @@ void MyLotNode::networkSetup() {
 }
 
 void MyLotNode::defineWSClient() {
+	wsClient.onMessage([this](WebsocketsMessage message){
+		this->onMessageCallback(message);
+	});
+
+	wsClient.onEvent([this](WebsocketsEvent event, String data) {
+		if (event == WebsocketsEvent::ConnectionOpened) {
+			Serial.println("Websocket server connected");
+		} else if (event == WebsocketsEvent::ConnectionClosed) {
+			Serial.println("Websocket server disconnected");
+		} else if (event == WebsocketsEvent::GotPing) {
+			Serial.println("Ping received");
+		}
+	});
+	
 	while(!wsClient.connect(this->websocket_server, this->websocket_port, "/")) {
 		delay(100);
 		Serial.println(this->websocket_port);
 		Serial.println(this->websocket_server);
-		Serial.println(".... Attempting to connect to websocket server ....");
+		Serial.println("Attempting to connect to websocket server ....");
 	}
-	Serial.println("Websocket server connected");
-	
-	/*wsClient.onMessage([this](WebsocketsMessage input){
-		Serial.println("onMessage activated!!!!!!!!!!!!!!!!!!!!!!");
-		//this->onMessageCallback(input);
-	});*/
-	wsClient.onMessage([](WebsocketsMessage msg){
-		Serial.println("Got Message: " + msg.data());
-	});
-
-	//wsClient.onMessage(this->onMessageCallback);
 }
 
-void MyLotNode::onMessageCallback(WebsocketsMessage input){
-	String msg = input.data();
-	Serial.println(msg);
+void MyLotNode::onMessageCallback(WebsocketsMessage message){
+	Serial.println("This is callback!!!!!!!!!!!!!!!!!!!!!!");
+	String msg = message.data();
+	String log = "Message received: " + message.data();
+	Serial.println(log);
 	if (msg == "TAKE_PICTURE") {
 		this->takePicture = true;
 	}
 }
 
 void MyLotNode::rollcall() {
-	if(wsClient.available()) 
-		wsClient.send("ACTIVE");
+	if(wsClient.available()) {
+		String msg = this->local_IP.toString() + " ACTIVE"; 
+		wsClient.send(msg);
+	}
 	else 
 		this->defineWSClient();
 }
@@ -90,5 +97,4 @@ void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int m
     wsClient.send(msg_event);
   }
   else if (this->distance == 0) wsClient.send(msg_zero);
-  //else wsClient.send("no_object");
 }
