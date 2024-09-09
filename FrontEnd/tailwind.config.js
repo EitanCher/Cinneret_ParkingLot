@@ -2,6 +2,8 @@ const { nextui } = require('@nextui-org/react');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'media', // Enable dark mode with class strategy
+
   content: [
     './src/**/*.{js,jsx,ts,tsx}', // Adjust according to your file structure
     './public/index.html', // Include if you have HTML files in public
@@ -46,10 +48,8 @@ module.exports = {
         lg: '1024px',
         xl: '1280px'
       }
-      // Additional customizations can be added here
     }
   },
-  darkMode: 'class', // If you use dark mode
   plugins: [
     nextui() // NextUI Tailwind plugin
     // You can add more plugins here if needed

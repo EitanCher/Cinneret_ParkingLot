@@ -63,15 +63,15 @@ const Login = () => {
   };
 
   return (
-    <div className='flex justify-center min-h-screen my-16'>
+    <div className='flex justify-center min-h-screen my-16 '>
       {/* Centers both vertically and horizontally */}
-      <div className='w-full max-w-sm bg-white p-6 md:p-0  flex flex-col items-center'>
+      <div className='w-full max-w-sm p-6 md:p-0  flex flex-col items-center '>
         {/* Invisible container with size matching NextUI Card */}
         <svg
           viewBox='0 0 48 48'
           fill='none'
           xmlns='http://www.w3.org/2000/svg'
-          className='w-8 h-8 text-[#111118] mb-4' // Adjust size and margin as needed
+          className='w-8 h-8 text-[#111118] mb-4 text' // Adjust size and margin as needed
         >
           <path d='M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z' fill='currentColor'></path>
         </svg>
@@ -117,7 +117,10 @@ const Login = () => {
             <span className='px-4 text-gray-500 text-xs'>OR</span>
             <Divider className='flex-1' />
           </div>
-          <Button className='w-full flex items-center justify-center bg-white text-black border border-gray-300' onClick={handleGoogleLogin}>
+          <Button
+            className='text google-button w-full flex items-center justify-center bg-white text-black border border-gray-300'
+            onClick={handleGoogleLogin}
+          >
             <FcGoogle className='mr-2' /> Continue with Google
           </Button>
           <p className='flex items-center justify-center  text-sm text-gray-500 mt-4'>

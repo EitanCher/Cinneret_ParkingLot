@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../Context/ThemeContext'; // Import useTheme from your ThemeContext
 
 const HowItWorks = () => {
   return (

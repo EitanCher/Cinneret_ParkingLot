@@ -56,7 +56,7 @@ const Signup = () => {
 
   return (
     <div className='flex justify-center min-h-screen my-16'>
-      <div className='w-full max-w-lg bg-white p-6 md:p-8 flex flex-col items-center rounded-lg'>
+      <div className='w-full max-w-lg p-6 md:p-8 flex flex-col items-center rounded-lg'>
         <h1 className='text-2xl font-bold mb-4'>Create Your Account</h1>
         <p className='mb-8 text-sm text-gray-500 text-center'>Fill in the details below to create a new account</p>
         <form onSubmit={handleSignup} className='w-full'>
@@ -145,7 +145,7 @@ const Signup = () => {
           </div>
 
           <p className='flex items-center justify-center text-sm text-gray-500 mt-4'>
-            Already have an account?{' '}
+            Already have an account? <span className='px-1' />
             <Link to='/login' className='text-blue-500 hover:underline'>
               Log In
             </Link>

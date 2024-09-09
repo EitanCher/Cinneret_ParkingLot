@@ -52,7 +52,7 @@ const Cities = () => {
       </p>
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto'>
         {cities.map((city, index) => (
-          <Card shadow='sm' key={index} isPressable onPress={() => console.log(`${city.CityName} pressed`)}>
+          <Card className='card' shadow='sm' key={index} isPressable onPress={() => console.log(`${city.CityName} pressed`)}>
             <CardBody className='overflow-visible p-0'>
               <Image
                 shadow='sm'

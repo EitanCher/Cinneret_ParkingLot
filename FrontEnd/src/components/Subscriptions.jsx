@@ -67,7 +67,7 @@ const Subscriptions = () => {
       </div>
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto px-4'>
         {subscriptions.map((sub, index) => (
-          <Card isFooterBlurred radius='lg' className='border-none' shadow='sm' key={index}>
+          <Card isFooterBlurred radius='lg' className='card border-none' shadow='sm' key={index}>
             <CardBody className='p-6'>
               <h1 class='text-[#0e0e1b] text-base font-bold leading-tight'>{sub.Name}</h1>
               <p class='py-3 flex items-baseline gap-1 text-[#0e0e1b]'>
