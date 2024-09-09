@@ -9,7 +9,15 @@ const WS_PORT = 5555;
 const HTTP_PORT = 8000;
 
 const wsServer = new webSocket.Server({port: WS_PORT}, ()=>console.log(`Websocket server is listening at ${WS_PORT}`));
-let allBoards = {gates: [], gateCams: [], slots: [], slotCams: []};    // Empty arrays - to enable push command in fetchNodesData()
+let allBoards = {gates: [], gateCams: [], slots: [], slotCams: []};    // Empty arrays - to enable push command in fetchBoardsDataOnInit()
+/*
+let lotClients = {
+    gates:      [{ip: '192.168.1.3', wsc: null, isFault: false, isConnected: false}],
+    gateCams:   [{ip: '192.168.1.6', wsc: null, isFault: false, isConnected: false}],
+    slots:      [{ip: '192.168.1.2', wsc: null, isFault: false, isConnected: false}],
+    slotCams:   [{ip: '192.168.1.8', wsc: null, isFault: false, isConnected: false}]
+}
+*/
 
 // Get local IP address:
 console.log('Local IP Address:', getLocalIPAddress());
@@ -30,11 +38,24 @@ wsServer.on('connection', (ws, req) => {
         const message = data.toString();
         console.log('Received:', message);
         
-        if (!boardData_1.isConnected) {
-            boardData_1.isConnected = true;
-        }
-        if (boardData_1.isActive && message === 'entry_event') {
-            console.log("trigggger");
+        if (!boardData_1.isFault) {
+            if (!boardData_1.isConnected) boardData_1.isConnected = true;
+
+            switch(message) {
+                case 'entry_event':
+                case 'OBJECT_DETECTED':
+                    console.log("Message accepted")
+                    if(boardData_1.wsc.available)
+                        console.log("AVAILABLE")
+                    if(boardData_2.wsc != null) {
+                            boardData_2.wsc.send('TAKE_PICTURE');
+                            console.log(`Trigger sent to camera ${boardData_2.ip}`);
+                    } 
+                    else console.log(`Camera ${boardData_2.ip} not connected.`);
+                    break;
+                default:
+                    // code block
+            }
         }
     });
   
@@ -55,6 +76,40 @@ setTimeout(() => {
                 board.send(`INITIAL_CONNECTION_ESTABLISHED`);
         });
 }, 5000);  // 5-second delay
+  
+/*  
+// WebSocket server logic
+    wsServer.on('connection', (ws, req) => {
+    console.log('Connected');
+    lotClients.push(ws);
+
+    // If there is a message from one of the clients, send it to all the clients:
+    ws.on('message', data => {
+        lotClients.forEach((ws, i) => {
+            if(ws.readyState === ws.OPEN) {
+                ws.send(data);
+            } 
+            // If a client doesn't have an opened connection, remove it from the array:
+            else {
+                lotClients.splice(i, 1);
+            }
+        })
+    });
+});
+*/
+
+// Serve HTML file:
+const server = app.get('/entry_us', (req, res) => res.sendFile(path.resolve(__dirname, './index.html')));
+// Listen for client's HTTP connection:
+app.listen(HTTP_PORT, ()=>console.log(`HTTP server is listening at ${HTTP_PORT}`));
+
+server.on('upgrade', (request, socket, head) => {
+    wsServer.handleUpgrade(request, socket, head, (ws) => {
+        wsServer.emit('connection', ws, request);
+    });
+});
+
+
 
 async function fetchBoardsDataOnInit() {
     console.log("Fetching data from the DB..................")
@@ -104,6 +159,7 @@ async function fetchBoardsDataOnInit() {
         console.log("Boards data after \"Fetch\":")
         console.log(allBoards);
         console.log("*******   Fetch done   *********************")
+//        scanConnectedBoards();
     } catch (err) {
         console.error('Error executing query', err.stack);
     } finally {
@@ -156,4 +212,6 @@ function getLocalIPAddress() {
     return '127.0.0.1'; // Fallback to loopback address
 }
 
+
+    
 
