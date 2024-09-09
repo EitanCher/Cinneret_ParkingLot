@@ -50,6 +50,8 @@ void setup() {
 }
 
 void loop() {
+  myCameraClient.handle();
+  
   // Perform rollcall:
   if (millis() - myTimer >= myCameraClient.getInterval()) {
     myCameraClient.rollcall();  
