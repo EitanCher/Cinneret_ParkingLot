@@ -32,6 +32,24 @@ void MyLotNode::defineWSClient() {
 		Serial.println(".... Attempting to connect to websocket server ....");
 	}
 	Serial.println("Websocket server connected");
+	
+	/*wsClient.onMessage([this](WebsocketsMessage input){
+		Serial.println("onMessage activated!!!!!!!!!!!!!!!!!!!!!!");
+		//this->onMessageCallback(input);
+	});*/
+	wsClient.onMessage([](WebsocketsMessage msg){
+		Serial.println("Got Message: " + msg.data());
+	});
+
+	//wsClient.onMessage(this->onMessageCallback);
+}
+
+void MyLotNode::onMessageCallback(WebsocketsMessage input){
+	String msg = input.data();
+	Serial.println(msg);
+	if (msg == "TAKE_PICTURE") {
+		this->takePicture = true;
+	}
 }
 
 void MyLotNode::rollcall() {
@@ -72,4 +90,5 @@ void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int m
     wsClient.send(msg_event);
   }
   else if (this->distance == 0) wsClient.send(msg_zero);
+  //else wsClient.send("no_object");
 }
