@@ -35,7 +35,7 @@ void setup() {
     cfg.setJpeg(80);
  
     bool camOk = Camera.begin(cfg);
-    Serial.println(camOk ? "CAMERA OK" : "CAMERA FAIL");
+    Serial.println(camOk ? "CAMERA SETUP OK" : "CAMERA SETUP FAILED");
   }
   
   // Connect to WIFI:
@@ -61,10 +61,6 @@ void loop() {
     doFlash();
     myCameraClient.setShotRequire(false);
   }
-  else {
-    Serial.println("isShotRequired = FALSE");
-  }
-  delay(1000);
 }
 
 // Capture and send an image:
