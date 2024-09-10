@@ -3,7 +3,7 @@ const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
 const passport = require('../utils/passport-config'); // Import from the correct path
-
+const axios = require('axios');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -309,12 +309,9 @@ const getUserCarsController = async (req, res) => {
 
 const getUserDetails = async (req, res) => {
   try {
-    console.log('start of try block in getUserDetails controller');
     const user = req.user; // Correctly getting userId
-    console.log('userID in getUserDetails controller:', user);
     if (!user) {
       // Check if userId is undefined or null
-      console.log('User ID is not found');
       return res.status(404).send('User ID is not provided');
     }
 
@@ -323,7 +320,6 @@ const getUserDetails = async (req, res) => {
     });
 
     if (!resultUser) {
-      console.log('User not found');
       return res.status(404).send('User not found');
     }
 
@@ -378,6 +374,29 @@ const deleteCarById = async (req, res) => {
   }
 };
 
+const fetchCheckoutSessionURL = async (req, res) => {
+  console.log('Fetching Stripe Checkout Session...');
+  const sessionId = req.params.sessionId;
+  const stripeUrl = `https://api.stripe.com/v1/checkout/sessions/${sessionId}`;
+
+  try {
+    const response = await axios.get(stripeUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` // Use your environment variable for the Stripe secret key
+      }
+    });
+    console.log('Response from Stripe:', response.data);
+
+    // Return the response data to the frontend
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error('Error fetching Stripe session:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data || 'An error occurred while fetching the Stripe session'
+    });
+  }
+};
+
 module.exports = {
   updateUser,
   deleteUser,
@@ -388,5 +407,6 @@ module.exports = {
   updateCars,
   deleteCarById,
   getUserDetails,
-  logout
+  logout,
+  fetchCheckoutSessionURL
 };

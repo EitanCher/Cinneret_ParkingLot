@@ -1,16 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Spinner, Card, Image, CardFooter, CardBody } from '@nextui-org/react';
 import subscriptionsImg from '../assets/images/Subscriptions.jpg'; // Corrected the import name
-import { fetchSubscriptions } from '../api/userApi'; // Ensure correct import
+import { fetchSubscriptions, fetchStripeSessionID } from '../api/userApi'; // Ensure correct import
 import { GoCheck } from 'react-icons/go';
 import { Link } from 'react-router-dom'; // Import useLocation from react-router-dom
+import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
+// Initialize Stripe outside of a component’s render to avoid recreating the instance on every render
+const stripePromise = loadStripe('pk_test_51PgRliRsSJ7763042IP7ZOzW1T0sizlOQy5xGFVI1n8YlIw14H0WRaFuOE8TIff1ZDvnua1gzOnaDgAPCs878dIZ0071SqcAkO'); // Replace with your actual publishable key
 
-import test from '../assets/images/test.jpg';
 const Subscriptions = () => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const handleSubscribe = async (subscriptionPlanId) => {
+    try {
+      console.log('Subscription plan in Subscriptions.jsx:', subscriptionPlanId);
+
+      // Fetch session ID from the backend
+      const sessionId = await fetchStripeSessionID(subscriptionPlanId);
+
+      console.log('Session ID in Subscriptions.jsx:', sessionId);
+
+      if (!sessionId) {
+        setError('Failed to get checkout session. Please try again.');
+        return;
+      }
+
+      // Initialize Stripe with your publishable key
+      const stripe = await stripePromise;
+
+      if (!stripe) {
+        setError('Stripe failed to initialize.');
+        return;
+      }
+
+      // Redirect to Stripe checkout
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+
+      if (error) {
+        console.error('Stripe Checkout error:', error);
+        setError('An error occurred during checkout. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to subscribe:', error);
+      setError('An error occurred. Please try again.');
+    }
+  };
   useEffect(() => {
     const getSubscriptions = async () => {
       try {
@@ -74,9 +111,10 @@ const Subscriptions = () => {
                 <span className='text-[#0e0e1b] text-4xl font-black leading-tight tracking-[-0.033em]'>{`$` + sub.Price} </span>
                 <span className='text-[#0e0e1b] text-base font-bold leading-tight'>/Year</span>
               </p>
-              <Button as={Link} to={'/signup/' + sub.Name} color='primary'>
+              <Button onClick={() => handleSubscribe(sub.idSubscriptionPlans)} color='primary'>
                 Subscribe
-              </Button>
+              </Button>{' '}
+              {/* onclick> handleSubscribe > sub.idSubscriptionPlans  */}
               {sub.Features && sub.Features.length > 0 && (
                 <ul className='list-disc  mt-4'>
                   {sub.Features.map((feature, i) => (

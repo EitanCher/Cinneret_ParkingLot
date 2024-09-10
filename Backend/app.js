@@ -9,18 +9,20 @@ const passport = require('./utils/passport-config');
 const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 3001;
+const path = require('path');
 
 // Middleware setup
 app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
 app.use(express.json());
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 // CORS configuration
 const corsOptions = {
-  origin: process.env.FRONTEND_URL, // Use the environment variable for the frontend URL
-  credentials: true // Allow credentials (cookies)
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
-
 app.use(cors(corsOptions));
 app.use(passport.initialize());
 app.use(cookieParser());

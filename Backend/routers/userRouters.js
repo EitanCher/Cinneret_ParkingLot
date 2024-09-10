@@ -14,7 +14,8 @@ const {
   updateCars,
   deleteCarById,
   getUserDetails,
-  logout
+  logout,
+  fetchCheckoutSessionURL
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -33,6 +34,7 @@ const passport = require('passport');
 const { createStripeSession } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 const { authenticateJWT } = require('../middlewares/authenticateJWT');
+router.get('/checkout-session/:sessionId', fetchCheckoutSessionURL);
 
 router.get(
   '/details',
@@ -44,6 +46,7 @@ router.get(
   authenticateJWT,
   getUserDetails
 );
+
 router.get('/parkinglots', getParkingLotCities);
 
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items

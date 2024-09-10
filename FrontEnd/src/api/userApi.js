@@ -119,3 +119,24 @@ export const logout = async () => {
     throw error; // Re-throw the error to handle it in the calling function
   }
 };
+
+export const fetchStripeSessionID = async (subscriptionPlanId) => {
+  try {
+    console.log('Subscription plan ID in userApi:', subscriptionPlanId);
+
+    // Make POST request to create a checkout session
+    const response = await api.post(
+      '/create-checkout-session',
+      { subscriptionPlanId }, // Simplified object shorthand
+      { withCredentials: true }
+    );
+
+    console.log('Response in fetchStripeSessionID:', response);
+
+    // Return sessionId from response data
+    return response.data.sessionId;
+  } catch (error) {
+    console.error('Error during subscription:', error);
+    throw error; // Re-throw the error to be handled in the calling function
+  }
+};

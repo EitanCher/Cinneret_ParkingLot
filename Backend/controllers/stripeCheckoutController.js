@@ -4,10 +4,11 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const { createSubscription, getUserSubscriptionPlanById } = require('../models/subscriptionModel');
 
 const createStripeSession = async (req, res) => {
-  let { userId, subscriptionPlanId } = req.body;
-
-  // Sanitization
-  userId = req.user.idUsers;
+  let { subscriptionPlanId } = req.body;
+  userId = req.user.id;
+  console.log('subscription plan id in stripe controller', subscriptionPlanId);
+  console.log('user id in stripe controller', userId);
+  console.log('secret key in stripe controller :', process.env.STRIPE_SECRET_KEY);
   subscriptionPlanId = subscriptionPlanId;
 
   if (!userId) {
@@ -16,6 +17,7 @@ const createStripeSession = async (req, res) => {
 
   try {
     // Fetch subscription plan details
+    console.log('fetching subscription plan details');
     const subscriptionPlan = await getUserSubscriptionPlanById(subscriptionPlanId);
 
     if (!subscriptionPlan) {
@@ -24,8 +26,20 @@ const createStripeSession = async (req, res) => {
 
     const featuresDescription = subscriptionPlan.Features.join(', ');
     const unitAmount = subscriptionPlan.Price * 100; // Convert price to cents for Stripe
-
+    let img = '';
+    switch (subscriptionPlanId) {
+      case 1:
+        img = `https://images.pexels.com/photos/3095713/pexels-photo-3095713.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`; // Example for plan 1
+        break;
+      case 2:
+        img = `https://images.pexels.com/photos/842794/pexels-photo-842794.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`; // Example for plan 2
+        break;
+      default:
+        img = `https://images.pexels.com/photos/23729986/pexels-photo-23729986/free-photo-of-concrete-real-estate-district.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`; // Default image
+    }
+    console.log('img is:', img);
     // Create a Stripe Checkout Session
+    console.log('creating stripe checkout session-stripe.checkout.sessions.create ');
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -35,7 +49,7 @@ const createStripeSession = async (req, res) => {
             product_data: {
               name: subscriptionPlan.Name,
               description: `Subscription plan with features: ${featuresDescription}`,
-              images: ['https://example.com/subscription-plan-image.jpg'] // Replace with your image URL
+              images: [img] // Replace with your image URL
             },
             unit_amount: unitAmount
           },
@@ -43,14 +57,15 @@ const createStripeSession = async (req, res) => {
         }
       ],
       mode: 'payment',
-      success_url: `https://httpbin.org/get?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `https://httpbin.org/get`,
+      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
       metadata: {
         userId,
         subscriptionPlanId
       }
     });
 
+    console.log('about to enter create subscription in model');
     // Save the Stripe session ID into the database
     const subscription = await createSubscription({
       userId,
