@@ -1,11 +1,24 @@
 #include "KinneretParkingLot.h"
 
 MyLotNode::MyLotNode(const IPAddress& myIP) 
-	: local_IP(myIP) {}
+	: local_IP(myIP) {
+		timer = millis();
+		defineWSClient();
+	}
     // Syntax memo:
 	// the constructor accepts an IPAddress object by reference, which avoids copying the object. 
 	// ': local_IP(myIP)' is a member initializer list, used to initialize member variables of a class before the constructor body runs
 
+
+void MyLotNode::handle() { 
+//void handle(unsigned long currTime, unsigned long startTime) { 
+	wsClient.poll(); 
+	// Perform rollcall:
+	if (millis() - this->timer >= this->rollcallInterval) {
+		this->rollcall();  
+		this->timer = millis();
+	}
+}
 
 void MyLotNode::networkSetup() {
 	Serial.println("WIFI Setup started");
@@ -24,6 +37,15 @@ void MyLotNode::networkSetup() {
 	Serial.println(WiFi.localIP());
 }
 
+void MyLotNode::connectToServer() {
+	while(!wsClient.connect(this->websocket_server, this->websocket_port, "/")) {
+		delay(100);
+		Serial.println(this->websocket_port);
+		Serial.println(this->websocket_server);
+		Serial.println("Attempting to connect to websocket server ....");
+	}
+}
+
 void MyLotNode::defineWSClient() {
 	wsClient.onMessage([this](WebsocketsMessage message){
 		this->onMessageCallback(message);
@@ -31,20 +53,15 @@ void MyLotNode::defineWSClient() {
 
 	wsClient.onEvent([this](WebsocketsEvent event, String data) {
 		if (event == WebsocketsEvent::ConnectionOpened) {
-			Serial.println("Websocket server connected");
+			Serial.print("Websocket server connected for client: ");
+			Serial.println(this->local_IP);
 		} else if (event == WebsocketsEvent::ConnectionClosed) {
-			Serial.println("Websocket server disconnected");
+			Serial.print("Websocket server disconnected for client: ");
+			Serial.println(this->local_IP);
 		} else if (event == WebsocketsEvent::GotPing) {
 			Serial.println("Ping received");
 		}
 	});
-	
-	while(!wsClient.connect(this->websocket_server, this->websocket_port, "/")) {
-		delay(100);
-		Serial.println(this->websocket_port);
-		Serial.println(this->websocket_server);
-		Serial.println("Attempting to connect to websocket server ....");
-	}
 }
 
 void MyLotNode::onMessageCallback(WebsocketsMessage message){
@@ -63,7 +80,7 @@ void MyLotNode::rollcall() {
 		wsClient.send(msg);
 	}
 	else 
-		this->defineWSClient();
+		this->connectToServer();
 }
 
 void MyLotNode::readDistance(int myTrig, int myEcho) {
@@ -89,7 +106,7 @@ void MyLotNode::readDistance(int myTrig, int myEcho) {
 void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
   this->readDistance(myTrig, myEcho);
   
-  String msg_event = myString + "_event";
+  String msg_event = "OBJECT_DETECTED";
   String msg_zero = myString + "_0_distance";
   if (this->distance > 0 && this->distance < myThreshold) {
     Serial.print("Object detected on ");
@@ -97,4 +114,12 @@ void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int m
     wsClient.send(msg_event);
   }
   else if (this->distance == 0) wsClient.send(msg_zero);
+  //else wsClient.send("no_object");
 }
+
+void MyLotNode::sendPicture(const char* data, const size_t len) {
+	wsClient.sendBinary(data, len);
+	this->takePicture = false;
+}
+
+
