@@ -42,7 +42,7 @@ void setup() {
   myCameraClient.networkSetup();
 
   // Connect to the server:
-  myCameraClient.defineWSClient();  
+  myCameraClient.connectToServer();  
 
   doFlash();
 
@@ -51,37 +51,24 @@ void setup() {
 
 void loop() {
   myCameraClient.handle();
-  
-  // Perform rollcall:
-  if (millis() - myTimer >= myCameraClient.getInterval()) {
-    myCameraClient.rollcall();  
-    myTimer = millis();
-  }
 
   if (myCameraClient.isShotRequired()) {
     Serial.println("PICTURE REQUEST DETECTED ====================");
-    doFlash();
-    myCameraClient.setShotRequire(false);
+    serveJpg();
   }
 }
 
 // Capture and send an image:
 void serveJpg() {
+  doFlash();
   auto frame = esp32cam::capture();
-  if (frame == nullptr) {
-    Serial.println("CAPTURE FAIL");
+  if (!frame) {
+    Serial.println("CAPTURE FAILED");
     return;
   }
   
   Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(), static_cast<int>(frame->size()));
-  /*
-  //When message "TAKE_PICTURE" received, start writing the incoming binary data to a file until it receives "END_OF_JPEG".
-  String startOfFile = "START_OF_JPEG";
-  String endOfFile = "END_OF_JPEG";
-  webSocket.sendTXT(startOfFile);
-  webSocket.sendBIN(frame->data(), frame->size());
-  webSocket.sendTXT(endOfFile);
-  */
+  myCameraClient.sendPicture((const char*)frame->data(), frame->size());   
 }
 
 void doFlash(){
