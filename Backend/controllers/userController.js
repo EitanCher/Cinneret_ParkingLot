@@ -330,6 +330,29 @@ const getUserDetails = async (req, res) => {
   }
 };
 
+const getUserSubscription = async (req, res) => {
+  try {
+    console.log('Start of getUserSubscription in user controller');
+    const userId = req.user.id;
+
+    // Fetch the user's active subscription
+    const userSubscription = await prisma.userSubscriptions.findFirst({
+      where: { UserID: userId, Status: 'active' }
+    });
+
+    if (!userSubscription) {
+      // Return a 200 status with an empty object or a message if no active subscription is found
+      return res.status(200).json({ message: 'No active subscription found', subscription: null });
+    }
+
+    // Respond with subscription details
+    res.status(200).json(userSubscription);
+  } catch (error) {
+    console.error('Error fetching user subscription:', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 // add delete cars controller
 
 const deleteCarById = async (req, res) => {
@@ -408,5 +431,6 @@ module.exports = {
   deleteCarById,
   getUserDetails,
   logout,
-  fetchCheckoutSessionURL
+  fetchCheckoutSessionURL,
+  getUserSubscription
 };

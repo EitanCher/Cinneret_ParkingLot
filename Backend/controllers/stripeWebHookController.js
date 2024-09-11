@@ -29,18 +29,20 @@ const handleCheckoutSessionCompleted = async (req, res) => {
     // Extract and sanitize metadata
     console.log('extractic userID and subscriptionPlanId from metadata');
     const userId = session.metadata.userId;
-    const subscriptionPlanId = session.metadata.subscriptionPlanId;
+    const prevSubscriptionPlanID = session.metadata.prevSubscriptionPlanID;
+    const subscriptionPlanIdForCheckout = session.metadata.subscriptionPlanIdForCheckout;
+    console.log('subscriptionPlanIdForCheckout in webhook: ' + subscriptionPlanIdForCheckout);
 
-    if (!userId || !subscriptionPlanId) {
+    if (!userId || !subscriptionPlanIdForCheckout) {
       console.error('Missing metadata fields in the session:', session.metadata);
       return res.status(400).send('Missing metadata fields');
     }
 
     try {
-      console.log(`Updating subscription status for user ${userId} and subscription plan ${subscriptionPlanId}`);
+      console.log(`Updating subscription status for user ${userId} and subscription plan ${subscriptionPlanIdForCheckout}`);
       // Update the subscription status to 'active'
-      await updateSubscriptionStatus(userId, subscriptionPlanId, 'active');
-      console.log(`Subscription ${subscriptionPlanId} for user ${userId} is now active.`);
+      await updateSubscriptionStatus(userId, prevSubscriptionPlanID, subscriptionPlanIdForCheckout, 'active');
+      console.log(`Subscription ${subscriptionPlanIdForCheckout} for user ${userId} is now active.`);
     } catch (err) {
       console.error('Error updating subscription status:', err.message);
       return res.status(500).send('Internal Server Error');

@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Spinner, Card, Image, CardFooter, CardBody } from '@nextui-org/react';
 import subscriptionsImg from '../assets/images/Subscriptions.jpg'; // Corrected the import name
-import { fetchSubscriptions, fetchStripeSessionID } from '../api/userApi'; // Ensure correct import
+import { fetchSubscriptions, fetchStripeSessionID, getUserSubscription } from '../api/userApi'; // Ensure correct import
 import { GoCheck } from 'react-icons/go';
 import { Link } from 'react-router-dom'; // Import useLocation from react-router-dom
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
+import { useAuth } from '../Context/AuthContext'; // Use your AuthContext
+
 // Initialize Stripe outside of a component’s render to avoid recreating the instance on every render
 const stripePromise = loadStripe('pk_test_51PgRliRsSJ7763042IP7ZOzW1T0sizlOQy5xGFVI1n8YlIw14H0WRaFuOE8TIff1ZDvnua1gzOnaDgAPCs878dIZ0071SqcAkO'); // Replace with your actual publishable key
 
 const Subscriptions = () => {
+  const { isAuthenticated } = useAuth();
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [userSubscriptionID, setUserSubscriptionID] = useState(null);
   const handleSubscribe = async (subscriptionPlanId) => {
     try {
       console.log('Subscription plan in Subscriptions.jsx:', subscriptionPlanId);
@@ -48,6 +51,7 @@ const Subscriptions = () => {
       setError('An error occurred. Please try again.');
     }
   };
+
   useEffect(() => {
     const getSubscriptions = async () => {
       try {
@@ -68,8 +72,29 @@ const Subscriptions = () => {
         setLoading(false);
       }
     };
+    const getUserActiveSubscription = async () => {
+      try {
+        // Fetch the user subscription details
+        const response = await getUserSubscription(); // Assuming getUserSubscription returns a response
+        console.log('response in subscriptions.jsx', response);
+        if (response) {
+          // If the user has a subscription, update the state with the current plan
+          console.log('Current plan:', response.SubscriptionPlanID);
+          setUserSubscriptionID(response.SubscriptionPlanID);
+        } else {
+          // If no active subscription is found, log a message without updating the state
+          console.log('No active subscription found');
+        }
+      } catch (error) {
+        console.error('Failed to get user subscription:', error);
+        setError('Failed to get user subscription');
+      }
+    };
+
+    if (isAuthenticated) getUserActiveSubscription();
+
     getSubscriptions();
-  }, []);
+  }, [isAuthenticated]);
 
   if (loading) {
     return (
@@ -111,9 +136,20 @@ const Subscriptions = () => {
                 <span className='text-[#0e0e1b] text-4xl font-black leading-tight tracking-[-0.033em]'>{`$` + sub.Price} </span>
                 <span className='text-[#0e0e1b] text-base font-bold leading-tight'>/Year</span>
               </p>
-              <Button onClick={() => handleSubscribe(sub.idSubscriptionPlans)} color='primary'>
-                Subscribe
-              </Button>{' '}
+
+              {/* make sure the subscriptions are sorted by id in the database. cheapest first id (pk) */}
+              <Button
+                onClick={() => handleSubscribe(sub.idSubscriptionPlans)}
+                color={userSubscriptionID === sub.idSubscriptionPlans ? 'danger' : 'primary'}
+                isDisabled={userSubscriptionID === sub.idSubscriptionPlans || (isAuthenticated && sub.idSubscriptionPlans < userSubscriptionID)}
+              >
+                {userSubscriptionID === sub.idSubscriptionPlans
+                  ? 'Active'
+                  : isAuthenticated && sub.idSubscriptionPlans > userSubscriptionID
+                  ? 'Upgrade'
+                  : 'Subscribe'}
+              </Button>
+
               {/* onclick> handleSubscribe > sub.idSubscriptionPlans  */}
               {sub.Features && sub.Features.length > 0 && (
                 <ul className='list-disc  mt-4'>

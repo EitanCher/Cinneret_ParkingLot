@@ -1,45 +1,76 @@
 // stripeController.js
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-const { createSubscription, getUserSubscriptionPlanById } = require('../models/subscriptionModel');
+const { createSubscription, getUserSubscriptionPlanById, checkExistingActiveSubscription } = require('../models/subscriptionModel');
 
 const createStripeSession = async (req, res) => {
   let { subscriptionPlanId } = req.body;
-  userId = req.user.id;
-  console.log('subscription plan id in stripe controller', subscriptionPlanId);
-  console.log('user id in stripe controller', userId);
-  console.log('secret key in stripe controller :', process.env.STRIPE_SECRET_KEY);
-  subscriptionPlanId = subscriptionPlanId;
-
+  const userId = req.user.id;
+  let prevPlanID = subscriptionPlanId;
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' });
   }
 
   try {
-    // Fetch subscription plan details
-    console.log('fetching subscription plan details');
+    const existingSubscription = await checkExistingActiveSubscription(userId);
     const subscriptionPlan = await getUserSubscriptionPlanById(subscriptionPlanId);
-
+    console.log('subscription plan in stripe controller', subscriptionPlan);
     if (!subscriptionPlan) {
       return res.status(404).json({ message: 'Subscription Plan not found' });
     }
 
-    const featuresDescription = subscriptionPlan.Features.join(', ');
-    const unitAmount = subscriptionPlan.Price * 100; // Convert price to cents for Stripe
+    let subscriptionPlanIdForCheckout = parseInt(subscriptionPlanId, 10);
+    if (isNaN(subscriptionPlanIdForCheckout)) {
+      console.log('Invalid subscriptionPlanId:', subscriptionPlanId);
+      throw new Error('Invalid subscription plan ID');
+    }
+    let price = parseFloat(subscriptionPlan.Price);
+    let upgrade = false;
+
+    if (isNaN(price) || price <= 0) {
+      throw new Error('Invalid subscription plan price');
+    }
+
+    if (existingSubscription) {
+      const existingPrice = parseFloat(existingSubscription.Price);
+      if (isNaN(existingPrice)) {
+        throw new Error('Invalid existing subscription price');
+      }
+
+      if (existingPrice >= price) {
+        throw new Error('Cannot subscribe to this plan anymore');
+      } else {
+        upgrade = true;
+        price -= existingPrice;
+        prevPlanID = existingSubscription.SubscriptionPlanID;
+      }
+    }
+
+    // Ensure the price to be paid is in cents and is a valid integer
+    const unitAmount = Math.round(price * 100); // Convert price to cents
+
+    if (unitAmount <= 0) {
+      throw new Error('Invalid final price');
+    }
+    console.log('Final price to pay is:', price);
+    console.log('Unit amount in cents:', unitAmount);
+
     let img = '';
-    switch (subscriptionPlanId) {
+    switch (subscriptionPlanIdForCheckout) {
       case 1:
-        img = `https://images.pexels.com/photos/3095713/pexels-photo-3095713.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`; // Example for plan 1
+        img = 'https://images.pexels.com/photos/3095713/pexels-photo-3095713.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'; // Example for plan 1
         break;
       case 2:
-        img = `https://images.pexels.com/photos/842794/pexels-photo-842794.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`; // Example for plan 2
+        img = 'https://images.pexels.com/photos/842794/pexels-photo-842794.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'; // Example for plan 2
         break;
       default:
-        img = `https://images.pexels.com/photos/23729986/pexels-photo-23729986/free-photo-of-concrete-real-estate-district.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`; // Default image
+        img =
+          'https://images.pexels.com/photos/23729986/pexels-photo-23729986/free-photo-of-concrete-real-estate-district.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'; // Default image
     }
-    console.log('img is:', img);
+    console.log('Image URL:', img);
+
     // Create a Stripe Checkout Session
-    console.log('creating stripe checkout session-stripe.checkout.sessions.create ');
+    console.log('Creating Stripe Checkout session...');
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -48,8 +79,8 @@ const createStripeSession = async (req, res) => {
             currency: 'usd',
             product_data: {
               name: subscriptionPlan.Name,
-              description: `Subscription plan with features: ${featuresDescription}`,
-              images: [img] // Replace with your image URL
+              description: `Subscription plan with features: ${subscriptionPlan.Features.join(', ')}`,
+              images: [img]
             },
             unit_amount: unitAmount
           },
@@ -61,18 +92,21 @@ const createStripeSession = async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
       metadata: {
         userId,
-        subscriptionPlanId
+        prevSubscriptionPlanID: prevPlanID,
+        subscriptionPlanIdForCheckout: subscriptionPlanId
       }
     });
 
-    console.log('about to enter create subscription in model');
+    console.log('Stripe session created successfully with ID', session.id);
+
+    console.log('subscriptionPlanIdForCheckout before calling createSubscription in model:', subscriptionPlanIdForCheckout);
     // Save the Stripe session ID into the database
-    const subscription = await createSubscription({
+    await createSubscription({
       userId,
-      subscriptionPlanId,
-      stripeSessionId: session.id
+      subscriptionPlanId: subscriptionPlanId,
+      stripeSessionId: session.id,
+      upgrade
     });
-    console.log(`Stripe session created successfully with ID ${session.id}`);
 
     // Send the session ID to the client
     res.json({ sessionId: session.id });

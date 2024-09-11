@@ -140,3 +140,16 @@ export const fetchStripeSessionID = async (subscriptionPlanId) => {
     throw error; // Re-throw the error to be handled in the calling function
   }
 };
+
+export const getUserSubscription = async () => {
+  try {
+    const response = await api.get('/user-subscription', {
+      withCredentials: true // Important to include credentials (cookies) in request
+    });
+    console.log('response data in userapi.js:', response.data);
+    return response.data; // Return the subscription data
+  } catch (error) {
+    console.error('Error fetching user subscription:', error);
+    throw error; // Optionally throw error to be handled by caller
+  }
+};

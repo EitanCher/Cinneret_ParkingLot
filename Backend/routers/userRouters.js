@@ -15,7 +15,8 @@ const {
   deleteCarById,
   getUserDetails,
   logout,
-  fetchCheckoutSessionURL
+  fetchCheckoutSessionURL,
+  getUserSubscription
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -48,7 +49,7 @@ router.get(
 );
 
 router.get('/parkinglots', getParkingLotCities);
-
+router.get('/user-subscription', authenticateJWT, getUserSubscription);
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
 router.patch('/cars', authenticateJWT, updateCars);
 router.get('/subscriptions', getSubscriptionTiers);

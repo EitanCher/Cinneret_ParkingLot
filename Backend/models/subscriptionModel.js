@@ -3,10 +3,11 @@ const { subscriptionSchema } = require('../db-postgres/zodSchema');
 const { calculateEndDate, getCurrentISODate } = require('../utils/dateUtils');
 
 // Function to create a subscription
-const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId }) => {
+const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId, upgrade }) => {
   const idUser = parseInt(userId, 10);
   const planId = parseInt(subscriptionPlanId, 10);
 
+  console.log('subscription plan id in model:', planId);
   if (isNaN(planId)) {
     throw new Error('Invalid subscription plan ID, must be a number');
   }
@@ -60,17 +61,32 @@ const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId 
 
     return updatedSubscription;
   }
+  if (upgrade === true) {
+    // First, find the subscription ID based on UserID and Status
+    const activeSubscription = await prisma.userSubscriptions.findUnique({
+      where: {
+        UserID_Status: {
+          UserID: idUser,
+          Status: 'active'
+        }
+      }
+    });
 
-  // Check if the user already has an active subscription
-  const existingActiveSubscription = await prisma.userSubscriptions.findFirst({
-    where: {
-      UserID: idUser,
-      Status: 'active'
+    if (!activeSubscription) {
+      throw new Error('Active subscription not found');
     }
-  });
 
-  if (existingActiveSubscription) {
-    throw new Error('User already has an active subscription');
+    // Then, update the subscription
+    const updatedSubscription = await prisma.userSubscriptions.update({
+      where: {
+        idUserSubscriptions: activeSubscription.idUserSubscriptions
+      },
+      data: {
+        SubscriptionPlanID: subscriptionPlanId
+      }
+    });
+
+    return updatedSubscription;
   }
 
   // Create the new subscription record
@@ -88,12 +104,48 @@ const createSubscription = async ({ userId, subscriptionPlanId, stripeSessionId 
   return newSubscription;
 };
 
+const checkExistingActiveSubscription = async (userId) => {
+  try {
+    // Find the existing active subscription
+    const existingSubscription = await prisma.userSubscriptions.findFirst({
+      where: {
+        UserID: parseInt(userId, 10),
+        Status: 'active'
+      },
+      include: {
+        SubscriptionPlans: {
+          // Make sure this matches your schema
+          select: {
+            Price: true
+          }
+        }
+      }
+    });
+
+    // If an active subscription is found, return the subscription object with price included
+    if (existingSubscription && existingSubscription.SubscriptionPlans) {
+      return {
+        ...existingSubscription, // Spread the existing subscription data
+        Price: existingSubscription.SubscriptionPlans.Price // Add the price field
+      };
+    } else {
+      return null; // No active subscription found
+    }
+  } catch (err) {
+    throw new Error('Error fetching existing active subscription: ' + err.message);
+  }
+};
+
 // Function to update subscription status
-const updateSubscriptionStatus = async (userId, subscriptionPlanId, status) => {
+
+const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscriptionPlanIdForCheckout, status) => {
   // Validate input data
   const userIdInt = parseInt(userId, 10);
-  const subscriptionPlanIdInt = parseInt(subscriptionPlanId, 10);
-  if (isNaN(userId, subscriptionPlanId)) {
+  const prevSubscriptionPlanIdInt = parseInt(prevSubscriptionPlanID, 10);
+  const subscriptionPlanIdForCheckoutInt = parseInt(subscriptionPlanIdForCheckout, 10);
+  console.log('prev sub', prevSubscriptionPlanIdInt);
+  console.log(' checkout sub', subscriptionPlanIdForCheckoutInt);
+  if (isNaN(userIdInt, prevSubscriptionPlanIdInt, subscriptionPlanIdForCheckoutInt)) {
     throw new Error('Invalid user ID, must be a number');
   }
   const validStatuses = ['pending', 'active', 'expired'];
@@ -104,15 +156,15 @@ const updateSubscriptionStatus = async (userId, subscriptionPlanId, status) => {
   await prisma.userSubscriptions.updateMany({
     where: {
       UserID: userIdInt,
-      SubscriptionPlanID: subscriptionPlanIdInt,
+      SubscriptionPlanID: prevSubscriptionPlanIdInt,
       Status: 'pending'
     },
     data: {
-      Status: status
+      Status: status,
+      SubscriptionPlanID: subscriptionPlanIdForCheckoutInt
     }
   });
 };
-
 // Function to get subscription plan details by ID
 const getUserSubscriptionPlanById = async (subscriptionPlanId) => {
   // Validate input data
@@ -140,5 +192,6 @@ const isValidStripeSessionId = (sessionId) => {
 module.exports = {
   createSubscription,
   updateSubscriptionStatus,
-  getUserSubscriptionPlanById
+  getUserSubscriptionPlanById,
+  checkExistingActiveSubscription
 };
