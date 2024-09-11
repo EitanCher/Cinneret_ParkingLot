@@ -16,7 +16,7 @@
 #define THRESHOLD_GATE 20
 #define THRESHOLD_SLOT 20
 
-unsigned long myTimer;
+bool isEntr = false, isExit = false;  // Need both of them to enable the first toggle between the modes (next code line)
 
 // Local IPs are manually set for current devices (Ultrasonic Sensors on Entry/Exist). 
 // The IPs have to be verified not to conflict with other devices.
@@ -41,40 +41,33 @@ void setup() {
   pinMode(PIN_ECHO_EXIT, INPUT);
 
   // Initialize WIFI connection:
-  myClient_Entry.networkSetup();
   myClient_Exit.networkSetup();
-
-  // Connect to the server:
-  myClient_Entry.defineWSClient();  
-  myClient_Exit.defineWSClient();  
-
-  myTimer = millis();
+  myClient_Entry.networkSetup();
 }
 
 void loop() {
     myClient_Entry.handle();
     myClient_Exit.handle();
 
-  // Perform rollcall for the clients:
-  if (millis() - myTimer >= myClient_Entry.getInterval()) {
-    myClient_Entry.rollcall();  
-    myTimer = millis();  // Reset timer
-  }
-  if (millis() - myTimer >= myClient_Exit.getInterval()) {
-    myClient_Exit.rollcall();  
-    myTimer = millis();  // Reset timer
-  }
-
   // Read the state of the switches:
   int StateEntr = digitalRead(SWITCH_ENTR);
   int StateExit = digitalRead(SWITCH_EXIT);
-  bool isEntr, isExit;
   
   // Check the mode of the Gate:
-  if (StateEntr == LOW && StateExit == HIGH)  // SWITCH_ENTR pin is connected to ground, SWITCH_EXIT pin unconnected
-    {isEntr = true; isExit = false;}
-  else   
-    {isExit = true; isEntr = false;}
+  // If changing from "EXIT" to "ENTRY" - connect the Entry object to the server (will disconnect the Exit object)
+  // and vice versa
+  if (StateEntr == LOW && StateExit == HIGH)  {// SWITCH_ENTR pin is connected to ground, SWITCH_EXIT pin unconnected
+    if (!isEntr) {
+      myClient_Entry.connectToServer();  
+      isEntr = true; isExit = false;  // Change the mode to "ENTRY"
+    }
+  }
+  else {
+    if (!isExit) {
+      myClient_Exit.connectToServer();  
+      isExit = true; isEntr = false;  // Change the mode to "EXIT"
+    }
+  }
 
   // Read the ultrasonic on the active gate and send to server if an object detected:
   if (isEntr) {
