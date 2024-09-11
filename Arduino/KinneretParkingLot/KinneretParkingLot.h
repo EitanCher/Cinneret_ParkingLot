@@ -16,6 +16,7 @@ private:
 	const uint16_t websocket_port = 5555;
 	uint16_t distance;
 	const int rollcallInterval = 60000;
+	unsigned long timer = 0;
 	bool takePicture = false;
 	IPAddress gateway = IPAddress(192, 168, 1, 1);    // Router's IP address (has to be verified for each network but certain conventions are common)
 	IPAddress subnet = IPAddress(255, 255, 252, 0);   // Subnet mask for the local network
@@ -29,16 +30,18 @@ private:
 
 public:
 	MyLotNode(const IPAddress& myIP);
-	void networkSetup();
-	void defineWSClient();
-	void onMessageCallback(WebsocketsMessage message);
-	void rollcall();
-	void readDistance(int myTrig, int myEcho);
-	void sendDistance(String myString, int myThreshold, int myTrig, int myEcho);
-	int getInterval() const { return rollcallInterval; }
-	bool isShotRequired() { return takePicture; }
-	void setShotRequire(bool b) { takePicture = b; }
-	void handle() { wsClient.poll(); }
+	void 	connectToServer();
+	void 	defineWSClient();
+	int 	getInterval() const { return rollcallInterval; }
+	void 	handle();
+	bool 	isShotRequired() { return takePicture; }
+	void 	networkSetup();
+	void 	onMessageCallback(WebsocketsMessage message);
+	void 	readDistance(int myTrig, int myEcho);
+	void 	rollcall();
+	void 	sendDistance(String myString, int myThreshold, int myTrig, int myEcho);
+	void 	sendPicture(const char* data, const size_t len);
+	void 	setShotRequire(bool b) { takePicture = b; }
 };
 
 #endif
