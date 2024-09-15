@@ -30,7 +30,8 @@ const getAllParkingLots = async () => {
       select: {
         CityName: true,
         FullAddress: true,
-        pictureUrl: true
+        pictureUrl: true,
+        idCities: true
       }
     });
     return { cities };
@@ -479,6 +480,68 @@ const fetchAverageParkingTimeByUser = async (idUsers) => {
   }
 };
 
+const findCityById = async (cityId) => {
+  try {
+    return await prisma.cities.findUnique({
+      where: {
+        idCities: cityId
+      },
+      select: {
+        idCities: true // Only fetch city ID to verify existence
+      }
+    });
+  } catch (error) {
+    console.error('Error finding city by ID:', error.message);
+    throw new Error('Database error: Unable to find city');
+  }
+};
+
+// Model function to count total slots and busy slots (Busy == true) associated with a city ID
+const countSlotsByCityId = async (cityId) => {
+  try {
+    if (isNaN(cityId)) throw new Error('Invalid city ID: ' + cityId);
+    // Find areas related to the given city
+    const areas = await prisma.areas.findMany({
+      where: {
+        CityID: cityId
+      },
+      select: {
+        idAreas: true
+      }
+    });
+
+    // Extract area IDs from the result
+    const areaIds = areas.map((area) => area.idAreas);
+
+    // Count total slots in these areas
+    const totalSlotsCount = await prisma.slots.count({
+      where: {
+        AreaID: {
+          in: areaIds
+        }
+      }
+    });
+
+    // Count slots where Busy == true in these areas
+    const availableSlotsCount = await prisma.slots.count({
+      where: {
+        AreaID: {
+          in: areaIds
+        },
+        Busy: false // Only count where Busy is true
+      }
+    });
+
+    return {
+      totalSlotsCount,
+      availableSlotsCount
+    };
+  } catch (error) {
+    console.error('Error counting slots by city ID:', error.message);
+    throw new Error('Database error: Unable to count slots');
+  }
+};
+
 module.exports = {
   getAllParkingLots,
   countActiveReservations,
@@ -492,7 +555,9 @@ module.exports = {
   fetchParkingHistoryByUserId,
   fetchTotalParkingTimeByUser,
   fetchAverageParkingTimeByUser,
-  getAreaIdsByCityId
+  getAreaIdsByCityId,
+  findCityById,
+  countSlotsByCityId
 };
 
 //TODO

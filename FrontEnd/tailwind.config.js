@@ -2,7 +2,7 @@ const { nextui } = require('@nextui-org/react');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'media', // Enable dark mode with class strategy
+  darkMode: 'class', // Enable dark mode with class strategy
 
   content: [
     './src/**/*.{js,jsx,ts,tsx}', // Adjust according to your file structure
@@ -11,6 +11,20 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        'dark-bg': '#111118',
+        'dark-text': '#f7fafc',
+
+        'navbar-bg': '#111118',
+        'navbar-menu-bg': 'rgba(0, 0, 0, 0.8)',
+        text: '#111118',
+        'card-bg': '#1f1f1f',
+        'card-border': '#333333',
+        'card-text': '#e2e8f0'
+      },
+      boxShadow: {
+        card: '0 4px 8px rgba(0, 0, 0, 0.3)'
+      },
       fontFamily: {
         sans: [
           'Inter',

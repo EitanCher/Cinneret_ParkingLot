@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Cookies from 'js-cookie';
-import { useAuth } from '../Context/authContext'; // Ensure all imports use this path
+import { useAuth } from '../context/AuthContext'; // Ensure all imports use this path
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Input, Checkbox, Button, Divider } from '@nextui-org/react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';

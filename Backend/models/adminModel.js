@@ -238,46 +238,38 @@ async function calculateMostActiveUsers(numOfUsers) {
   }
 }
 
-async function calculateIncomeByTimeFrame(startDate, endDate) {
+async function calculateIncomeByTimeFrame({ startDate, endDate }) {
   try {
-    // Validate the input dates using Zod or your schema validation method
-    userSubscriptionDateSchema.parse({ startDate, endDate });
+    console.log('startDate and endDate in model:', startDate, endDate);
+
+    // Validate that startDate and endDate are valid Date objects
+    if (!(startDate instanceof Date) || isNaN(startDate.getTime()) || !(endDate instanceof Date) || isNaN(endDate.getTime())) {
+      throw new Error('Invalid date format.');
+    }
 
     // Fetch user subscriptions within the specified time frame, including related subscription plans
     const allSubscriptions = await prisma.userSubscriptions.findMany({
       where: {
-        StartDate: { gte: new Date(startDate), lte: new Date(endDate) } // Ensure it's within the start and end dates
+        StartDate: { gte: startDate, lte: endDate } // Use Date objects directly
       },
       include: {
         SubscriptionPlans: true // Include SubscriptionPlans to access the Price field
       }
     });
 
-    // Initialize income data object
-    const incomeData = {
-      incomeByMonth: {},
-      totalIncome: 0
-    };
+    console.log('Fetched subscriptions:', allSubscriptions);
 
-    // Aggregate income by month and calculate total income
+    // Calculate total income
+    let totalIncome = 0;
+
     allSubscriptions.forEach((subscription) => {
-      const subscriptionStartDate = new Date(subscription.StartDate);
-      const year = subscriptionStartDate.getFullYear();
-      const month = subscriptionStartDate.getMonth() + 1; // Months are 0-indexed, so add 1
-      const key = `${year}-${month.toString().padStart(2, '0')}`; // Format as "YYYY-MM"
-
-      // Initialize the month if not already in the accumulator
-      if (!incomeData.incomeByMonth[key]) {
-        incomeData.incomeByMonth[key] = 0;
-      }
-
-      // Add to the corresponding month's income and total income
       const price = parseFloat(subscription.SubscriptionPlans.Price); // Convert Decimal to Number
-      incomeData.incomeByMonth[key] += price;
-      incomeData.totalIncome += price; // Accumulate into the total income
+      totalIncome += price; // Accumulate into the total income
     });
 
-    return incomeData;
+    console.log('Total income:', totalIncome);
+
+    return { totalIncome };
   } catch (error) {
     console.error('Error calculating income by time frame:', error.message);
     throw error;
@@ -571,6 +563,36 @@ async function getAllUsers() {
   }
 }
 
+async function getUserCounts() {
+  try {
+    const inactiveUserCount = await prisma.users.count({
+      where: {
+        UserSubscriptions: {
+          some: {
+            OR: [{ Status: 'pending' }, { Status: 'expired' }, { Status: 'canceled' }]
+          }
+        }
+      }
+    });
+
+    const activeUserCount = await prisma.users.count({
+      where: {
+        UserSubscriptions: {
+          some: {
+            Status: 'active'
+          }
+        }
+      }
+    });
+
+    const totalUserCount = inactiveUserCount + activeUserCount;
+
+    return { inactiveUserCount, activeUserCount, totalUserCount };
+  } catch (error) {
+    console.error('Error getting user counts:', error);
+    throw new Error('Error getting user counts');
+  }
+}
 //get sub id by sub name
 
 module.exports = {
@@ -590,5 +612,6 @@ module.exports = {
   deleteSlotByID,
   getUsersByCriteria,
   toggleSubscriptionStatusById,
-  getAllUsers
+  getAllUsers,
+  getUserCounts
 };

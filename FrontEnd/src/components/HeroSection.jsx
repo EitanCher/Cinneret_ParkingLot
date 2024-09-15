@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button, Image } from '@nextui-org/react';
 import { useAuth } from '../Context/authContext';
 import backgroundImage8 from '../assets/images/HeroSection.jpg'; // Adjust the path as needed
+import { IconBrandTabler } from '@tabler/icons-react';
 
 const HeroSection = () => {
   const { isAuthenticated, loading } = useAuth(); // Get authentication status and loading state from context
@@ -33,6 +34,15 @@ const HeroSection = () => {
                 </Button>
                 <Button as={Link} color='default' to='/subscriptions' variant='shadow'>
                   Sign Up
+                </Button>
+              </>
+            )}
+
+            {isAuthenticated && (
+              <>
+                <Button as={Link} color='primary' to='/sidebar-demo' variant='shadow'>
+                  <IconBrandTabler />
+                  Park Now
                 </Button>
               </>
             )}

@@ -11,59 +11,60 @@ html, body {
     margin: 0;
     overflow-x: hidden; /* Prevent horizontal scroll */
   }
-
+/* 
   
 .dark {
-    background-color: #111118; /* Dark background for the whole app */
-    color: #f7fafc; /* Light text color */
+    background-color: #111118;
+    color: #f7fafc; 
   }
   .dark html{
-    background-color: #111118; /* Dark background for the whole app */
+    background-color: #111118; 
 
   }
+  
 
   .dark .google-button{
-    background-color: #111118; /* Dark background for the whole app */
+    background-color: #111118; 
 
   }
   .dark .text {
-    color: #e2e8f0; /* Light text color */
+    color: #e2e8f0; 
   }
 
   .dark p {
-    color: #e2e8f0; /* Light text color for paragraphs */
+    color: #e2e8f0; 
   }
   .dark h1 {
-    color: #e2e8f0; /* Light text color for paragraphs */
+    color: #e2e8f0; 
   }
   .dark h2 {
-    color: #e2e8f0; /* Light text color for paragraphs */
+    color: #e2e8f0; 
   }
 
   .dark li {
-    color: #e2e8f0; /* Light text color for paragraphs */
+    color: #e2e8f0; 
   }
   .dark ul {
-    color: #e2e8f0; /* Light text color for paragraphs */
+    color: #e2e8f0; 
   }
   .dark span {
-    color: #e2e8f0; /* Light text color for paragraphs */
+    color: #e2e8f0; 
   }
   .dark .card {
-    background-color: #1f1f1f; /* Primary card background color */
-    border: 1px solid #333333; /* Card border color */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
-    color: #e2e8f0; /* Text color for good readability */
+    background-color: #1f1f1f; 
+    border: 1px solid #333333; 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); 
+    color: #e2e8f0; 
   }
   
 
   .dark-navbar {
-    background-color: #111118; /* Dark background for navbar */
+    background-color: #111118; 
   }
 
 
-  /* Dark mode styling for Navbar menu */
 .dark .navbar-menu {
-  background: rgba(0, 0, 0, 0.8); /* Dark background with transparency */
+  background: rgba(0, 0, 0, 0.8); 
 }
 
+*/

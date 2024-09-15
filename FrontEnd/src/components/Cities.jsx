@@ -44,7 +44,7 @@ const Cities = () => {
   return (
     <div className='px-4 py-10'>
       <h2 className='text-2xl font-bold mb-6 text-center'>Our parking lots</h2>
-      <p className='text-sm text-gray-500 mb-4 text-center pb-4 px-10'>
+      <p className='text-sm text-gray-500 mb-4 text-center pb-4 px-10 dark:text-gray-300'>
         Explore Our Cities Discover the vibrant and diverse cities we serve! Whether you're planning a visit or looking for convenient parking
         solutions, we have a variety of parking lots available in some of the most dynamic urban areas. From bustling downtowns to charming
         neighborhoods, you'll find our parking facilities strategically located to meet your needs. Check out our selection of parking lots and make

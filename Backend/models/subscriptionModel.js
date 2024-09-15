@@ -138,17 +138,20 @@ const checkExistingActiveSubscription = async (userId) => {
 
 // Function to update subscription status
 
-const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscriptionPlanIdForCheckout, status) => {
+const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscriptionPlanIdForCheckout, status, subscriptionId) => {
   // Validate input data
   const userIdInt = parseInt(userId, 10);
   const prevSubscriptionPlanIdInt = parseInt(prevSubscriptionPlanID, 10);
   const subscriptionPlanIdForCheckoutInt = parseInt(subscriptionPlanIdForCheckout, 10);
+
   console.log('prev sub', prevSubscriptionPlanIdInt);
-  console.log(' checkout sub', subscriptionPlanIdForCheckoutInt);
-  if (isNaN(userIdInt, prevSubscriptionPlanIdInt, subscriptionPlanIdForCheckoutInt)) {
-    throw new Error('Invalid user ID, must be a number');
+  console.log('checkout sub', subscriptionPlanIdForCheckoutInt);
+
+  if (isNaN(userIdInt) || isNaN(prevSubscriptionPlanIdInt) || isNaN(subscriptionPlanIdForCheckoutInt)) {
+    throw new Error('Invalid user ID or subscription plan IDs, must be numbers');
   }
-  const validStatuses = ['pending', 'active', 'expired'];
+
+  const validStatuses = ['pending', 'active', 'expired', 'canceled'];
   if (!validStatuses.includes(status)) {
     throw new Error('Invalid status');
   }
@@ -161,7 +164,8 @@ const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscrip
     },
     data: {
       Status: status,
-      SubscriptionPlanID: subscriptionPlanIdForCheckoutInt
+      SubscriptionPlanID: subscriptionPlanIdForCheckoutInt,
+      subscriptionId: subscriptionId // Add the subscriptionId field
     }
   });
 };
@@ -179,7 +183,8 @@ const getUserSubscriptionPlanById = async (subscriptionPlanId) => {
     select: {
       Price: true,
       Name: true,
-      Features: true
+      Features: true,
+      StripePriceId: true
     }
   });
 };

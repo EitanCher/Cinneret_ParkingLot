@@ -1,7 +1,6 @@
-// src/App.jsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import './index.css';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import './index.css'; // Ensure this file does not override dark mode styles
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
@@ -11,42 +10,49 @@ import Subscriptions from './components/Subscriptions';
 import Login from './components/Login';
 import AuthProvider from './Context/authContext';
 import SignUp from './components/SignUp';
-import { useTheme } from './Context/ThemeContext'; // Your custom theme context
+import { useTheme } from './Context/ThemeContext';
+import SidebarDemo from './components/dashboard/admin/SidebarDemo';
 
 const App = () => {
   const { isDarkMode } = useTheme();
+  const location = useLocation();
+
+  // Conditionally apply 'max-w-[960px]' only if not on '/sidebar-demo'
+  const containerClass = location.pathname === '/sidebar-demo' ? 'w-full' : 'max-w-[960px]';
+  const paddingClass = location.pathname === '/sidebar-demo' ? 'p-0' : 'px-4 py-5';
 
   return (
-    <Router>
-      <AuthProvider>
-        <div
-          className={`relative flex min-h-screen flex-col overflow-x-hidden ${isDarkMode ? 'dark' : ''}`}
-          style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}
-        >
-          <Header />
-          <div className='px-4 flex flex-1 justify-center py-5'>
-            <div className='layout-content-container flex flex-col max-w-[960px] flex-1'>
-              <Routes>
-                <Route
-                  path='/'
-                  element={
-                    <>
-                      <HeroSection />
-                      <HowItWorks />
-                      <ReadyToPark />
-                    </>
-                  }
-                />
-                <Route path='/cities' element={<Cities />} />
-                <Route path='/subscriptions' element={<Subscriptions />} />
-                <Route path='/login' element={<Login />} />
-                <Route path='/signup' element={<SignUp />} />
-              </Routes>
-            </div>
+    <AuthProvider>
+      <div
+        className={`relative flex min-h-screen flex-col overflow-x-hidden ${
+          isDarkMode ? 'dark bg-dark-bg text-dark-text ' : 'bg-white text-gray-900 text-text'
+        }`}
+        style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}
+      >
+        <Header />
+        <div className={`flex flex-1 justify-center ${paddingClass}`}>
+          <div className={`layout-content-container flex flex-col flex-1 ${containerClass}`}>
+            <Routes>
+              <Route
+                path='/'
+                element={
+                  <>
+                    <HeroSection />
+                    <HowItWorks />
+                    <ReadyToPark />
+                  </>
+                }
+              />
+              <Route path='/cities' element={<Cities />} />
+              <Route path='/subscriptions' element={<Subscriptions />} />
+              <Route path='/login' element={<Login />} />
+              <Route path='/signup' element={<SignUp />} />
+              <Route path='/sidebar-demo' element={<SidebarDemo />} />
+            </Routes>
           </div>
         </div>
-      </AuthProvider>
-    </Router>
+      </div>
+    </AuthProvider>
   );
 };
 

@@ -24,11 +24,8 @@ api.interceptors.response.use(
 
 export const fetchUserDetails = async () => {
   try {
-    console.log('fetched user details function triggered');
     const response = await api.get('/details');
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    console.log('response.data in fetchUserDetails is:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Error fetching user details:', error);
@@ -41,6 +38,7 @@ export const fetchCities = async () => {
   try {
     console.log('api is: ' + `${import.meta.env.VITE_API_URL}`);
     const response = await api.get('/parkinglots'); // Make GET request to fetch cities
+    console.log(response.data);
     return response.data; // Return the fetched data
   } catch (error) {
     console.error('Error fetching cities:', error); // Log the error
@@ -122,8 +120,6 @@ export const logout = async () => {
 
 export const fetchStripeSessionID = async (subscriptionPlanId) => {
   try {
-    console.log('Subscription plan ID in userApi:', subscriptionPlanId);
-
     // Make POST request to create a checkout session
     const response = await api.post(
       '/create-checkout-session',
@@ -146,10 +142,20 @@ export const getUserSubscription = async () => {
     const response = await api.get('/user-subscription', {
       withCredentials: true // Important to include credentials (cookies) in request
     });
-    console.log('response data in userapi.js:', response.data);
     return response.data; // Return the subscription data
   } catch (error) {
     console.error('Error fetching user subscription:', error);
     throw error; // Optionally throw error to be handled by caller
+  }
+};
+
+export const fetchSlotCountsByCityId = async (cityId) => {
+  try {
+    const response = await api.get(`/parking/slots-count/${cityId}`, { withCredentials: true });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching slot counts:', error);
+    throw error;
   }
 };

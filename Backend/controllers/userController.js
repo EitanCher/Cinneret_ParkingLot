@@ -204,6 +204,7 @@ const login = (req, res, next) => {
       process.env.JWT_SECRET,
       { expiresIn: '2h' }
     );
+    console.log('Generated JWT Token:', token);
 
     // Set cookie
     res.cookie('jwt', token, {

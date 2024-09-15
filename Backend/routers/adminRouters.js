@@ -23,7 +23,9 @@ const {
   deleteSlotByIDController,
   viewUsersByCriteria,
   updateCityPicture,
-  getUserDetails
+  getUserDetails,
+  userCountController,
+  incomeByTimeFrame
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -32,18 +34,18 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE
 const { apiKeyAuth } = require('../middlewares/apiKeyAuth');
 const passport = require('passport');
 const { checkAdminRole } = require('../middlewares/isAdmin');
-const { toggleSubscriptionStatusById } = require('../models/adminModel');
+const { toggleSubscriptionStatusById, getUserCounts } = require('../models/adminModel');
 const { authenticateJWT } = require('../middlewares/authenticateJWT');
 
 router.use(authenticateJWT);
 router.use(checkAdminRole);
-
+router.get('/income-by-dates', incomeByTimeFrame);
 router.post('/parking/add-parking-lot', addParkingLot); // OK
 router.put('/parking/update-parking-lot/:idCities', updateParkingLot); // OK
 router.delete('/parking/parkinglot/:idCities', removeParkingLot); // OK
 router.get('/parking/all-parking-lots', getParkingLotCities); // OK
 router.patch('/parking/picture/:idCities', updateCityPicture); // NEEDS TESTING
-
+router.get('/users/counts', userCountController);
 router.post('/parking/areas', addArea); //OK
 router.delete('/parking/areas/:idAreas', removeArea); //OK
 router.get('/parking/areas/:cityId', areasByCityID); //OK

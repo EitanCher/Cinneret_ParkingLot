@@ -26,13 +26,14 @@ const {
   cancelReservationController,
   getParkingHistory,
   calculateTotalParkingTimeByUser,
-  calculateAverageParkingTimeByUser
+  calculateAverageParkingTimeByUser,
+  countSlotsByCityID
 } = require('../controllers/parkingController');
 const { googleCallback } = require('../controllers/authController');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.REDIRECT_URI);
 const passport = require('passport');
-const { createStripeSession } = require('../controllers/stripeCheckoutController');
+const { createStripeSession, cancelSubscription } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 const { authenticateJWT } = require('../middlewares/authenticateJWT');
 router.get('/checkout-session/:sessionId', fetchCheckoutSessionURL);
@@ -48,6 +49,7 @@ router.get(
   getUserDetails
 );
 
+router.post('/cancel-subscription', authenticateJWT, cancelSubscription);
 router.get('/parkinglots', getParkingLotCities);
 router.get('/user-subscription', authenticateJWT, getUserSubscription);
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
@@ -56,6 +58,7 @@ router.get('/subscriptions', getSubscriptionTiers);
 router.post('/signup', addUserController);
 router.post('/login', login);
 router.post('/logout', authenticateJWT, logout);
+router.get('/parking/slots-count/:cityId', authenticateJWT, countSlotsByCityID);
 router.patch('/:id', authenticateJWT, updateUser);
 router.post('/cars', authenticateJWT, addCarsController);
 router.delete('/cars/:id', authenticateJWT, deleteCarById);

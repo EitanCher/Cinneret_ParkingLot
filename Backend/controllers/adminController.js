@@ -17,7 +17,8 @@ const {
   deleteSlotByID,
   getUsersByCriteria,
   toggleSubscriptionStatusById,
-  getAllUsers
+  getAllUsers,
+  getUserCounts
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -379,17 +380,22 @@ async function avgParkingTimeForAll(req, res) {
 //NEEDS TESTING
 async function incomeByTimeFrame(req, res) {
   try {
-    // Extract startDate and endDate from query parameters or request body
+    console.log('start of incomeByTimeFrame in admin controller');
     const { startDate, endDate } = req.query;
+    console.log('Extracted from query:', { startDate, endDate });
 
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'Start date and end date are required.' });
     }
 
-    // Call the service function to calculate the income
-    const incomeData = await calculateIncomeByTimeFrame(startDate, endDate);
+    // Convert query strings to Date objects
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
 
-    // Return the result as a JSON response
+    console.log('Converted dates:', { startDateObj, endDateObj });
+
+    const incomeData = await calculateIncomeByTimeFrame({ startDate: startDateObj, endDate: endDateObj });
+
     res.status(200).json(incomeData);
   } catch (error) {
     console.error('Error in incomeByTimeFrameController:', error.message);
@@ -642,6 +648,17 @@ async function toggleUserSubscriptionStatus(req, res) {
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
+
+async function userCountController(req, res) {
+  try {
+    const { inactiveUserCount, activeUserCount, totalUserCount } = await getUserCounts();
+    return res.json({ inactiveUserCount, activeUserCount, totalUserCount });
+  } catch (error) {
+    console.error('Error getting user counts:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
 async function createGate(req, res) {}
 
 //deal with parking violations web socket
@@ -670,5 +687,6 @@ module.exports = {
   deleteSlotByIDController,
   viewUsersByCriteria,
   toggleUserSubscriptionStatus,
-  updateCityPicture
+  updateCityPicture,
+  userCountController
 };
