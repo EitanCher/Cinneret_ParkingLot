@@ -14,7 +14,9 @@ const {
   findBestSlot,
   fetchParkingHistoryByUserId,
   fetchTotalParkingTimeByUser,
-  fetchAverageParkingTimeByUser
+  fetchAverageParkingTimeByUser,
+  findCityById,
+  countSlotsByCityId
 } = require('../models/parkingModel');
 const passport = require('../utils/passport-config');
 const bcrypt = require('bcrypt');
@@ -22,6 +24,7 @@ const saltRounds = 10;
 
 const maxDurationReservation = 24;
 const maxDurationParkingNoReservation = 6;
+
 const getParkingLotCities = async (req, res) => {
   try {
     console.log('start of try block in parking controller');
@@ -299,6 +302,39 @@ const calculateAverageParkingTimeByUser = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+const countSlotsByCityID = async (req, res) => {
+  try {
+    const { cityId } = req.params;
+    // Validate cityId
+    if (!cityId || isNaN(cityId)) {
+      return res.status(400).json({ error: 'Valid cityId is required.' });
+    }
+
+    const parsedCityId = parseInt(cityId, 10);
+
+    // Check if the city exists using the model
+    const city = await findCityById(parsedCityId);
+    if (!city) {
+      return res.status(404).json({ error: 'City not found.' });
+    }
+
+    // Count the number of slots (total and busy) using the model
+    const { totalSlotsCount, availableSlotsCount } = await countSlotsByCityId(parsedCityId);
+
+    // Return the results
+    return res.status(200).json({
+      cityId: parsedCityId,
+      totalSlotsCount,
+      availableSlotsCount
+    });
+  } catch (error) {
+    console.error('Error counting slots:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const countSlotsByCityName = () => {};
 module.exports = {
   getParkingLotCities,
   cancelReservationController,
@@ -307,5 +343,6 @@ module.exports = {
   findAvailableSlotController,
   getParkingHistory,
   calculateTotalParkingTimeByUser,
-  calculateAverageParkingTimeByUser
+  calculateAverageParkingTimeByUser,
+  countSlotsByCityID
 };

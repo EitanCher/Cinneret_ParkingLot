@@ -16,15 +16,16 @@ model Cities {
   idCities    Int     @id @default(autoincrement())
   CityName    String  @unique @db.VarChar(45)
   FullAddress String  @db.VarChar(255)
-  Areas       Areas[] @relation("CityAreas") // Remove onDelete from here
-  Gates       Gates[] @relation("CityGates") // Remove onDelete from here
+  pictureUrl  String? @db.VarChar(255)
+  Areas       Areas[] @relation("CityAreas")
+  Gates       Gates[] @relation("CityGates")
 }
 
 model Areas {
   idAreas  Int     @id @default(autoincrement())
   AreaName String  @unique @db.VarChar(45)
   CityID   Int
-  Cities   Cities  @relation("CityAreas", fields: [CityID], references: [idCities], onDelete: Cascade) // Specify onDelete here
+  Cities   Cities  @relation("CityAreas", fields: [CityID], references: [idCities], onDelete: Cascade)
   Slots    Slots[]
 }
 
@@ -43,10 +44,9 @@ model Gates {
   Entrance Boolean
   Fault    Boolean
   CityID   Int
-  Cities   Cities  @relation("CityGates", fields: [CityID], references: [idCities], onDelete: Cascade) // Specify onDelete here
-
-  GateIP   String @unique @db.VarChar(15) // New column for Gate IP
-  CameraIP String @unique @db.VarChar(15) // New column for Camera IP
+  CameraIP String  @unique @db.VarChar(15)
+  GateIP   String  @unique @db.VarChar(15)
+  Cities   Cities  @relation("CityGates", fields: [CityID], references: [idCities], onDelete: Cascade)
 }
 
 model ParkingLog {
@@ -64,18 +64,17 @@ model ParkingLog {
 }
 
 model Slots {
-  idSlots     Int      @id @default(autoincrement())
-  Busy        Boolean? @default(false) // Optional, defaults to false
-  BorderRight Int
-  Active      Boolean? @default(true) // Optional, defaults to true
-  Fault       Boolean? @default(false) // Optional, defaults to false
-  AreaID      Int
-
-  SlotIP       String         @unique @db.VarChar(15) // New column for Gate IP
-  CameraIP     String         @unique @db.VarChar(15) // New column for Camera IP
+  idSlots      Int            @id @default(autoincrement())
+  Busy         Boolean?       @default(false)
+  BorderRight  Int
+  Active       Boolean?       @default(true)
+  Fault        Boolean?       @default(false)
+  AreaID       Int
+  CameraIP     String?        @unique @db.VarChar(15)
+  SlotIP       String?        @unique @db.VarChar(15)
   ParkingLog   ParkingLog[]
   Reservations Reservations[] @relation("SlotReservations")
-  Areas        Areas          @relation(fields: [AreaID], references: [idAreas], onDelete: Cascade) // Specify onDelete here
+  Areas        Areas          @relation(fields: [AreaID], references: [idAreas], onDelete: Cascade)
 }
 
 model SubscriptionPlans {
@@ -85,19 +84,22 @@ model SubscriptionPlans {
   MaxCars               Int
   Features              String[]
   MaxActiveReservations Int                 @default(0)
+  StripePriceId         String?             @db.VarChar(255) // Keep this line
   UserSubscriptions     UserSubscriptions[]
 }
 
 model UserSubscriptions {
-  idUserSubscriptions Int               @id @default(autoincrement())
+  idUserSubscriptions Int      @id @default(autoincrement())
   UserID              Int
   SubscriptionPlanID  Int
-  StartDate           DateTime          @db.Date
-  EndDate             DateTime          @db.Date
-  Status              String            @db.VarChar(20)
-  StripeSessionId     String?           @db.VarChar(255)
-  SubscriptionPlans   SubscriptionPlans @relation(fields: [SubscriptionPlanID], references: [idSubscriptionPlans], onDelete: NoAction, onUpdate: NoAction, map: "SubscriptionPlan_fk")
-  Users               Users             @relation(fields: [UserID], references: [idUsers], onDelete: Cascade, onUpdate: NoAction, map: "User_fk")
+  StartDate           DateTime @db.Date
+  EndDate             DateTime @db.Date
+  Status              String   @db.VarChar(20)
+  StripeSessionId     String?
+  SubscriptionId      String?  @db.VarChar(255)
+
+  SubscriptionPlans SubscriptionPlans @relation(fields: [SubscriptionPlanID], references: [idSubscriptionPlans], onDelete: NoAction, onUpdate: NoAction, map: "SubscriptionPlan_fk")
+  Users             Users             @relation(fields: [UserID], references: [idUsers], onDelete: Cascade, onUpdate: NoAction, map: "User_fk")
 
   @@unique([UserID, Status])
 }
@@ -110,8 +112,8 @@ model Users {
   Phone             String              @db.VarChar(20)
   Email             String              @unique @db.VarChar(100)
   Password          String              @db.VarChar(255)
-  violations        Int                 @default(0)
-  role              String              @default("user") @db.VarChar(50)
+  Violations        Int                 @default(0) @map("Violations") // Correct column name and map it to the existing database column
+  Role              String              @default("user") @map("Role") // Correct column name and map it to the existing database column
   Cars              Cars[]
   Reservations      Reservations[]      @relation("UserReservations")
   UserSubscriptions UserSubscriptions[]

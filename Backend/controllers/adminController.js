@@ -10,13 +10,15 @@ const {
   calculateAvgParkingTimeForAll,
   calculateMostActiveUsers,
   calculateIncomeByTimeFrame,
-  viewSlotsByStatusAreaCity,
+  viewSlotsByCriteria,
   updateSlotByID,
   deleteSlotsByCriteria,
   updateSlotsByCriteria,
   deleteSlotByID,
   getUsersByCriteria,
-  toggleSubscriptionStatusById
+  toggleSubscriptionStatusById,
+  getAllUsers,
+  getUserCounts
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -35,17 +37,58 @@ const {
 const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 
+async function updateCityPicture(req, res) {
+  try {
+    const { idCities } = parseInt(req.params.idCities, 10);
+    const stringFields = ['pictureUrl'];
+    const sanitizedData = sanitizeObject(req.body, stringFields);
+    const { pictureUrl } = sanitizedData;
+    CityUpdateSchema.parse({ idCities, pictureUrl });
+
+    const city = await prisma.cities.findUnique({
+      where: {
+        idCities: idCities
+      }
+    });
+    if (!city) return res.status(404).json({ message: 'City not found' });
+
+    // Update the city picture in the database
+    const updatedCity = await prisma.cities.update({
+      where: {
+        idCities: idCities
+      },
+      data: { pictureUrl }
+    });
+
+    return res.status(200).json({
+      message: 'City picture updated successfully',
+      CityName: updatedCity.CityName,
+      FullAddress: updatedCity.FullAddress,
+      pictureUrl: updatedCity.pictureUrl
+    });
+  } catch (error) {
+    console.error('Error updating city picture:', error);
+
+    // Improved error handling
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ message: 'Validation Error', errors: error.errors });
+    }
+
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
 async function addParkingLot(req, res) {
   try {
-    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress']);
-    const { CityName, FullAddress } = sanitizedData;
+    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress', 'pictureUrl']);
+    const { CityName, FullAddress, pictureUrl } = sanitizedData;
 
     // Validate input with schema
-    CityCreateSchema.parse({ CityName, FullAddress });
+    CityCreateSchema.parse({ CityName, FullAddress, pictureUrl });
 
     // Create the city record in the database
     const city = await prisma.cities.create({
-      data: { CityName, FullAddress }
+      data: { CityName, FullAddress, pictureUrl }
     });
 
     if (!city) {
@@ -55,13 +98,15 @@ async function addParkingLot(req, res) {
     // Return the created city details
     return res.status(201).json({
       CityName: city.CityName,
-      FullAddress: city.FullAddress
+      FullAddress: city.FullAddress,
+      pictureUrl: city.pictureUrl
     });
   } catch (error) {
     console.error('Error adding city:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
+
 //NEEDS TESTING
 async function updateParkingLot(req, res) {
   try {
@@ -129,22 +174,33 @@ async function removeParkingLot(req, res) {
 }
 
 //NEEDS TESTING
-async function areaIdsByCityID(req, res) {
+async function areasByCityID(req, res) {
   try {
     const { idCities } = req.params;
-    const areaIds = await prisma.areas.findMany({
+    const areas = await prisma.areas.findMany({
       where: { CityID: idCities },
-      select: { idAreas: true }
+      select: { idAreas: true, AreaName: true }
     });
 
-    if (!areaIds) {
+    if (areas.length === 0) {
       return res.status(404).json({ message: 'City not found' });
     }
 
-    // Return the area IDs associated with the city
-    return res.status(200).json({ areaIds: areaIds.map((area) => area.idAreas) });
-  } catch (err) {}
+    // Return the area IDs and names associated with the city
+    return res.status(200).json({
+      areas: areas.map((area) => ({
+        idAreas: area.idAreas,
+        AreaName: area.AreaName
+      }))
+    });
+  } catch (err) {
+    // Handle the error
+    // Handle the error
+    console.error(err);
+    return res.status(500).json({ message: 'An error occurred while retrieving areas.' });
+  }
 }
+
 //NEEDS TESTING
 
 async function addArea(req, res) {
@@ -239,19 +295,21 @@ async function toggleSlot(req, res) {
 //NEEDS TESTING  || ALREADY REFACTORED WITH A MODEL
 async function addSubscriptionController(req, res) {
   try {
-    const sanitizedData = sanitizeObject(req.body, ['Name', 'Features']);
-    const { Price, MaxCars, MaxActiveReservations } = req.body;
-    const { Name, Features } = sanitizedData;
-    const Data = {
-      Name,
-      Price,
-      MaxCars,
-      MaxActiveReservations,
-      Features
+    const { Name, Price, MaxCars, MaxActiveReservations, Features } = req.body;
+    const data = {
+      name: Name,
+      price: Price,
+      maxCars: MaxCars,
+      maxActiveReservations: MaxActiveReservations,
+      features: Features
     };
-    const subscription = await addSubscription(Data);
 
-    // Return the created subscription details
+    // Validate the input data with the Zod schema
+    createSubscriptionPlanSchema.parse(data);
+
+    // Call the model function to add subscription
+    const subscription = await addSubscription(data);
+
     return res.status(201).json({
       idSubscriptionPlans: subscription.idSubscriptionPlans,
       Name: subscription.Name,
@@ -262,13 +320,16 @@ async function addSubscriptionController(req, res) {
     });
   } catch (err) {
     console.error('Error adding subscription:', err);
-    return res.status(400).json({ message: 'Invalid data', errors: err.message });
+    return res.status(400).json({ message: 'Invalid data', errors: err.errors });
   }
 }
 
 async function updateSubscriptionController(req, res) {
   try {
-    const idSubscriptionPlans = req.params.idSubscriptionPlans;
+    const idSubscriptionPlans = parseInt(req.params.idSubscriptionPlans, 10); // Convert to integer
+    if (isNaN(idSubscriptionPlans)) {
+      return res.status(400).json({ message: 'Invalid subscriptionId' });
+    }
     const sanitizedData = sanitizeObject(req.body, ['Name', 'Features']);
     const { Name, Features } = sanitizedData;
     const { Price, MaxCars, MaxActiveReservations } = req.body;
@@ -277,7 +338,10 @@ async function updateSubscriptionController(req, res) {
     if (!result) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
-    return res.status(200).json(result);
+    return res.status(200).json({
+      message: 'Subscription plan updated successfully',
+      subscription: result
+    });
   } catch (error) {
     console.error('Error updating subscription:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
@@ -286,7 +350,11 @@ async function updateSubscriptionController(req, res) {
 
 async function removeSubscriptionController(req, res) {
   try {
-    const idSubscriptionPlans = req.params.idSubscriptionPlans;
+    const idSubscriptionPlans = parseInt(req.params.idSubscriptionPlans, 10);
+    console.log('id in controller:' + idSubscriptionPlans);
+    if (isNaN(idSubscriptionPlans)) {
+      return res.status(400).json({ message: 'Invalid subscription ID' });
+    }
     const result = await deleteSubscriptionPlanByID(idSubscriptionPlans);
     if (!result) {
       return res.status(404).json({ message: 'Subscription not found' });
@@ -312,17 +380,22 @@ async function avgParkingTimeForAll(req, res) {
 //NEEDS TESTING
 async function incomeByTimeFrame(req, res) {
   try {
-    // Extract startDate and endDate from query parameters or request body
+    console.log('start of incomeByTimeFrame in admin controller');
     const { startDate, endDate } = req.query;
+    console.log('Extracted from query:', { startDate, endDate });
 
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'Start date and end date are required.' });
     }
 
-    // Call the service function to calculate the income
-    const incomeData = await calculateIncomeByTimeFrame(startDate, endDate);
+    // Convert query strings to Date objects
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
 
-    // Return the result as a JSON response
+    console.log('Converted dates:', { startDateObj, endDateObj });
+
+    const incomeData = await calculateIncomeByTimeFrame({ startDate: startDateObj, endDate: endDateObj });
+
     res.status(200).json(incomeData);
   } catch (error) {
     console.error('Error in incomeByTimeFrameController:', error.message);
@@ -333,7 +406,16 @@ async function incomeByTimeFrame(req, res) {
 //NEEDS TESTING
 async function mostActiveUsersController(req, res) {
   try {
-    const result = await calculateMostActiveUsers(numUsers); //recieves  OwnerID: 2,FirstName: 'Jane',LastName: 'Smith',Email: 'jane.smith@example.com',logCount: 120
+    // Extract numUsers from query parameters or set a default value
+    const numUsers = parseInt(req.query.numUsers, 10) || 10; // Default to 10 if not provided
+
+    // Validate numUsers to ensure it's a positive number
+    if (isNaN(numUsers) || numUsers <= 0) {
+      return res.status(400).json({ message: 'Invalid number of users' });
+    }
+
+    // Call the function to calculate the most active users
+    const result = await calculateMostActiveUsers(numUsers);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error calculating most active users:', error);
@@ -341,7 +423,6 @@ async function mostActiveUsersController(req, res) {
   }
 }
 
-// NEEDS TESTING
 async function addSlotsToArea(req, res) {
   try {
     const { idAreas, numOfSlots } = req.body;
@@ -388,27 +469,40 @@ const deleteSlotsByIdRangeController = async (req, res) => {
     res.status(400).json({ message: err.errors ? err.errors : 'Invalid input' });
   }
 };
-//NEEDS TESTING
 // TODO view slots- add criteria (busy)
-async function slotsByStatusAreaCity(req, res) {
+async function viewSlotsByCriteriaController(req, res) {
   try {
-    const { active, cityId, areaId } = req.query;
-    if (!active && !cityId && !areaId) {
-      return res.status(400).json({ error: 'At least one filter parameter is required.' });
+    // Parse query parameters
+    console.log('req query active:', req.query.active);
+    console.log('req query cityId:', req.query.cityId);
+    console.log('req query areaId:', req.query.areaId);
+    console.log('req query busy:', req.query.busy);
+
+    const active = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
+    const cityId = req.query.cityId ? parseInt(req.query.cityId, 10) : undefined;
+    const areaId = req.query.areaId ? parseInt(req.query.areaId, 10) : undefined;
+    const busy = req.query.busy === 'true' ? true : req.query.busy === 'false' ? false : undefined;
+
+    // Log parsed values for debugging
+    console.log('Parsed Query Params:', { cityId, active, areaId, busy });
+
+    // Check for required parameters
+    if (!cityId) {
+      return res.status(400).json({ error: 'cityId is required.' });
     }
 
-    const result = await viewSlotsByStatusAreaCity(active, cityId, areaId);
-
+    const result = await viewSlotsByCriteria(cityId, active, areaId, busy);
     res.status(200).json(result);
   } catch (error) {
     console.error('Error viewing slots:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }
-//NEEDS TESTING
+
 async function updateIndividualSlot(req, res) {
   try {
     const { idSlots } = req.params;
+    console.log('idslots in controller:' + idSlots);
     const { BorderRight, Active } = req.body;
     const result = await updateSlotByID(idSlots, { BorderRight, Active });
 
@@ -426,7 +520,7 @@ async function updateIndividualSlot(req, res) {
 async function updateSlotsByCriteriaController(req, res) {
   try {
     const { cityId, areaId, active } = req.query;
-    const { borderRight, activeStatus } = req.body;
+    const { BorderRight, Active } = req.body;
 
     // Call the model function to update slots
     const result = await updateSlotsByCriteria({
@@ -434,8 +528,8 @@ async function updateSlotsByCriteriaController(req, res) {
       areaId: areaId ? Number(areaId) : undefined,
       active: active ? JSON.parse(active) : undefined,
       updates: {
-        BorderRight: borderRight,
-        Active: activeStatus
+        BorderRight: BorderRight,
+        Active: Active
       }
     });
 
@@ -453,17 +547,23 @@ async function updateSlotsByCriteriaController(req, res) {
 //NEEDS TESTING
 async function deleteSlotsByStatusAreaCity(req, res) {
   try {
-    const { cityId } = req.params;
-    const { areaId, active } = req.query;
-    if (!cityId) {
+    const { cityID } = req.params;
+    const { AreaID, Active } = req.query;
+
+    if (!cityID) {
       return res.status(400).json({ error: 'City is required' });
     }
+
+    // Create criteria object using the correct field names
     const criteria = {
-      cityId: parseInt(cityId, 10),
-      areaId: areaId ? parseInt(areaId, 10) : undefined,
-      active: active !== undefined ? active === 'true' : undefined
+      cityId: parseInt(cityID, 10),
+      AreaID: AreaID ? parseInt(AreaID, 10) : undefined,
+      Active: Active !== undefined ? Active === 'true' : undefined
     };
+
+    console.log('Criteria in controller:', criteria);
     const result = await deleteSlotsByCriteria(criteria);
+
     if (result.count === 0) {
       return res.status(404).json({ message: 'No slots found to delete' });
     }
@@ -474,10 +574,12 @@ async function deleteSlotsByStatusAreaCity(req, res) {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }
+
 // NEEDS TESTING
 async function deleteSlotByIDController(req, res) {
   try {
     const { idSlots } = req.params;
+
     const result = await deleteSlotByID(idSlots);
 
     if (!result) {
@@ -491,24 +593,30 @@ async function deleteSlotByIDController(req, res) {
 //NEEDS TESTING
 async function viewUsersByCriteria(req, res) {
   try {
-    const { subscriptionStatus, SubscriptionPlanName, FirstName, LastName, Phone, Email, Violations } = req.query;
+    console.log('Request Query:', req.query);
+
+    // Extract query parameters
+    const { status, fname, lname, subscriptionTier, email, violations, role } = req.query;
+    console.log('Extracted Query Parameters:', { status, fname, lname, subscriptionTier, email, violations, role });
+
+    // Build the criteria object with consistent naming
     const criteria = {
-      ...(validatedParams.subscriptionStatus && { subscriptionStatus: validatedParams.subscriptionStatus }),
-      ...(validatedParams.SubscriptionPlanName && { SubscriptionPlanName: validatedParams.SubscriptionPlanName }),
-      ...(validatedParams.FirstName && { FirstName: validatedParams.FirstName }),
-      ...(validatedParams.LastName && { LastName: validatedParams.LastName }),
-      ...(validatedParams.Phone && { Phone: validatedParams.Phone }),
-      ...(validatedParams.Email && { Email: validatedParams.Email }),
-      ...(validatedParams.Violations !== undefined && { Violations: validatedParams.Violations })
+      ...(status && { subscriptionStatus: status }), // Ensure this matches the model
+      ...(fname && { FirstName: fname }), // Ensure this matches the model
+      ...(lname && { LastName: lname }), // Ensure this matches the model
+      ...(subscriptionTier && { SubscriptionPlanName: subscriptionTier }), // Ensure this matches the model
+      ...(email && { Email: email }), // Ensure this matches the model
+      ...(violations !== undefined && { Violations: parseInt(violations, 10) }), // Ensure this matches the model
+      ...(role && { Role: role }) // Ensure this matches the model
     };
+
+    console.log('Criteria object:', criteria);
 
     // Ensure that at least one criteria is present
     if (Object.keys(criteria).length === 0) {
       return res.status(400).json({ error: 'At least one criteria must be provided' });
     }
-    if (users.length === 0) {
-      return res.status(404).json({ message: 'No users found matching the criteria' });
-    }
+
     // Fetch users by criteria
     const users = await getUsersByCriteria(criteria);
 
@@ -519,6 +627,7 @@ async function viewUsersByCriteria(req, res) {
     return res.status(500).json({ error: 'An error occurred while fetching users' });
   }
 }
+
 async function toggleUserSubscriptionStatus(req, res) {
   try {
     // Extract the ID from the URL parameters
@@ -539,6 +648,17 @@ async function toggleUserSubscriptionStatus(req, res) {
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
+
+async function userCountController(req, res) {
+  try {
+    const { inactiveUserCount, activeUserCount, totalUserCount } = await getUserCounts();
+    return res.json({ inactiveUserCount, activeUserCount, totalUserCount });
+  } catch (error) {
+    console.error('Error getting user counts:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
 async function createGate(req, res) {}
 
 //deal with parking violations web socket
@@ -547,7 +667,7 @@ async function createGate(req, res) {}
 module.exports = {
   addParkingLot,
   updateParkingLot,
-  areaIdsByCityID,
+  areasByCityID,
   addArea,
   removeArea,
   deleteSlotsByIdRangeController,
@@ -560,11 +680,13 @@ module.exports = {
   avgParkingTimeForAll,
   mostActiveUsersController,
   incomeByTimeFrame,
-  slotsByStatusAreaCity,
+  viewSlotsByCriteriaController,
   updateIndividualSlot,
   updateSlotsByCriteriaController,
   deleteSlotsByStatusAreaCity,
   deleteSlotByIDController,
   viewUsersByCriteria,
-  toggleUserSubscriptionStatus
+  toggleUserSubscriptionStatus,
+  updateCityPicture,
+  userCountController
 };

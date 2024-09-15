@@ -110,7 +110,6 @@ async function getSubscriptions() {
 async function createUser(userData) {
   try {
     // Validate userData with the Zod schema
-
     const validatedData = addUserControllerSchema.parse(userData);
 
     // Proceed with hashing password and creating the user in the database
@@ -163,8 +162,7 @@ async function createCars(userId, carsData, subscriptionPlanID) {
   console.log('sub plan max cars: ' + maxCars);
   console.log('user has ' + numCarsUserHas + 'cars');
   if (carsData.length > maxCars) throw new Error(`This subscription plan only supports up to ${maxCars} cars`);
-  if (numCarsUserHas >= maxCars)
-    throw new Error(` this subscription already has the maximum car count for this plan: ${numCarsUserHas}`);
+  if (numCarsUserHas >= maxCars) throw new Error(` this subscription already has the maximum car count for this plan: ${numCarsUserHas}`);
   if (carsData.length === 0) throw new Error('No cars data provided');
 
   // Add cars to the database
@@ -199,7 +197,7 @@ const findUserByEmail = async (email) => {
       select: {
         idUsers: true,
         Email: true,
-        role: true // Explicitly select the role field
+        Role: true // Explicitly select the role field
         // Add other fields you may need
       }
     });

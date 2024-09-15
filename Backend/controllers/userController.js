@@ -3,7 +3,7 @@ const { sanitizeObject } = require('../utils/xssUtils');
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
 const passport = require('../utils/passport-config'); // Import from the correct path
-
+const axios = require('axios');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -97,39 +97,55 @@ const deleteUser = async (req, res) => {
 };
 
 const stringFields = ['FirstName', 'LastName', 'Email', 'Phone', 'SubscriptionPlanID', 'StartDate', 'EndDate'];
+
 const addUserController = async (req, res) => {
   const userData = req.body; // Adjust based on how user data is sent
-
+  console.log('user data in controller: ', req.body);
   try {
     // Sanitize the input data
     const sanitizedUserData = sanitizeObject(userData, ['persId', 'FirstName', 'LastName', 'Email', 'Phone', 'Password']);
 
     // Create user
     const user = await createUser(sanitizedUserData);
+    // Ensure user was created successfully
+    if (!user || !user.idUsers) {
+      return res.status(400).json({ message: 'User creation failed' });
+    }
 
-    // Generate JWT token
+    // Generate JWT token with a 2-hour expiration
     const token = jwt.sign(
       {
         id: user.idUsers,
         email: user.Email,
-        role: user.role // Include the role in the token payload
+        role: user.Role // Include the role in the token payload
       },
       process.env.JWT_SECRET,
-      { expiresIn: '72h' } // Set token expiration time to 72 hours
+      { expiresIn: '2h' } // Set token expiration time to 2 hours
     );
-    // Respond with success and user ID along with JWT token
+
+    // Set the token in a secure, HTTP-only cookie with a 30-day max age
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'Strict', // Prevent CSRF attacks
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
+    // Respond with success and user ID
     res.status(201).json({
       message: 'User created successfully. Proceed to payment to select a subscription.',
-      userId: user.idUsers,
-      token
+      userId: user.idUsers
     });
   } catch (error) {
+    console.error('Error:', error.message);
+
+    // Respond with appropriate status code and message
     if (error.name === 'ZodError') {
       return res.status(400).json({
         message: `Validation error: ${error.errors.map((e) => e.message).join(', ')}`
       });
     }
-    console.error('Error:', error.message);
+
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -179,19 +195,54 @@ const login = (req, res, next) => {
     if (!user) return res.status(401).json({ message: info.message });
 
     // Generate JWT token
-    //TODO store the token in the frontend
     const token = jwt.sign(
       {
         id: user.idUsers,
         email: user.Email,
-        role: user.role // Include the role in the token payload
+        role: user.role
       },
       process.env.JWT_SECRET,
-      { expiresIn: '72h' } // Set token expiration time to 72 hours
+      { expiresIn: '2h' }
     );
-    // Send response with token
-    res.status(200).json({ token });
-  })(req, res, next); // Pass req, res, and next to the middleware
+    console.log('Generated JWT Token:', token);
+
+    // Set cookie
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 2592000000 // 30 days
+    });
+
+    // Send user data
+    res.status(200).json({
+      user: {
+        id: user.idUsers,
+        email: user.Email,
+        role: user.role
+      }
+    });
+  })(req, res, next);
+};
+
+//might not need it
+const logout = (req, res) => {
+  console.log('Logout process started in controller');
+  try {
+    res.cookie('jwt', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 0 // Set to 0 to immediately expire the cookie
+    });
+
+    // Optionally log additional information or perform cleanup here
+    console.log('before res.status');
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'Failed to log out. Please try again later.' });
+  }
 };
 
 //TODO
@@ -257,6 +308,52 @@ const getUserCarsController = async (req, res) => {
   }
 };
 
+const getUserDetails = async (req, res) => {
+  try {
+    const user = req.user; // Correctly getting userId
+    if (!user) {
+      // Check if userId is undefined or null
+      return res.status(404).send('User ID is not provided');
+    }
+
+    const resultUser = await prisma.users.findUnique({
+      where: { idUsers: user.id }
+    });
+
+    if (!resultUser) {
+      return res.status(404).send('User not found');
+    }
+
+    res.json(resultUser);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+const getUserSubscription = async (req, res) => {
+  try {
+    console.log('Start of getUserSubscription in user controller');
+    const userId = req.user.id;
+
+    // Fetch the user's active subscription
+    const userSubscription = await prisma.userSubscriptions.findFirst({
+      where: { UserID: userId, Status: 'active' }
+    });
+
+    if (!userSubscription) {
+      // Return a 200 status with an empty object or a message if no active subscription is found
+      return res.status(200).json({ message: 'No active subscription found', subscription: null });
+    }
+
+    // Respond with subscription details
+    res.status(200).json(userSubscription);
+  } catch (error) {
+    console.error('Error fetching user subscription:', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 // add delete cars controller
 
 const deleteCarById = async (req, res) => {
@@ -301,6 +398,29 @@ const deleteCarById = async (req, res) => {
   }
 };
 
+const fetchCheckoutSessionURL = async (req, res) => {
+  console.log('Fetching Stripe Checkout Session...');
+  const sessionId = req.params.sessionId;
+  const stripeUrl = `https://api.stripe.com/v1/checkout/sessions/${sessionId}`;
+
+  try {
+    const response = await axios.get(stripeUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` // Use your environment variable for the Stripe secret key
+      }
+    });
+    console.log('Response from Stripe:', response.data);
+
+    // Return the response data to the frontend
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error('Error fetching Stripe session:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data || 'An error occurred while fetching the Stripe session'
+    });
+  }
+};
+
 module.exports = {
   updateUser,
   deleteUser,
@@ -309,5 +429,9 @@ module.exports = {
   login,
   addCarsController,
   updateCars,
-  deleteCarById
+  deleteCarById,
+  getUserDetails,
+  logout,
+  fetchCheckoutSessionURL,
+  getUserSubscription
 };

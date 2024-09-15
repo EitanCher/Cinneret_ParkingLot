@@ -25,11 +25,11 @@ const userSubscriptionDateSchema = z.object({
   EndDate: z.string()
 });
 const createSubscriptionPlanSchema = z.object({
-  name: z.string().min(1, 'Name is required'), // Name is a required string
-  price: z.number().positive('Price must be a positive number'), // Price must be a positive number
-  maxCars: z.number().int().positive('MaxCars must be a positive integer'), // MaxCars must be a positive integer
-  maxActiveReservations: z.number().int().nonnegative('MaxActiveReservations cannot be negative'), // MaxActiveReservations must be a non-negative integer
-  features: z.array(z.string()).nonempty('Features array cannot be empty') // Features is an array of non-empty strings
+  name: z.string().min(1, 'Name is required'),
+  price: z.number().positive('Price must be a positive number'),
+  maxCars: z.number().int().positive('MaxCars must be a positive integer'),
+  maxActiveReservations: z.number().int().nonnegative('MaxActiveReservations cannot be negative'),
+  features: z.array(z.string()).nonempty('Features array cannot be empty')
 });
 
 const updateSubscriptionPlanSchema = createSubscriptionPlanSchema.partial();
@@ -61,7 +61,8 @@ const carsArraySchema = z.array(carSchema);
 const CitySchema = z.object({
   idCities: z.number().int(),
   CityName: z.string().max(45),
-  FullAddress: z.string().max(255)
+  FullAddress: z.string().max(255),
+  pictureUrl: z.string().url() // Validates that pictureUrl is a valid URL
 });
 const CityCreateSchema = CitySchema.omit({ idCities: true });
 const CityUpdateSchema = CitySchema.partial();
@@ -171,39 +172,31 @@ const rangeSchema = z
   });
 const viewSlotsSchema = z.object({
   cityId: z
-    .string()
-    .nonempty({ message: 'cityId is required' })
-    .refine((value) => !isNaN(Number(value)), { message: 'cityId must be a number' })
-    .transform((value) => Number(value)), // Converts string to number
-  active: z
-    .string()
-    .optional()
-    .transform((value) => (value === 'true' ? true : value === 'false' ? false : undefined)), // Converts 'true'/'false' to boolean
-  areaId: z
-    .string()
-    .optional()
-    .refine((value) => !isNaN(Number(value)), { message: 'areaId must be a number' })
-    .transform((value) => (value ? Number(value) : undefined)) // Converts string to number
+    .number()
+    .int()
+    .positive()
+    .refine((value) => value > 0, { message: 'cityId must be a positive number' }),
+  active: z.boolean().optional(),
+  areaId: z.number().int().positive().optional(),
+  busy: z.boolean().optional() // Adding the busy criterion
 });
 
 const deleteSlotsCriteriaSchema = z.object({
-  cityId: z.number().int(),
-  areaId: z.number().int().optional(),
-  active: z.boolean().optional()
+  cityId: z.number().int().positive(), // Required and must be a positive integer
+  AreaID: z.number().int().positive().optional(), // Optional positive integer
+  Active: z.boolean().optional() // Optional boolean
+});
+const UserCriteriaSchema = z.object({
+  subscriptionStatus: z.string().optional(),
+  SubscriptionPlanName: z.string().optional(),
+  FirstName: z.string().optional(),
+  LastName: z.string().optional(),
+  Phone: z.string().optional(),
+  Email: z.string().optional(),
+  Violations: z.number().optional(),
+  Role: z.string().optional()
 });
 
-const UserCriteriaSchema = z
-  .object({
-    status: z.string().optional(),
-    fname: z.string().optional(),
-    lname: z.string().optional(),
-    subscriptionTier: z.string().optional(),
-    email: z.string().optional(),
-    violations: z.number().int().optional()
-  })
-  .refine((data) => Object.values(data).some((value) => value !== undefined), {
-    message: 'At least one criteria field is required'
-  });
 const IdSchema = z.number().int().positive();
 
 module.exports = {

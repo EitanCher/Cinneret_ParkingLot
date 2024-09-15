@@ -6,23 +6,26 @@ const adminRouters = require('./routers/adminRouters');
 const helmet = require('helmet');
 const cors = require('cors');
 const passport = require('./utils/passport-config');
-
+const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 3001;
+const path = require('path');
 
 // Middleware setup
 app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
 app.use(express.json());
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
-app.use(cors()); // Enable CORS if needed
+// CORS configuration
+const corsOptions = {
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+};
+app.use(cors(corsOptions));
 app.use(passport.initialize());
-
-// Logging Middleware
-app.use((req, res, next) => {
-  console.log(`Received ${req.method} request for ${req.url}`);
-  next();
-});
+app.use(cookieParser());
 
 // Routes
 app.use('/api/users', userRouters);
