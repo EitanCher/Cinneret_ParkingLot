@@ -14,10 +14,13 @@ private:
 	const char* PSWD = "0509232623";
 	const char* websocket_server = "192.168.1.10";
 	const uint16_t websocket_port = 5555;
+	const unsigned long connectionTimeout = 300000; // Set timeout to 5 minutes
+	unsigned long connectionStartTime = 0;
 	uint16_t distance;
-	const int rollcallInterval = 60000;
+	const unsigned long rollcallInterval = 60000;
 	unsigned long timer = 0;
 	bool takePicture = false;
+	bool isConnectionSuccess = true;
 	IPAddress gateway = IPAddress(192, 168, 1, 1);    // Router's IP address (has to be verified for each network but certain conventions are common)
 	IPAddress subnet = IPAddress(255, 255, 252, 0);   // Subnet mask for the local network
 
@@ -34,6 +37,7 @@ public:
 	void 	defineWSClient();
 	int 	getInterval() const { return rollcallInterval; }
 	void 	handle();
+	bool	isConnectionSucceed() { return isConnectionSuccess; }
 	bool 	isShotRequired() { return takePicture; }
 	void 	networkSetup();
 	void 	onMessageCallback(WebsocketsMessage message);
