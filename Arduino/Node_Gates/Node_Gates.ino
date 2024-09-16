@@ -46,9 +46,6 @@ void setup() {
 }
 
 void loop() {
-    myClient_Entry.handle();
-    myClient_Exit.handle();
-
   // Read the state of the switches:
   int StateEntr = digitalRead(SWITCH_ENTR);
   int StateExit = digitalRead(SWITCH_EXIT);
@@ -70,11 +67,14 @@ void loop() {
   }
 
   // Read the ultrasonic on the active gate and send to server if an object detected:
-  if (isEntr) {
+  if (isEntr && myClient_Entry.isConnectionSucceed()) {
     Serial.println("Acting as Entry Gate -------------------------------");
+    myClient_Entry.handle();
     myClient_Entry.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
-  } else {
+  } 
+  else if (isExit && myClient_Exit.isConnectionSucceed()) {
     Serial.println("Acting as Exit Gate -------------------------------");
+    myClient_Exit.handle();
     myClient_Exit.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
   }
   
