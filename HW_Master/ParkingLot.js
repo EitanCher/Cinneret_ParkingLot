@@ -5,10 +5,11 @@ const app = express();
 const os = require('os');
 const myDBPool = require('./db_config');
 const fs = require('fs');
+const Tesseract = require('tesseract.js');
+const { createWorker } = Tesseract;
 
 const WS_PORT = 5555;
-const HTTP_PORT = 8000;
-
+const myLocalIP = getLocalIPAddress();
 const wsServer = new webSocket.Server({port: WS_PORT}, ()=>console.log(`Websocket server is listening at ${WS_PORT}`));
 let allBoards = {gates: [], gateCams: [], slots: [], slotCams: []};    // Empty arrays - to enable push command in fetchBoardsDataOnInit()
 /*
@@ -21,7 +22,7 @@ let lotClients = {
 */
 
 // Get local IP address:
-console.log('Local IP Address:', getLocalIPAddress());
+console.log('Local IP Address: ', myLocalIP);
 
 // Get the list of boards registered at the DB:
 fetchBoardsDataOnInit();
@@ -60,10 +61,21 @@ wsServer.on('connection', (ws, req) => {
     ws.on('message', (data, isBinary) => {
         if (isBinary) {
             console.log('Received binary data from client');
-            fs.writeFile('received_image.jpg', data, (err) => {
+            const imagePath = `./images/image_${ip}.png`;
+            fs.writeFile(imagePath, data, (err) => {
                 if (err) throw err;
-                console.log('Image saved as received_image.jpg');
+                console.log(`Image saved as ${imagePath}`);
             });
+
+            // Retrieve text data from the taken image:
+            (async () => {
+                const worker = await createWorker('eng');
+                const ret = await worker.recognize(imagePath);
+                console.log("TEXT FROM IMAGE: ");
+                console.log(ret.data.text);
+                await worker.terminate();
+            })();
+
         } 
         else {
             const message = data.toString();
@@ -77,20 +89,14 @@ wsServer.on('connection', (ws, req) => {
                 if (!boardData_1.isConnected) boardData_1.isConnected = true;
 
                 switch(message) {
-                    //case 'entry_event':
                     case 'OBJECT_DETECTED':
                         console.log("Message accepted")
-                        //console.log(boardData_1.wsc.readyState)
-                        //if(boardData_1.wsc.readyState === webSocket.OPEN)
-                            //console.log("AVAILABLE")
                         if(boardData_2.wsc != null) {
                                 boardData_2.wsc.send('TAKE_PICTURE');
                                 console.log(`Trigger sent to camera ${boardData_2.ip}`);
                         } 
                         else console.log(`Camera ${boardData_2.ip} not connected.`);
                         break;
-                    default:
-                        // code block
                 }
             }
         }
@@ -99,21 +105,9 @@ wsServer.on('connection', (ws, req) => {
     // Handle client disconnection
     ws.on('close', () => {
         console.log(`Client disconnected: ${ip}`);
+        connectionStatus(ip, ws, false);
     });
 });
-
-// Serve HTML file:
-const server = app.get('/entry_us', (req, res) => res.sendFile(path.resolve(__dirname, './index.html')));
-// Listen for client's HTTP connection:
-app.listen(HTTP_PORT, ()=>console.log(`HTTP server is listening at ${HTTP_PORT}`));
-
-server.on('upgrade', (request, socket, head) => {
-    wsServer.handleUpgrade(request, socket, head, (ws) => {
-        wsServer.emit('connection', ws, request);
-    });
-});
-
-
 
 async function fetchBoardsDataOnInit() {
     console.log("Fetching data from the DB..................")
@@ -172,7 +166,7 @@ async function fetchBoardsDataOnInit() {
 }
 
 function connectionStatus(inputIP, inputConn, isConn) {
-    console.log("Clients already connected:");
+    if (isConn) console.log("Clients already connected:");
     for (const boardsArray in allBoards) {
         const myArray = allBoards[boardsArray];
         for (const boardDict of myArray){
