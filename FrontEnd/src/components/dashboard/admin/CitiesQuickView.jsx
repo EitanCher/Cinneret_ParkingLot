@@ -11,7 +11,7 @@ const AvatarWithPopover = ({ city }) => {
     const fetchSlotCounts = async () => {
       try {
         const response = await fetchSlotCountsByCityId(city.idCities);
-        console.log('response in main component: ', response);
+
         if (response) {
           setSlotCounts({
             total: response.totalSlotsCount,
@@ -72,14 +72,14 @@ export const CitiesQuickView = () => {
   }, []);
 
   return (
-    <Card className='w-full flex flex-col max-w-md bg-gray-100 dark:bg-neutral-800'>
+    <Card className='w-full flex flex-col max-w-md  bg-gray-100 dark:bg-neutral-800 text-gray-800 dark:text-gray-200 font-medium text-lg'>
       <CardBody>
         <h4 className='text-neutral-700 dark:text-neutral-200 text-center mb-4'>Parking Lots</h4>
         <div className='flex items-center justify-center flex-wrap gap-4'>
           {Array.isArray(cities) && cities.length > 0 ? (
             cities.map((city) => <AvatarWithPopover key={city.idCities} city={city} />)
           ) : (
-            <p>No cities available.</p>
+            <p className=''>No cities available.</p>
           )}
         </div>
         {error && <p className='text-red-600'>{error}</p>}

@@ -595,6 +595,117 @@ async function getUserCounts() {
 }
 //get sub id by sub name
 
+async function getParkingLotsFaultsModel(cityId = null) {
+  try {
+    let faultyGates, faultySlots;
+
+    if (cityId && !isNaN(cityId)) {
+      // Fetch faulty gates and slots for the provided city ID
+      faultyGates = await prisma.gates.findMany({
+        where: {
+          Fault: true,
+          CityID: parseInt(cityId)
+        },
+        include: {
+          Cities: {
+            select: {
+              CityName: true,
+              idCities: true // Include City ID if needed
+            }
+          }
+        }
+      });
+
+      faultySlots = await prisma.slots.findMany({
+        where: {
+          Fault: true,
+          Areas: {
+            CityID: parseInt(cityId)
+          }
+        },
+        include: {
+          Areas: {
+            select: {
+              AreaName: true,
+              idAreas: true, // Include Area ID if needed
+              Cities: {
+                select: {
+                  CityName: true,
+                  idCities: true // Include City ID if needed
+                }
+              }
+            }
+          }
+        }
+      });
+    } else {
+      // Fetch all faulty gates and slots
+      faultyGates = await prisma.gates.findMany({
+        where: {
+          Fault: true
+        },
+        include: {
+          Cities: {
+            select: {
+              CityName: true,
+              idCities: true // Include City ID if needed
+            }
+          }
+        }
+      });
+
+      faultySlots = await prisma.slots.findMany({
+        where: {
+          Fault: true
+        },
+        include: {
+          Areas: {
+            select: {
+              AreaName: true,
+              idAreas: true, // Include Area ID if needed
+              Cities: {
+                select: {
+                  CityName: true,
+                  idCities: true // Include City ID if needed
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Reshape the results to flatten the nested structure
+    const reshapedFaultyGates = faultyGates.map((gate) => ({
+      idGates: gate.idGates,
+      CityName: gate.Cities.CityName,
+      CityID: gate.Cities.idCities, // City ID
+      CameraIP: gate.CameraIP, // Add other relevant fields here
+      Fault: gate.Fault,
+      Entrance: gate.Entrance
+    }));
+
+    const reshapedFaultySlots = faultySlots.map((slot) => ({
+      idSlots: slot.idSlots,
+      AreaName: slot.Areas.AreaName,
+      AreaID: slot.Areas.idAreas, // Area ID
+      CityName: slot.Areas.Cities.CityName,
+      CityID: slot.Areas.Cities.idCities, // City ID
+      Active: slot.Active,
+      Fault: slot.Fault
+    }));
+
+    // Return the reshaped result
+    return {
+      faultyGates: reshapedFaultyGates,
+      faultySlots: reshapedFaultySlots
+    };
+  } catch (error) {
+    console.error('Error fetching parking lots faults:', error);
+    throw new Error('Database query failed');
+  }
+}
+
 module.exports = {
   getUsersWithActiveSubscriptions,
   addSlotsBulk,
@@ -613,5 +724,6 @@ module.exports = {
   getUsersByCriteria,
   toggleSubscriptionStatusById,
   getAllUsers,
-  getUserCounts
+  getUserCounts,
+  getParkingLotsFaultsModel
 };

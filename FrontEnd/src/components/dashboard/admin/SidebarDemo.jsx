@@ -10,6 +10,7 @@ import { fetchUserDetails } from '../../../api/userApi';
 import { fetchUserCounts } from '../../../api/adminApi';
 import { ViewOnly, PlaceholderCard, IncomeDataCard } from '../DashboardCards';
 import { CitiesQuickView } from '../admin/CitiesQuickView';
+import { FaultsCard } from './Faults';
 function SidebarDemo() {
   const [userData, setUserData] = useState(null);
   const [incomeData, setIncomeData] = useState([]);
@@ -30,7 +31,6 @@ function SidebarDemo() {
     const handleUserCounts = async () => {
       try {
         const counts = await fetchUserCounts();
-        console.log('User counts:', counts);
         const { inactiveUserCount, activeUserCount, totalUserCount } = counts;
         setUserCounts({ inactiveUserCount, activeUserCount, totalUserCount });
       } catch (error) {
@@ -43,7 +43,6 @@ function SidebarDemo() {
     const handleUserData = async () => {
       try {
         const userInfo = await fetchUserDetails();
-        console.log('User info:', userInfo);
         setUserData(userInfo);
       } catch (error) {
         setErrors((prev) => ({
@@ -163,6 +162,7 @@ const Dashboard = ({ userCounts, errors }) => {
   const userCountsCard = 0;
   const incomeDataCard = 1;
   const citiesQuickViewCard = 2;
+  const faultsCard = 3;
   return (
     <div className='flex flex-1'>
       <div className='p-2 md:p-10 rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col gap-2 flex-1 w-full h-full'>
@@ -178,6 +178,8 @@ const Dashboard = ({ userCounts, errors }) => {
               <IncomeDataCard key={`card-${i}`} title='Income data' />
             ) : i === citiesQuickViewCard ? (
               <CitiesQuickView key={`card-${i}`} />
+            ) : i === faultsCard ? (
+              <FaultsCard key={`card-${i}`} className='bg-gray-100 dark:bg-neutral-800' />
             ) : (
               <PlaceholderCard key={`placeholder-${i}`} />
             )

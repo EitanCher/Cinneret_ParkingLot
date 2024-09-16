@@ -34,7 +34,6 @@ export const fetchUserCounts = async () => {
 
 export const fetchIncomeData = async ({ startDate, endDate }) => {
   try {
-    console.log('startDate and endDate in admin api:', startDate, endDate);
     // Ensure startDate and endDate are provided and are valid Date objects
     if (!startDate || !endDate) {
       throw new Error('Both startDate and endDate are required.');
@@ -52,10 +51,20 @@ export const fetchIncomeData = async ({ startDate, endDate }) => {
       withCredentials: true
     });
 
-    console.log('response.data of fetchIncomeData in admin api:', response.data);
     return response.data; // Ensure response.data is returned
   } catch (error) {
     console.error('Error fetching income data:', error);
     throw error; // Re-throw the error to handle it in the component
+  }
+};
+
+export const fetchFaultySlotsGates = async () => {
+  try {
+    const response = await api.get('/parking/faulty/:cityId', { withCredentials: true });
+    console.log(response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching fault slots and gates (origina: adminAPI):', error);
+    throw error;
   }
 };

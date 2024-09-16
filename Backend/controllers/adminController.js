@@ -18,7 +18,8 @@ const {
   getUsersByCriteria,
   toggleSubscriptionStatusById,
   getAllUsers,
-  getUserCounts
+  getUserCounts,
+  getParkingLotsFaultsModel
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -661,6 +662,24 @@ async function userCountController(req, res) {
 
 async function createGate(req, res) {}
 
+async function getParkingLotsFaultsController(req, res) {
+  try {
+    let result = null;
+    const { cityId } = req.params;
+    if (!cityId) {
+      //get info from all parking lots
+      result = await getParkingLotsFaultsModel();
+    } else {
+      result = await getParkingLotsFaultsModel(cityId);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Error getting parking lots with faults:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
 //deal with parking violations web socket
 //make slot inactive when fault is detected
 
@@ -688,5 +707,6 @@ module.exports = {
   viewUsersByCriteria,
   toggleUserSubscriptionStatus,
   updateCityPicture,
-  userCountController
+  userCountController,
+  getParkingLotsFaultsController
 };

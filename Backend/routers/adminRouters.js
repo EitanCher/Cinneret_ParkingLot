@@ -25,7 +25,8 @@ const {
   updateCityPicture,
   getUserDetails,
   userCountController,
-  incomeByTimeFrame
+  incomeByTimeFrame,
+  getParkingLotsFaultsController
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -40,35 +41,35 @@ const { authenticateJWT } = require('../middlewares/authenticateJWT');
 router.use(authenticateJWT);
 router.use(checkAdminRole);
 router.get('/income-by-dates', incomeByTimeFrame);
-router.post('/parking/add-parking-lot', addParkingLot); // OK
-router.put('/parking/update-parking-lot/:idCities', updateParkingLot); // OK
-router.delete('/parking/parkinglot/:idCities', removeParkingLot); // OK
-router.get('/parking/all-parking-lots', getParkingLotCities); // OK
+router.post('/parking/add-parking-lot', addParkingLot);
+router.put('/parking/update-parking-lot/:idCities', updateParkingLot);
+router.delete('/parking/parkinglot/:idCities', removeParkingLot);
+router.get('/parking/all-parking-lots', getParkingLotCities);
 router.patch('/parking/picture/:idCities', updateCityPicture); // NEEDS TESTING
 router.get('/users/counts', userCountController);
-router.post('/parking/areas', addArea); //OK
-router.delete('/parking/areas/:idAreas', removeArea); //OK
-router.get('/parking/areas/:cityId', areasByCityID); //OK
-
-router.delete('/parking/slots/:idSlots', deleteSlotByIDController); //OK
-router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity); //OK
+router.post('/parking/areas', addArea);
+router.delete('/parking/areas/:idAreas', removeArea);
+router.get('/parking/areas/:cityId', areasByCityID);
+router.get('/parking/faulty/:cityId', getParkingLotsFaultsController); //send city id for city faults. or leave empty for all cities faults
+router.delete('/parking/slots/:idSlots', deleteSlotByIDController);
+router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity);
 
 router.delete('/parking/slots/range', deleteSlotsByIdRangeController); //NEEDS TESTING
-router.patch('/parking/slots/bulk-update', updateSlotsByCriteriaController); //OK
+router.patch('/parking/slots/bulk-update', updateSlotsByCriteriaController);
 router.post('/parking/slots/changestatus/:id', toggleSlot); //activate/deactivate
-router.get('/parking/slots', viewSlotsByCriteriaController); //OK
-router.patch('/parking/slots/update/:idSlots', updateIndividualSlot); //OK
-router.post('/parking/slots/add', addSlotsToArea); //OK  although need to decide what to do with borderright and ips
+router.get('/parking/slots', viewSlotsByCriteriaController);
+router.patch('/parking/slots/update/:idSlots', updateIndividualSlot);
+router.post('/parking/slots/add', addSlotsToArea); //  although need to decide what to do with borderright and ips
 
-router.post('/subscriptions', addSubscriptionController); //OK
-router.patch('/subscriptions/:idSubscriptionPlans', updateSubscriptionController); //OK
-router.delete('/subscriptions/:idSubscriptionPlans', removeSubscriptionController); //OK
-router.get('/subscriptions', getSubscriptionTiers); // OK
+router.post('/subscriptions', addSubscriptionController);
+router.patch('/subscriptions/:idSubscriptionPlans', updateSubscriptionController);
+router.delete('/subscriptions/:idSubscriptionPlans', removeSubscriptionController);
+router.get('/subscriptions', getSubscriptionTiers);
 
-router.get('/users/mostactive', mostActiveUsersController); // ||OK
+router.get('/users/mostactive', mostActiveUsersController);
 //status || fname || lname || subscriptionTier || email || violations || role
 //http://localhost:3001/api/admin/users/criteria?role=user&subscriptionTier=Single%20Plan  example
-router.get('/users/criteria', viewUsersByCriteria); // ||OK
+router.get('/users/criteria', viewUsersByCriteria);
 router.patch('/users/subscriptions/:subscriptionId', toggleSubscriptionStatusById); //not sure needed yet
 
 // route for occupancy- take from parking controller
