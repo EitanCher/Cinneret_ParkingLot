@@ -22,6 +22,8 @@ void MyLotNode::handle() {
 
 void MyLotNode::networkSetup() {
 	Serial.println("WIFI Setup started");
+	this->isConnectionSuccess = true;
+	this->connectionStartTime = millis();
 
 	// Configure static IP for the current Sensor Node:
 	if (!WiFi.config(local_IP, this->gateway, this->subnet)) Serial.println("STA Failed to configure");
@@ -29,16 +31,36 @@ void MyLotNode::networkSetup() {
 	wifiMulti.addAP(this->SSID, this->PSWD); // Preferred over 'WiFi.begin(this->SSID, this->PSWD)' due to support for using static IP 
 
 	while(wifiMulti.run() != WL_CONNECTED) {
+		// Apply timeout check:
+		if (millis() - this->connectionStartTime >= this->connectionTimeout) {
+			Serial.println("Failed to connect to WiFi within the timeout period.");
+			this->isConnectionSuccess = false;
+			break;
+		}
+
 		Serial.println("Attempting to connect to network...");
 		delay(100);
 	}
-	Serial.println("Connected to network");
-	Serial.print("Local AP IP: ");
-	Serial.println(WiFi.localIP());
+	
+	if (this->isConnectionSuccess) {
+		Serial.println("Connected to network");
+		Serial.print("Local AP IP: ");
+		Serial.println(WiFi.localIP());
+	}
 }
 
 void MyLotNode::connectToServer() {
+	if(!this->isConnectionSuccess) return;
+	this->connectionStartTime = millis();
+
 	while(!wsClient.connect(this->websocket_server, this->websocket_port, "/")) {
+		// Apply timeout check:
+		if (millis() - this->connectionStartTime >= this->connectionTimeout) {
+			Serial.println("Failed to connect to Server within the timeout period.");
+			this->isConnectionSuccess = false;
+			break;
+		}
+
 		delay(100);
 		Serial.println(this->websocket_port);
 		Serial.println(this->websocket_server);
@@ -58,6 +80,7 @@ void MyLotNode::defineWSClient() {
 		} else if (event == WebsocketsEvent::ConnectionClosed) {
 			Serial.print("Websocket server disconnected for client: ");
 			Serial.println(this->local_IP);
+			this->connectToServer();
 		} else if (event == WebsocketsEvent::GotPing) {
 			Serial.println("Ping received");
 		}
@@ -65,7 +88,6 @@ void MyLotNode::defineWSClient() {
 }
 
 void MyLotNode::onMessageCallback(WebsocketsMessage message){
-	Serial.println("This is callback!!!!!!!!!!!!!!!!!!!!!!");
 	String msg = message.data();
 	String log = "Message received: " + message.data();
 	Serial.println(log);
