@@ -10,7 +10,6 @@
 IPAddress local_IP(192, 168, 1, 4);
 
 #define PIN_FLASH 4
-unsigned long myTimer;
 static auto loRes = esp32cam::Resolution::find(320, 240);
 static auto midRes = esp32cam::Resolution::find(350, 530);
 static auto hiRes = esp32cam::Resolution::find(800, 600);
@@ -42,26 +41,32 @@ void setup() {
   myCameraClient.networkSetup();
 
   // Connect to the server:
-  myCameraClient.connectToServer();  
-
-  doFlash();
-
-  myTimer = millis();
+  if(myCameraClient.isConnectionSucceed()) {  // Connection to WIFI success
+    myCameraClient.connectToServer(); 
+    if(myCameraClient.isConnectionSucceed()) { doFlash(); } // Connection to Server success
+  }
 }
 
 void loop() {
-  myCameraClient.handle();
+  if(myCameraClient.isConnectionSucceed()) { 
+    myCameraClient.handle();
 
-  if (myCameraClient.isShotRequired()) {
-    Serial.println("PICTURE REQUEST DETECTED ====================");
-    serveJpg();
+    if (myCameraClient.isShotRequired()) {
+      Serial.println("PICTURE REQUEST DETECTED ====================");
+      serveJpg();
+    }
   }
 }
 
 // Capture and send an image:
 void serveJpg() {
-  doFlash();
+  digitalWrite(PIN_FLASH, HIGH); //Turn flash on
+  delay(1000);
+
   auto frame = esp32cam::capture();
+  digitalWrite(PIN_FLASH, LOW); //Turn flash off
+  delay (100);
+
   if (!frame) {
     Serial.println("CAPTURE FAILED");
     return;
@@ -69,6 +74,7 @@ void serveJpg() {
   
   Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(), static_cast<int>(frame->size()));
   myCameraClient.sendPicture((const char*)frame->data(), frame->size());   
+  Serial.println("\nDONE");
 }
 
 void doFlash(){
