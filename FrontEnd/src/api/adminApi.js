@@ -68,3 +68,17 @@ export const fetchFaultySlotsGates = async () => {
     throw error;
   }
 };
+
+export const fetchRecentSubscriptions = async () => {
+  try {
+    const response = await api.get('/users/recent/', {
+      params: { limit: 12 }, // Pass the limit as a query parameter
+      withCredentials: true
+    });
+    console.log('recent users in adminAPI: ', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching recent subscriptions:', error);
+    throw error;
+  }
+};

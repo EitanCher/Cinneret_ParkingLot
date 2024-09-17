@@ -706,6 +706,88 @@ async function getParkingLotsFaultsModel(cityId = null) {
   }
 }
 
+async function getRecentSubscriptionsModel(limit) {
+  try {
+    const result = await prisma.userSubscriptions.findMany({
+      where: {
+        Status: 'active' // Filter for active subscriptions
+      },
+      take: parseInt(limit, 10), // Limit the number of results
+      orderBy: {
+        StartDate: 'desc' // Get the most recent subscriptions by start date
+      },
+      select: {
+        Users: {
+          select: {
+            FirstName: true,
+            LastName: true,
+            Email: true
+            // If you have a createdAt field for registration date, include it here
+          }
+        },
+        SubscriptionPlans: {
+          select: {
+            Name: true,
+            Price: true
+          }
+        },
+        StartDate: true // Subscription start date
+      }
+    });
+
+    const reshapedResult = result.map((item) => {
+      return {
+        Name: `${item.Users.FirstName} ${item.Users.LastName}`,
+        Email: item.Users.Email,
+        SubscriptionPlan: item.SubscriptionPlans.Name,
+        Price: item.SubscriptionPlans.Price,
+        StartDate: item.StartDate
+      };
+    });
+
+    return reshapedResult;
+  } catch (error) {
+    console.error(error);
+    throw new Error('Error fetching recent subscriptions');
+  }
+}
+
+const calculateAverageParkingTimeAllUsers = async () => {
+  try {
+    // Fetch total parking time for all users
+    const totalParkingTimeResult = await prisma.parkingLog.aggregate({
+      _sum: {
+        // Calculate the total duration of parking logs (Exit - Entrance)
+        duration: {
+          field: 'Exit',
+          subtract: {
+            field: 'Entrance'
+          }
+        }
+      }
+    });
+
+    const totalParkingTime = totalParkingTimeResult._sum.duration || 0;
+
+    // Fetch the number of parking logs for all users
+    const parkingLogsCountResult = await prisma.parkingLog.count();
+
+    // If no logs are found, return null
+    if (parkingLogsCountResult === 0) {
+      return null;
+    }
+
+    // Compute the average duration in milliseconds
+    const averageDuration = totalParkingTime / parkingLogsCountResult;
+
+    // Return the average parking time in seconds
+    return averageDuration / 1000; // Convert milliseconds to seconds
+  } catch (error) {
+    console.error('Error fetching average parking time for all users:', error.message);
+    throw new Error('Unable to fetch average parking time');
+  }
+};
+
 module.exports = {
   getUsersWithActiveSubscriptions,
   addSlotsBulk,
@@ -725,5 +807,7 @@ module.exports = {
   toggleSubscriptionStatusById,
   getAllUsers,
   getUserCounts,
-  getParkingLotsFaultsModel
+  getParkingLotsFaultsModel,
+  getRecentSubscriptionsModel,
+  calculateAverageParkingTimeAllUsers
 };

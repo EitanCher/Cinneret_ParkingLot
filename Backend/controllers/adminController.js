@@ -19,7 +19,9 @@ const {
   toggleSubscriptionStatusById,
   getAllUsers,
   getUserCounts,
-  getParkingLotsFaultsModel
+  getParkingLotsFaultsModel,
+  getRecentSubscriptionsModel,
+  calculateAverageParkingTimeAllUsers
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -680,6 +682,36 @@ async function getParkingLotsFaultsController(req, res) {
   }
 }
 
+async function getRecentSubscriptionsController(req, res) {
+  try {
+    const { limit } = req.query;
+    const result = await getRecentSubscriptionsModel(limit);
+    if (!result) {
+      return res.status(404).json({ message: 'No recent subscriptions found' });
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Error getting recent subscriptions:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
+async function calculateAverageParkingTimeAllUsersController(req, res) {
+  try {
+    // Fetch the average parking time for all users
+    const averageParkingTime = await calculateAverageParkingTimeAllUsers();
+
+    // Return the average parking time
+    if (averageParkingTime !== null) {
+      res.status(200).json({ averageParkingTime });
+    } else {
+      res.status(404).json({ message: 'No parking history found for any user' });
+    }
+  } catch (err) {
+    console.error('Error calculating average parking time for all users:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
 //deal with parking violations web socket
 //make slot inactive when fault is detected
 
@@ -708,5 +740,7 @@ module.exports = {
   toggleUserSubscriptionStatus,
   updateCityPicture,
   userCountController,
-  getParkingLotsFaultsController
+  getParkingLotsFaultsController,
+  getRecentSubscriptionsController,
+  calculateAverageParkingTimeAllUsersController
 };

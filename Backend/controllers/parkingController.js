@@ -22,8 +22,8 @@ const passport = require('../utils/passport-config');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
-const maxDurationReservation = 24;
-const maxDurationParkingNoReservation = 6;
+let maxDurationReservation = 24;
+let maxDurationParkingNoReservation = 6;
 
 const getParkingLotCities = async (req, res) => {
   try {
@@ -333,6 +333,8 @@ const countSlotsByCityID = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+//recent parking logs
 
 const countSlotsByCityName = () => {};
 module.exports = {

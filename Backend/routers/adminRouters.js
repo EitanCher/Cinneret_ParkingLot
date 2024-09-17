@@ -26,7 +26,9 @@ const {
   getUserDetails,
   userCountController,
   incomeByTimeFrame,
-  getParkingLotsFaultsController
+  getParkingLotsFaultsController,
+  getRecentSubscriptionsController,
+  calculateAverageParkingTimeAllUsersController
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -40,6 +42,8 @@ const { authenticateJWT } = require('../middlewares/authenticateJWT');
 
 router.use(authenticateJWT);
 router.use(checkAdminRole);
+
+router.get('/parking/average-parking-time', calculateAverageParkingTimeAllUsersController);
 router.get('/income-by-dates', incomeByTimeFrame);
 router.post('/parking/add-parking-lot', addParkingLot);
 router.put('/parking/update-parking-lot/:idCities', updateParkingLot);
@@ -53,14 +57,13 @@ router.get('/parking/areas/:cityId', areasByCityID);
 router.get('/parking/faulty/:cityId', getParkingLotsFaultsController); //send city id for city faults. or leave empty for all cities faults
 router.delete('/parking/slots/:idSlots', deleteSlotByIDController);
 router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity);
-
+router.get('/users/recent/', getRecentSubscriptionsController);
 router.delete('/parking/slots/range', deleteSlotsByIdRangeController); //NEEDS TESTING
 router.patch('/parking/slots/bulk-update', updateSlotsByCriteriaController);
 router.post('/parking/slots/changestatus/:id', toggleSlot); //activate/deactivate
 router.get('/parking/slots', viewSlotsByCriteriaController);
 router.patch('/parking/slots/update/:idSlots', updateIndividualSlot);
 router.post('/parking/slots/add', addSlotsToArea); //  although need to decide what to do with borderright and ips
-
 router.post('/subscriptions', addSubscriptionController);
 router.patch('/subscriptions/:idSubscriptionPlans', updateSubscriptionController);
 router.delete('/subscriptions/:idSubscriptionPlans', removeSubscriptionController);
