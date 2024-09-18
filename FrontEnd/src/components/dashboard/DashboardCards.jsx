@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
 
-import { Card, CardBody } from '@nextui-org/card';
+import { Card, CardBody, CardFooter } from '@nextui-org/card';
 import { DateRangePicker } from '@nextui-org/react';
 import { fetchIncomeData } from '../../api/adminApi';
 export const PlaceholderCard = () => {
@@ -14,11 +14,12 @@ export const PlaceholderCard = () => {
   );
 };
 export const ViewOnly = ({ title, content }) => (
-  <Card className='w-full max-h-24 max-w-md bg-gray-100 dark:bg-neutral-800'>
-    <CardBody>
+  <Card className='w-full min-h-56  max-w-md bg-gray-100 dark:bg-neutral-800'>
+    <IncomeDataCard className='bg-gray-100 dark:bg-neutral-800' />
+    <CardFooter className='flex flex-col justify-center items-center bg-gray-100 dark:bg-neutral-800 '>
       <h3 className='text-lg text-center font-medium text-gray-800 dark:text-gray-200'>{title}</h3>
       <p className='text-sm text-center text-gray-600 dark:text-gray-300'>{content}</p>
-    </CardBody>
+    </CardFooter>
   </Card>
 );
 
@@ -61,7 +62,7 @@ export const IncomeDataCard = ({ title }) => {
   };
 
   return (
-    <Card className='w-full max-h-36 max-w-md bg-gray-100 dark:bg-neutral-800'>
+    <Card className='w-full  max-w-md bg-gray-100 dark:bg-neutral-800'>
       <CardBody className='flex flex-col gap-4'>
         {/* Title */}
         <h3 className='text-lg text-center font-medium text-gray-800 dark:text-gray-200'>{title || 'Income'}</h3>

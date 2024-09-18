@@ -754,36 +754,45 @@ async function getRecentSubscriptionsModel(limit) {
 
 const calculateAverageParkingTimeAllUsers = async () => {
   try {
-    // Fetch total parking time for all users
-    const totalParkingTimeResult = await prisma.parkingLog.aggregate({
-      _sum: {
-        // Calculate the total duration of parking logs (Exit - Entrance)
-        duration: {
-          field: 'Exit',
-          subtract: {
-            field: 'Entrance'
-          }
-        }
+    // Fetch all parking logs with Entrance and Exit times
+    const parkingLogs = await prisma.parkingLog.findMany({
+      select: {
+        Entrance: true,
+        Exit: true
       }
     });
-
-    const totalParkingTime = totalParkingTimeResult._sum.duration || 0;
-
-    // Fetch the number of parking logs for all users
-    const parkingLogsCountResult = await prisma.parkingLog.count();
+    console.log(parkingLogs.length);
 
     // If no logs are found, return null
-    if (parkingLogsCountResult === 0) {
+    if (parkingLogs.length === 0) {
       return null;
     }
 
-    // Compute the average duration in milliseconds
-    const averageDuration = totalParkingTime / parkingLogsCountResult;
+    // Calculate the total parking time in milliseconds
+    const totalParkingTime = parkingLogs.reduce((total, log) => {
+      if (log.Entrance && log.Exit) {
+        const entranceTime = new Date(log.Entrance).getTime();
+        const exitTime = new Date(log.Exit).getTime();
+        const duration = exitTime - entranceTime; // Duration in milliseconds
+        return total + duration;
+      }
+      return total;
+    }, 0);
 
-    // Return the average parking time in seconds
-    return averageDuration / 1000; // Convert milliseconds to seconds
+    // Compute the average duration in milliseconds
+    const averageDurationMilliseconds = totalParkingTime / parkingLogs.length;
+
+    // Convert average duration to hours
+    const averageDurationHours = averageDurationMilliseconds / (1000 * 3600); // Convert milliseconds to hours
+
+    // Format to one decimal place
+    const formattedAverageDuration = parseFloat(averageDurationHours.toFixed(1));
+    console.log(formattedAverageDuration);
+
+    // Return the average parking time in hours with one decimal place
+    return { formattedAverageDuration, dataPoints: parkingLogs.length };
   } catch (error) {
-    console.error('Error fetching average parking time for all users:', error.message);
+    console.error('Error calculating average parking time for all users:', error.message);
     throw new Error('Unable to fetch average parking time');
   }
 };

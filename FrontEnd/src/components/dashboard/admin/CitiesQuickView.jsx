@@ -72,7 +72,7 @@ export const CitiesQuickView = () => {
   }, []);
 
   return (
-    <Card className='w-full flex flex-col max-w-md  bg-gray-100 dark:bg-neutral-800 text-gray-800 dark:text-gray-200 font-medium text-lg'>
+    <Card className='w-full flex flex-col max-w-md  min-h-36 bg-gray-100 dark:bg-neutral-800 text-gray-800 dark:text-gray-200 font-medium text-lg'>
       <CardBody>
         <h4 className='text-neutral-700 dark:text-neutral-200 text-center mb-4'>Parking Lots</h4>
         <div className='flex items-center justify-center flex-wrap gap-4'>

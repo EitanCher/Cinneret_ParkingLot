@@ -39,7 +39,7 @@ export const FaultsCard = () => {
   const paginatedRows = rows.slice(startIndex, endIndex);
 
   return (
-    <Card className='w-full flex flex-col max-w-md bg-gray-100  dark:bg-neutral-800'>
+    <Card className='w-full flex flex-col max-w-md min-h-56  bg-gray-100  dark:bg-neutral-800'>
       <CardBody>
         <h4 className='text-red-600 font-semibold text-lg text-center mb-4'>Faults</h4>
         <Select

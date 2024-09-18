@@ -82,3 +82,15 @@ export const fetchRecentSubscriptions = async () => {
     throw error;
   }
 };
+
+//parking/average-parking-time
+
+export const fetchAverageParkingTimeAllUsers = async () => {
+  try {
+    const response = await api.get('/parking/average-parking-time', {
+      withCredentials: true
+    });
+    console.log('average parking time for all users: ', response.data);
+    return response.data;
+  } catch (error) {}
+};

@@ -12,6 +12,7 @@ import { ViewOnly, PlaceholderCard, IncomeDataCard } from '../DashboardCards';
 import { CitiesQuickView } from '../admin/CitiesQuickView';
 import { FaultsCard } from './Faults';
 import { RecentUsersCard } from './RecentUsers';
+import { AverageParkingCard } from './AverageParking';
 function SidebarDemo() {
   const [userData, setUserData] = useState(null);
   const [incomeData, setIncomeData] = useState([]);
@@ -161,7 +162,7 @@ const Dashboard = ({ userCounts, errors }) => {
 
   // Define which index to replace with the data
   const userCountsCard = 0;
-  const incomeDataCard = 1;
+  const AverageParking = 1;
   const citiesQuickViewCard = 2;
   const faultsCard = 3;
 
@@ -176,8 +177,8 @@ const Dashboard = ({ userCounts, errors }) => {
                 title='User Count'
                 content={errors ? `Error: ${errors}` : `Active: ${activeUserCount} | Inactive: ${inactiveUserCount} | Total: ${totalUserCount}`}
               />
-            ) : i === incomeDataCard ? (
-              <IncomeDataCard key={`card-${i}`} title='Income data' />
+            ) : i === AverageParking ? (
+              <AverageParkingCard key={`card-${i}`} title='Income data' />
             ) : i === citiesQuickViewCard ? (
               <CitiesQuickView key={`card-${i}`} />
             ) : i === faultsCard ? (
