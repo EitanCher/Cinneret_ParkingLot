@@ -8,10 +8,20 @@ const fs = require('fs');
 const Tesseract = require('tesseract.js');
 const { createWorker } = Tesseract;
 
+
 const WS_PORT = 5555;
 const myLocalIP = getLocalIPAddress();
 const wsServer = new webSocket.Server({port: WS_PORT}, ()=>console.log(`Websocket server is listening at ${WS_PORT}`));
 let allBoards = {gates: [], gateCams: [], slots: [], slotCams: []};    // Empty arrays - to enable push command in fetchBoardsDataOnInit()
+let disturbancesOnCameras = {};
+
+// Detect disturbances on cameras:
+for (board in disturbancesOnCameras) {
+    if (disturbancesOnCameras[board] > 10) {
+        console.log(`Disturbancy found on Camera ${board}`);
+        disturbancesOnCameras[board] = 0;
+    }
+}
 /*
 let lotClients = {
     gates:      [{ip: '192.168.1.3', wsc: null, isFault: false, isConnected: false}],
@@ -71,9 +81,11 @@ wsServer.on('connection', (ws, req) => {
             (async () => {
                 const worker = await createWorker('eng');
                 const ret = await worker.recognize(imagePath);
+                const imageText = ret.data.text;
                 console.log("TEXT FROM IMAGE: ");
-                console.log(ret.data.text);
+                console.log(imageText);
                 await worker.terminate();
+                await processImage(imageText, ip);
             })();
 
         } 
@@ -109,12 +121,49 @@ wsServer.on('connection', (ws, req) => {
     });
 });
 
+// Retrieve text from Image and verify it is legal registration ID:
+async function processImage(imageText, inputIP) { 
+    const myPattern1 = imageText.match(/\d{2}\W\d{3}\W\d{2}/); // ID pattern: "12-345-67"
+    const myPattern2 = imageText.match(/\d{3}\W\d{2}\W\d{3}/); // ID pattern: "123-45-678"
+    let myPattern = '';
+     
+    // Check if any Pattern occurs in the Image Text:
+    if (myPattern1 == null && myPattern2 == null) 
+        disturbancesOnCameras[inputIP] ++ ;
+    
+    if (myPattern1 != null) myPattern = myPattern1;
+    if (myPattern2 != null) myPattern = myPattern2;
+    
+    const regID = String(myPattern).replace(/\W/g, ''); // Remove the non-alphabetical characters
+    console.log(`Pattern found: ${regID}`);
+
+    // Verify the Pattern is registered in the DB as a valid ID:
+    const pgClient = await myDBPool.connect();
+    try {
+        const query = `SELECT * FROM \"Cars\" WHERE \"RegistrationID\" LIKE $1;`;
+        const values = [`%${regID}%`];
+        const result = await pgClient.query(query, values);
+
+        if (result.rows.length > 0) {
+            console.log('Found match:', result.rows);
+        } else {
+            console.log(`No matches found for ${regID}`);
+        }
+    } catch (err) {
+        console.error('Error executing query', err);
+    } finally {
+        // Release the client back to the pool after query accomplished:
+        await pgClient.release();
+    }
+}
+
+// Retrieve Parking-Lot nodes expected by the DB:
 async function fetchBoardsDataOnInit() {
     console.log("Fetching data from the DB..................")
+    const pgClient = await myDBPool.connect();
     try {
-        await myDBPool.connect();
-        const res1 = await myDBPool.query('SELECT \"Fault\", \"CameraIP\", \"GateIP\" FROM \"Gates\";');
-        const res2 = await myDBPool.query('SELECT \"Fault\", \"CameraIP\", \"SlotIP\" FROM \"Slots\";');        
+        const res1 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"GateIP\" FROM \"Gates\";');
+        const res2 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"SlotIP\" FROM \"Slots\";');        
         
         // Purge the existing metadata:
         for (boardsArray in allBoards) boardsArray = [];
@@ -160,22 +209,32 @@ async function fetchBoardsDataOnInit() {
     } catch (err) {
         console.error('Error executing query', err.stack);
     } finally {
-        // Close the database connection
-        await myDBPool.end();
+        // Release the client back to the pool after query accomplished
+        await pgClient.release();
     }
 }
 
+// Update status of the node in the network:
 function connectionStatus(inputIP, inputConn, isConn) {
     if (isConn) console.log("Clients already connected:");
     for (const boardsArray in allBoards) {
         const myArray = allBoards[boardsArray];
         for (const boardDict of myArray){
-            if(boardDict.isConnected) console.log(boardDict.ip);
             // Find the metadata of the connected board by its IP:
             if(boardDict.ip === inputIP){
                 boardDict.isConnected = isConn;
-                // Store the connection object:
-                boardDict.wsc = inputConn;
+                if (isConn) {
+                    if(boardDict.isConnected) console.log(boardDict.ip);
+                    // Store the connection object:
+                    boardDict.wsc = inputConn;
+                    // Create key-value in the "disturbances" list (for cameras only):
+                    if(boardsArray == 'gateCams' || boardsArray == 'slotCams')
+                        disturbancesOnCameras[inputIP] = 0;
+                }
+                else {
+                    if(disturbancesOnCameras.hasOwnProperty(inputIP)) 
+                        delete disturbancesOnCameras.inputIP;
+                }
             }
         }
     }
