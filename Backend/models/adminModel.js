@@ -741,7 +741,7 @@ async function getRecentSubscriptionsModel(limit) {
         Email: item.Users.Email,
         SubscriptionPlan: item.SubscriptionPlans.Name,
         Price: item.SubscriptionPlans.Price,
-        StartDate: item.StartDate
+        StartDate: new Date(item.StartDate).toLocaleString()
       };
     });
 
@@ -796,7 +796,47 @@ const calculateAverageParkingTimeAllUsers = async () => {
     throw new Error('Unable to fetch average parking time');
   }
 };
+async function getRecentParkingLogs(limit = 10) {
+  try {
+    const logs = await prisma.parkingLog.findMany({
+      take: limit, // Limits the number of results
+      orderBy: {
+        Entrance: 'desc' // Retrieves the recent logs
+      },
+      include: {
+        Cars: {
+          select: {
+            RegistrationID: true,
+            Model: true,
+            Users: {
+              select: {
+                FirstName: true,
+                LastName: true
+              }
+            }
+          }
+        },
+        Reservations: {
+          select: {
+            idReservation: true // Determines if there's a reservation
+          }
+        }
+      }
+    });
 
+    return logs.map((log) => ({
+      fullName: `${log.Cars.Users.FirstName} ${log.Cars.Users.LastName}`,
+      carModel: log.Cars.Model,
+      registrationNo: log.Cars.RegistrationID,
+      reservation: log.Reservations !== null ? 'Has a reservation' : 'No reservation',
+      entrance: new Date(log.Entrance).toLocaleString(), // Convert to readable format
+      exit: new Date(log.Exit).toLocaleString(), // Convert to readable format
+      needToExitBy: new Date(log.NeedToExitBy).toLocaleString() // Convert to readable format
+    }));
+  } catch (error) {
+    throw new Error('Error fetching recent parking logs: ' + error.message);
+  }
+}
 module.exports = {
   getUsersWithActiveSubscriptions,
   addSlotsBulk,
@@ -818,5 +858,6 @@ module.exports = {
   getUserCounts,
   getParkingLotsFaultsModel,
   getRecentSubscriptionsModel,
-  calculateAverageParkingTimeAllUsers
+  calculateAverageParkingTimeAllUsers,
+  getRecentParkingLogs
 };

@@ -23,7 +23,7 @@ export const AverageParkingCard = () => {
   }, []);
 
   return (
-    <Card className='w-full  max-w-md border-none bg-gradient-to-br from-gray-100 to-gray-300'>
+    <Card className='w-full max-w-md border-none bg-gradient-to-br from-gray-200 to-gray-400 dark:from-neutral-600 dark:to-neutral-900'>
       <CardBody className=' items-center pb-0'>
         <h4 className='text-neutral-700 dark:text-neutral-200 text-center mb-4'>Average parking time</h4>
         <CircularProgress

@@ -21,7 +21,8 @@ const {
   getUserCounts,
   getParkingLotsFaultsModel,
   getRecentSubscriptionsModel,
-  calculateAverageParkingTimeAllUsers
+  calculateAverageParkingTimeAllUsers,
+  getRecentParkingLogs
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -712,6 +713,17 @@ async function calculateAverageParkingTimeAllUsersController(req, res) {
     res.status(500).json({ error: 'Server error' });
   }
 }
+
+async function getRecentParkingLogsController(req, res) {
+  try {
+    // You can pass a limit parameter through query or set a default
+    const limit = parseInt(req.query.limit) || 10;
+    const logs = await getRecentParkingLogs(limit);
+    return res.status(200).json(logs);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
 //deal with parking violations web socket
 //make slot inactive when fault is detected
 
@@ -742,5 +754,6 @@ module.exports = {
   userCountController,
   getParkingLotsFaultsController,
   getRecentSubscriptionsController,
-  calculateAverageParkingTimeAllUsersController
+  calculateAverageParkingTimeAllUsersController,
+  getRecentParkingLogsController
 };

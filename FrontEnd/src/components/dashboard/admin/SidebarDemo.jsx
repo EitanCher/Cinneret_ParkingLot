@@ -13,6 +13,7 @@ import { CitiesQuickView } from '../admin/CitiesQuickView';
 import { FaultsCard } from './Faults';
 import { RecentUsersCard } from './RecentUsers';
 import { AverageParkingCard } from './AverageParking';
+import { RecentParkingLogsCard } from './RecentParkingLogs';
 function SidebarDemo() {
   const [userData, setUserData] = useState(null);
   const [incomeData, setIncomeData] = useState([]);
@@ -192,8 +193,10 @@ const Dashboard = ({ userCounts, errors }) => {
           {[...new Array(2)].map((_, i) =>
             i === 0 ? (
               <RecentUsersCard key={`recent-users-${i}`} className='w-full md:w-2/3 lg:w-3/4 xl:w-full bg-gray-100 dark:bg-neutral-800' />
+            ) : i === 1 ? (
+              <RecentParkingLogsCard key={`recent-parking-${i}`} className='w-full md:w-2/3 lg:w-3/4 xl:w-full bg-gray-100 dark:bg-neutral-800' />
             ) : (
-              <div key={`placeholder-${i + 4}`} className='h-full w-full rounded-lg bg-gray-100 dark:bg-neutral-800 animate-pulse'></div>
+              <div key={`placeholder-${i}`} className='h-full w-full rounded-lg bg-gray-100 dark:bg-neutral-800 animate-pulse'></div>
             )
           )}
         </div>

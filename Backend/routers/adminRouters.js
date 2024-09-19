@@ -28,7 +28,8 @@ const {
   incomeByTimeFrame,
   getParkingLotsFaultsController,
   getRecentSubscriptionsController,
-  calculateAverageParkingTimeAllUsersController
+  calculateAverageParkingTimeAllUsersController,
+  getRecentParkingLogsController
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -43,6 +44,7 @@ const { authenticateJWT } = require('../middlewares/authenticateJWT');
 router.use(authenticateJWT);
 router.use(checkAdminRole);
 
+router.get('/parking/recent-parking-logs', getRecentParkingLogsController);
 router.get('/parking/average-parking-time', calculateAverageParkingTimeAllUsersController);
 router.get('/income-by-dates', incomeByTimeFrame);
 router.post('/parking/add-parking-lot', addParkingLot);

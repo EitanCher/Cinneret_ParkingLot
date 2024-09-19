@@ -94,3 +94,17 @@ export const fetchAverageParkingTimeAllUsers = async () => {
     return response.data;
   } catch (error) {}
 };
+
+export const fetchRecentParkingLogs = async () => {
+  try {
+    const response = await api.get('/parking/recent-parking-logs', {
+      params: { limit: 12 }, // Pass the limit as a query parameter
+      withCredentials: true
+    });
+    console.log('recent parking logs in adminAPI: ', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching recent parking logs:', error);
+    throw error;
+  }
+};
