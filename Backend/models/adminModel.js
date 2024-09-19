@@ -595,6 +595,248 @@ async function getUserCounts() {
 }
 //get sub id by sub name
 
+async function getParkingLotsFaultsModel(cityId = null) {
+  try {
+    let faultyGates, faultySlots;
+
+    if (cityId && !isNaN(cityId)) {
+      // Fetch faulty gates and slots for the provided city ID
+      faultyGates = await prisma.gates.findMany({
+        where: {
+          Fault: true,
+          CityID: parseInt(cityId)
+        },
+        include: {
+          Cities: {
+            select: {
+              CityName: true,
+              idCities: true // Include City ID if needed
+            }
+          }
+        }
+      });
+
+      faultySlots = await prisma.slots.findMany({
+        where: {
+          Fault: true,
+          Areas: {
+            CityID: parseInt(cityId)
+          }
+        },
+        include: {
+          Areas: {
+            select: {
+              AreaName: true,
+              idAreas: true, // Include Area ID if needed
+              Cities: {
+                select: {
+                  CityName: true,
+                  idCities: true // Include City ID if needed
+                }
+              }
+            }
+          }
+        }
+      });
+    } else {
+      // Fetch all faulty gates and slots
+      faultyGates = await prisma.gates.findMany({
+        where: {
+          Fault: true
+        },
+        include: {
+          Cities: {
+            select: {
+              CityName: true,
+              idCities: true // Include City ID if needed
+            }
+          }
+        }
+      });
+
+      faultySlots = await prisma.slots.findMany({
+        where: {
+          Fault: true
+        },
+        include: {
+          Areas: {
+            select: {
+              AreaName: true,
+              idAreas: true, // Include Area ID if needed
+              Cities: {
+                select: {
+                  CityName: true,
+                  idCities: true // Include City ID if needed
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Reshape the results to flatten the nested structure
+    const reshapedFaultyGates = faultyGates.map((gate) => ({
+      idGates: gate.idGates,
+      CityName: gate.Cities.CityName,
+      CityID: gate.Cities.idCities, // City ID
+      CameraIP: gate.CameraIP, // Add other relevant fields here
+      Fault: gate.Fault,
+      Entrance: gate.Entrance
+    }));
+
+    const reshapedFaultySlots = faultySlots.map((slot) => ({
+      idSlots: slot.idSlots,
+      AreaName: slot.Areas.AreaName,
+      AreaID: slot.Areas.idAreas, // Area ID
+      CityName: slot.Areas.Cities.CityName,
+      CityID: slot.Areas.Cities.idCities, // City ID
+      Active: slot.Active,
+      Fault: slot.Fault
+    }));
+
+    // Return the reshaped result
+    return {
+      faultyGates: reshapedFaultyGates,
+      faultySlots: reshapedFaultySlots
+    };
+  } catch (error) {
+    console.error('Error fetching parking lots faults:', error);
+    throw new Error('Database query failed');
+  }
+}
+
+async function getRecentSubscriptionsModel(limit) {
+  try {
+    const result = await prisma.userSubscriptions.findMany({
+      where: {
+        Status: 'active' // Filter for active subscriptions
+      },
+      take: parseInt(limit, 10), // Limit the number of results
+      orderBy: {
+        StartDate: 'desc' // Get the most recent subscriptions by start date
+      },
+      select: {
+        Users: {
+          select: {
+            FirstName: true,
+            LastName: true,
+            Email: true
+            // If you have a createdAt field for registration date, include it here
+          }
+        },
+        SubscriptionPlans: {
+          select: {
+            Name: true,
+            Price: true
+          }
+        },
+        StartDate: true // Subscription start date
+      }
+    });
+
+    const reshapedResult = result.map((item) => {
+      return {
+        Name: `${item.Users.FirstName} ${item.Users.LastName}`,
+        Email: item.Users.Email,
+        SubscriptionPlan: item.SubscriptionPlans.Name,
+        Price: item.SubscriptionPlans.Price,
+        StartDate: new Date(item.StartDate).toLocaleString()
+      };
+    });
+
+    return reshapedResult;
+  } catch (error) {
+    console.error(error);
+    throw new Error('Error fetching recent subscriptions');
+  }
+}
+
+const calculateAverageParkingTimeAllUsers = async () => {
+  try {
+    // Fetch all parking logs with Entrance and Exit times
+    const parkingLogs = await prisma.parkingLog.findMany({
+      select: {
+        Entrance: true,
+        Exit: true
+      }
+    });
+    console.log(parkingLogs.length);
+
+    // If no logs are found, return null
+    if (parkingLogs.length === 0) {
+      return null;
+    }
+
+    // Calculate the total parking time in milliseconds
+    const totalParkingTime = parkingLogs.reduce((total, log) => {
+      if (log.Entrance && log.Exit) {
+        const entranceTime = new Date(log.Entrance).getTime();
+        const exitTime = new Date(log.Exit).getTime();
+        const duration = exitTime - entranceTime; // Duration in milliseconds
+        return total + duration;
+      }
+      return total;
+    }, 0);
+
+    // Compute the average duration in milliseconds
+    const averageDurationMilliseconds = totalParkingTime / parkingLogs.length;
+
+    // Convert average duration to hours
+    const averageDurationHours = averageDurationMilliseconds / (1000 * 3600); // Convert milliseconds to hours
+
+    // Format to one decimal place
+    const formattedAverageDuration = parseFloat(averageDurationHours.toFixed(1));
+    console.log(formattedAverageDuration);
+
+    // Return the average parking time in hours with one decimal place
+    return { formattedAverageDuration, dataPoints: parkingLogs.length };
+  } catch (error) {
+    console.error('Error calculating average parking time for all users:', error.message);
+    throw new Error('Unable to fetch average parking time');
+  }
+};
+async function getRecentParkingLogs(limit = 10) {
+  try {
+    const logs = await prisma.parkingLog.findMany({
+      take: limit, // Limits the number of results
+      orderBy: {
+        Entrance: 'desc' // Retrieves the recent logs
+      },
+      include: {
+        Cars: {
+          select: {
+            RegistrationID: true,
+            Model: true,
+            Users: {
+              select: {
+                FirstName: true,
+                LastName: true
+              }
+            }
+          }
+        },
+        Reservations: {
+          select: {
+            idReservation: true // Determines if there's a reservation
+          }
+        }
+      }
+    });
+
+    return logs.map((log) => ({
+      fullName: `${log.Cars.Users.FirstName} ${log.Cars.Users.LastName}`,
+      carModel: log.Cars.Model,
+      registrationNo: log.Cars.RegistrationID,
+      reservation: log.Reservations !== null ? 'Has a reservation' : 'No reservation',
+      entrance: new Date(log.Entrance).toLocaleString(), // Convert to readable format
+      exit: new Date(log.Exit).toLocaleString(), // Convert to readable format
+      needToExitBy: new Date(log.NeedToExitBy).toLocaleString() // Convert to readable format
+    }));
+  } catch (error) {
+    throw new Error('Error fetching recent parking logs: ' + error.message);
+  }
+}
 module.exports = {
   getUsersWithActiveSubscriptions,
   addSlotsBulk,
@@ -613,5 +855,9 @@ module.exports = {
   getUsersByCriteria,
   toggleSubscriptionStatusById,
   getAllUsers,
-  getUserCounts
+  getUserCounts,
+  getParkingLotsFaultsModel,
+  getRecentSubscriptionsModel,
+  calculateAverageParkingTimeAllUsers,
+  getRecentParkingLogs
 };

@@ -10,6 +10,10 @@ import { fetchUserDetails } from '../../../api/userApi';
 import { fetchUserCounts } from '../../../api/adminApi';
 import { ViewOnly, PlaceholderCard, IncomeDataCard } from '../DashboardCards';
 import { CitiesQuickView } from '../admin/CitiesQuickView';
+import { FaultsCard } from './Faults';
+import { RecentUsersCard } from './RecentUsers';
+import { AverageParkingCard } from './AverageParking';
+import { RecentParkingLogsCard } from './RecentParkingLogs';
 function SidebarDemo() {
   const [userData, setUserData] = useState(null);
   const [incomeData, setIncomeData] = useState([]);
@@ -30,7 +34,6 @@ function SidebarDemo() {
     const handleUserCounts = async () => {
       try {
         const counts = await fetchUserCounts();
-        console.log('User counts:', counts);
         const { inactiveUserCount, activeUserCount, totalUserCount } = counts;
         setUserCounts({ inactiveUserCount, activeUserCount, totalUserCount });
       } catch (error) {
@@ -43,7 +46,6 @@ function SidebarDemo() {
     const handleUserData = async () => {
       try {
         const userInfo = await fetchUserDetails();
-        console.log('User info:', userInfo);
         setUserData(userInfo);
       } catch (error) {
         setErrors((prev) => ({
@@ -161,8 +163,10 @@ const Dashboard = ({ userCounts, errors }) => {
 
   // Define which index to replace with the data
   const userCountsCard = 0;
-  const incomeDataCard = 1;
+  const AverageParking = 1;
   const citiesQuickViewCard = 2;
+  const faultsCard = 3;
+
   return (
     <div className='flex flex-1'>
       <div className='p-2 md:p-10 rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col gap-2 flex-1 w-full h-full'>
@@ -174,19 +178,27 @@ const Dashboard = ({ userCounts, errors }) => {
                 title='User Count'
                 content={errors ? `Error: ${errors}` : `Active: ${activeUserCount} | Inactive: ${inactiveUserCount} | Total: ${totalUserCount}`}
               />
-            ) : i === incomeDataCard ? (
-              <IncomeDataCard key={`card-${i}`} title='Income data' />
+            ) : i === AverageParking ? (
+              <AverageParkingCard key={`card-${i}`} title='Income data' />
             ) : i === citiesQuickViewCard ? (
               <CitiesQuickView key={`card-${i}`} />
+            ) : i === faultsCard ? (
+              <FaultsCard key={`card-${i}`} className='bg-gray-100 dark:bg-neutral-800' />
             ) : (
               <PlaceholderCard key={`placeholder-${i}`} />
             )
           )}
         </div>
-        <div className='flex flex-col md:flex-row  gap-2 flex-1'>
-          {[...new Array(2)].map((_, i) => (
-            <div key={`placeholder-${i + 4}`} className='h-full w-full rounded-lg bg-gray-100 dark:bg-neutral-800 animate-pulse'></div>
-          ))}
+        <div className='flex flex-col md:flex-row gap-2 flex-1'>
+          {[...new Array(2)].map((_, i) =>
+            i === 0 ? (
+              <RecentUsersCard key={`recent-users-${i}`} className='w-full md:w-2/3 lg:w-3/4 xl:w-full bg-gray-100 dark:bg-neutral-800' />
+            ) : i === 1 ? (
+              <RecentParkingLogsCard key={`recent-parking-${i}`} className='w-full md:w-2/3 lg:w-3/4 xl:w-full bg-gray-100 dark:bg-neutral-800' />
+            ) : (
+              <div key={`placeholder-${i}`} className='h-full w-full rounded-lg bg-gray-100 dark:bg-neutral-800 animate-pulse'></div>
+            )
+          )}
         </div>
       </div>
     </div>

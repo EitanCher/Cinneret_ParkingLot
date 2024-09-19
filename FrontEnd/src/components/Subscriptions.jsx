@@ -118,7 +118,7 @@ const Subscriptions = () => {
             <h1 className=' text-[#f7fafc] -4xl font-black leading-tight tracking-[-0.033em] md:text-5xl md:leading-tight md:tracking-[-0.033em]'>
               Get the most out of your parking with ParkNow
             </h1>
-            <h2 className='text text-sm font-normal leading-normal md:text-base'>
+            <h2 className='text-[#f7fafc] text text-sm font-normal leading-normal md:text-base'>
               Choose the Plan that's right for you, and start parking smarter today
             </h2>
           </div>

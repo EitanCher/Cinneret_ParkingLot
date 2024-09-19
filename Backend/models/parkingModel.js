@@ -542,6 +542,8 @@ const countSlotsByCityId = async (cityId) => {
   }
 };
 
+// model/parking.js
+
 module.exports = {
   getAllParkingLots,
   countActiveReservations,

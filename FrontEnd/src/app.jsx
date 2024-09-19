@@ -25,7 +25,7 @@ const App = () => {
     <AuthProvider>
       <div
         className={`relative flex min-h-screen flex-col overflow-x-hidden ${
-          isDarkMode ? 'dark bg-dark-bg text-dark-text ' : 'bg-white text-gray-900 text-text'
+          isDarkMode ? 'dark bg-dark-bg text-dark-text ' : 'bg-white text-gray-900 '
         }`}
         style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}
       >
