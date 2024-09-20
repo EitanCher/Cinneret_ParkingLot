@@ -11,7 +11,7 @@ import Login from './components/Login';
 import AuthProvider from './Context/authContext';
 import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
-import SidebarDemo from './components/dashboard/admin/SidebarDemo';
+import AdminDashboard from './components/dashboard/admin/Dashboard';
 
 const App = () => {
   const { isDarkMode } = useTheme();
@@ -47,7 +47,7 @@ const App = () => {
               <Route path='/subscriptions' element={<Subscriptions />} />
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
-              <Route path='/sidebar-demo' element={<SidebarDemo />} />
+              <Route path='/sidebar-demo' element={<AdminDashboard />} />
             </Routes>
           </div>
         </div>

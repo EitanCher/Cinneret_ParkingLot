@@ -8,15 +8,15 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { fetchUserDetails } from '../../../api/userApi';
 import { fetchUserCounts } from '../../../api/adminApi';
-import { ViewOnly, PlaceholderCard, IncomeDataCard } from '../DashboardCards';
-import { CitiesQuickView } from '../admin/CitiesQuickView';
+import { IncomeAndUserCount } from './IncomeAndUserCount';
+import { PlaceholderCard } from '../PlaceHolder';
+import { CitiesQuickView } from './CitiesQuickView';
 import { FaultsCard } from './Faults';
 import { RecentUsersCard } from './RecentUsers';
 import { AverageParkingCard } from './AverageParking';
 import { RecentParkingLogsCard } from './RecentParkingLogs';
-function SidebarDemo() {
+function AdminDashboard() {
   const [userData, setUserData] = useState(null);
-  const [incomeData, setIncomeData] = useState([]);
   const [userCounts, setUserCounts] = useState({
     inactiveUserCount: 0,
     activeUserCount: 0,
@@ -31,18 +31,6 @@ function SidebarDemo() {
   });
 
   useEffect(() => {
-    const handleUserCounts = async () => {
-      try {
-        const counts = await fetchUserCounts();
-        const { inactiveUserCount, activeUserCount, totalUserCount } = counts;
-        setUserCounts({ inactiveUserCount, activeUserCount, totalUserCount });
-      } catch (error) {
-        setErrors((prev) => ({
-          ...prev,
-          userCounts: 'An error occurred while fetching user counts.'
-        }));
-      }
-    };
     const handleUserData = async () => {
       try {
         const userInfo = await fetchUserDetails();
@@ -56,7 +44,6 @@ function SidebarDemo() {
     };
 
     handleUserData();
-    handleUserCounts(); // Call handleUserCounts to fetch user counts
   }, []);
 
   const links = [
@@ -135,12 +122,12 @@ function SidebarDemo() {
           </div>
         </SidebarBody>
       </Sidebar>
-      <Dashboard userCounts={userCounts} errors={errors.userCounts} />
+      <Dashboard />
     </div>
   );
 }
 
-export default SidebarDemo;
+export default AdminDashboard;
 
 export const Logo = () => (
   <Link href='#' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
@@ -173,7 +160,7 @@ const Dashboard = ({ userCounts, errors }) => {
         <div className='flex flex-col md:flex-row gap-2'>
           {[...new Array(4)].map((_, i) =>
             i === userCountsCard ? (
-              <ViewOnly
+              <IncomeAndUserCount
                 key={`card-${i}`}
                 title='User Count'
                 content={errors ? `Error: ${errors}` : `Active: ${activeUserCount} | Inactive: ${inactiveUserCount} | Total: ${totalUserCount}`}
