@@ -85,7 +85,14 @@ wsServer.on('connection', (ws, req) => {
                 console.log("TEXT FROM IMAGE: ");
                 console.log(imageText);
                 await worker.terminate();
-                await processImage(imageText, ip);
+                const registrationID = await processImage(imageText, ip);
+                if (registrationID != '') {
+                    if (findKindOfBoard(ip) == 'gateCams')
+                        await openGate(registrationID, ip);
+                    else if (findKindOfBoard(ip) == 'slotCams'){
+
+                    }
+                }
             })();
 
         } 
@@ -121,39 +128,34 @@ wsServer.on('connection', (ws, req) => {
     });
 });
 
-// Retrieve text from Image and verify it is legal registration ID:
-async function processImage(imageText, inputIP) { 
-    const myPattern1 = imageText.match(/\d{2}\W\d{3}\W\d{2}/); // ID pattern: "12-345-67"
-    const myPattern2 = imageText.match(/\d{3}\W\d{2}\W\d{3}/); // ID pattern: "123-45-678"
-    let myPattern = '';
-     
-    // Check if any Pattern occurs in the Image Text:
-    if (myPattern1 == null && myPattern2 == null) 
-        disturbancesOnCameras[inputIP] ++ ;
-    
-    if (myPattern1 != null) myPattern = myPattern1;
-    if (myPattern2 != null) myPattern = myPattern2;
-    
-    const regID = String(myPattern).replace(/\W/g, ''); // Remove the non-alphabetical characters
-    console.log(`Pattern found: ${regID}`);
 
-    // Verify the Pattern is registered in the DB as a valid ID:
-    const pgClient = await myDBPool.connect();
-    try {
-        const query = `SELECT * FROM \"Cars\" WHERE \"RegistrationID\" LIKE $1;`;
-        const values = [`%${regID}%`];
-        const result = await pgClient.query(query, values);
+//===============================================================
+//         FUNCTIONS:
+//===============================================================
 
-        if (result.rows.length > 0) {
-            console.log('Found match:', result.rows);
-        } else {
-            console.log(`No matches found for ${regID}`);
+// Update status of the node in the network:
+function connectionStatus(inputIP, inputConn, isConn) {
+    if (isConn) console.log("Clients already connected:");
+    for (const boardsArray in allBoards) {
+        const myArray = allBoards[boardsArray];
+        for (const boardDict of myArray){
+            // Find the metadata of the connected board by its IP:
+            if(boardDict.ip === inputIP){
+                boardDict.isConnected = isConn;
+                if (isConn) {
+                    if(boardDict.isConnected) console.log(boardDict.ip);
+                    // Store the connection object:
+                    boardDict.wsc = inputConn;
+                    // Create key-value in the "disturbances" list (for cameras only):
+                    if(boardsArray == 'gateCams' || boardsArray == 'slotCams')
+                        disturbancesOnCameras[inputIP] = 0;
+                }
+                else {
+                    if(disturbancesOnCameras.hasOwnProperty(inputIP)) 
+                        delete disturbancesOnCameras.inputIP;
+                }
+            }
         }
-    } catch (err) {
-        console.error('Error executing query', err);
-    } finally {
-        // Release the client back to the pool after query accomplished:
-        await pgClient.release();
     }
 }
 
@@ -162,7 +164,7 @@ async function fetchBoardsDataOnInit() {
     console.log("Fetching data from the DB..................")
     const pgClient = await myDBPool.connect();
     try {
-        const res1 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"GateIP\" FROM \"Gates\";');
+        const res1 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"GateIP\", \"Entrance\" FROM \"Gates\";');
         const res2 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"SlotIP\" FROM \"Slots\";');        
         
         // Purge the existing metadata:
@@ -178,6 +180,7 @@ async function fetchBoardsDataOnInit() {
             myGateCamDict.isFault = row.Fault;
             myGateDict.isConnected =    false;
             myGateCamDict.isConnected = false;
+            myGateDict.isEntry = row.Entrance;
             
             allBoards.gates.push(myGateDict); // Add the Gate dictionary into 'gates' array
             allBoards.gateCams.push(myGateCamDict); // Add the Gate Cam dictionary into 'gateCams' array
@@ -214,30 +217,15 @@ async function fetchBoardsDataOnInit() {
     }
 }
 
-// Update status of the node in the network:
-function connectionStatus(inputIP, inputConn, isConn) {
-    if (isConn) console.log("Clients already connected:");
-    for (const boardsArray in allBoards) {
-        const myArray = allBoards[boardsArray];
-        for (const boardDict of myArray){
-            // Find the metadata of the connected board by its IP:
-            if(boardDict.ip === inputIP){
-                boardDict.isConnected = isConn;
-                if (isConn) {
-                    if(boardDict.isConnected) console.log(boardDict.ip);
-                    // Store the connection object:
-                    boardDict.wsc = inputConn;
-                    // Create key-value in the "disturbances" list (for cameras only):
-                    if(boardsArray == 'gateCams' || boardsArray == 'slotCams')
-                        disturbancesOnCameras[inputIP] = 0;
-                }
-                else {
-                    if(disturbancesOnCameras.hasOwnProperty(inputIP)) 
-                        delete disturbancesOnCameras.inputIP;
-                }
-            }
+function findKindOfBoard(inputIP) {
+    for (let arrayName in allBoards) {
+        if (allBoards[arrayName].some(item => item.ip === inputIP)) {
+            // Return the name of the boards array ("gates" / "gateCams" / "slots" / "slotCams"):
+            console.log(`Current array is ${arrayName}`);
+            return arrayName;
         }
     }
+    return null;  // Return null if not found
 }
 
 function getLocalIPAddress() {
@@ -280,5 +268,93 @@ function getNodePair(inputIP) {
     return null;
 }
 
+// Verify the Registration ID is valid and respond by opening / not opening the Gate:
+async function openGate(regID, inputIP) {
+    // Verify the Pattern is registered in the DB as a valid ID:
+    const pgClient = await myDBPool.connect();
+    try {
+        const query = `SELECT \"idCars\" FROM \"Cars\" WHERE \"RegistrationID\" LIKE $1;`;
+        const values = [`%${regID}%`];
+        const result = await pgClient.query(query, values);
+
+        if (result.rows.length > 0) {
+            const carID = result.rows[0].idCars;
+            console.log(`Found match for ${regID}: index ${carID}`);
+            // Find the board corresponding to the current camera:
+            const targetGate = getNodePair(inputIP)[1];
+            // Open the gate:
+            targetGate.wsc.send('OPEN_GATE');
+            // Update the Parking log:
+            if (targetGate.isEntry) 
+                updateParkingLog(pgClient, carID, null, 'Entrance');
+            else 
+                updateParkingLog(pgClient, carID, null, 'Exit');
+            
+            console.log(`Trigger sent to open Gate ${inputIP}`);
+        } 
+        else {
+            console.log(`No matches found for ${regID}`);
+            disturbancesOnCameras[inputIP] ++ ;
+        }
+    } catch (err) {
+        console.error('Error executing query: ', err);
+    } finally {
+        // Release the client back to the pool after query accomplished:
+        await pgClient.release();
+    }
+}
+
+// Retrieve text from Image:
+async function processImage(imageText, inputIP) { 
+    const myPattern1 = imageText.match(/\d{2}\W\d{3}\W\d{2}/); // ID pattern: "12-345-67"
+    const myPattern2 = imageText.match(/\d{3}\W\d{2}\W\d{3}/); // ID pattern: "123-45-678"
+    let myPattern = '';
+     
+    // Check if any Pattern occurs in the Image Text:
+    if (myPattern1 == null && myPattern2 == null) {
+        disturbancesOnCameras[inputIP] ++ ;
+        console.log("Pattern not found");
+        return '';
+    }
     
+    if (myPattern1 != null) myPattern = myPattern1;
+    if (myPattern2 != null) myPattern = myPattern2;
+    
+    const regID = String(myPattern).replace(/\W/g, ''); // Remove the non-alphabetical characters
+    console.log(`Pattern found: ${regID}`);
+    disturbancesOnCameras[inputIP] = 0;
+    return regID;
+}
+
+// Update ParkingLog table in the DB:
+async function updateParkingLog(pgClient, carID, slotID, targetColumn){
+    try {
+        const query = `INSERT INTO \"ParkingLog\" (\"CarID\", \"${targetColumn}\") VALUES ($1, $2) RETURNING *`;
+
+        let targetValue;
+        switch(targetColumn) {
+            case 'Entrance':
+            case 'Exit':
+                // Get valid 'Timestamp with time zone' value to send to the DB:
+                const currentDate = new Date();
+                targetValue = currentDate.toISOString().replace('Z', '+00:00'); // Convert to string with time zone
+                break;
+            case 'SlotID':
+                targetValue = slotID;
+                break;
+            case 'Violation':
+                targetValue = true;
+                break;
+        }
+
+        // Values to insert (this is to avoid SQL injection):
+        const values = [carID, targetValue];
+    
+        // Execute the query
+        await pgClient.query(query, values);            
+    }
+    catch {
+        console.error('Error executing ParkingLog-update query: ', err);
+    }
+}
 
