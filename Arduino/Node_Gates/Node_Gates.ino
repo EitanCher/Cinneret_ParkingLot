@@ -2,8 +2,12 @@
 #include <WiFiMulti.h>
 #include <ArduinoWebsockets.h>
 #include <KinneretParkingLot.h>
+#include <ESP32Servo.h>
 
 // === Pins Definitions: =====================================================
+// Servo pins:
+#define PIN_SERVO_ENTR 23
+#define PIN_SERVO_EXIT 22
 // A switch between Entrance / Exit mode of the Gate. Set to enable using one board for both cases due to HW restrictions of the project
 #define SWITCH_ENTR 2
 #define SWITCH_EXIT 4
@@ -28,11 +32,19 @@ IPAddress local_IP_exit(192, 168, 1, 3);
 MyLotNode myClient_Entry(local_IP_entr);
 MyLotNode myClient_Exit(local_IP_exit);
 
+// === Create objects for Servo Motors: =====================================
+Servo servoEntry;
+Servo servoExit;
+
 void setup() {
   Serial.begin(9600);
   Serial.println("Starting....................");
-  
-  // Initialize the pins:
+
+  // Initialize Servo pins:
+  servoEntry.attach(PIN_SERVO_ENTR);
+  servoExit.attach(PIN_SERVO_EXIT);
+
+  // Initialize Ultrasonic pins:
   pinMode(SWITCH_ENTR, INPUT_PULLUP);
   pinMode(SWITCH_EXIT, INPUT_PULLUP);
   pinMode(PIN_TRIG_ENTR, OUTPUT);
@@ -67,17 +79,44 @@ void loop() {
   }
 
   // Read the ultrasonic on the active gate and send to server if an object detected:
-  if (isEntr && myClient_Entry.isConnectionSucceed()) {
-    Serial.println("Acting as Entry Gate -------------------------------");
-    myClient_Entry.handle();
-    myClient_Entry.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
+  if (isEntr) {
+    if(myClient_Entry.isConnectionSucceed()) {
+      Serial.println("Acting as Entry Gate -------------------------------");
+      myClient_Entry.handle();
+      myClient_Entry.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
+    }
+    if(myClient_Entry.isOpenRequired()) {
+      myClient_Entry.setOpenRequest(false);
+      GateOpen(servoEntry);
+    }
   } 
-  else if (isExit && myClient_Exit.isConnectionSucceed()) {
-    Serial.println("Acting as Exit Gate -------------------------------");
-    myClient_Exit.handle();
-    myClient_Exit.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
+  else if (isExit) {
+    if(myClient_Exit.isConnectionSucceed()) {
+      Serial.println("Acting as Exit Gate -------------------------------");
+      myClient_Exit.handle();
+      myClient_Exit.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
+    }
+    if(myClient_Exit.isOpenRequired()) {
+      myClient_Exit.setOpenRequest(false);
+      GateOpen(servoExit);
+   }
   }
   
   delay(2000);
 }
+
+void GateOpen(Servo myServo) {
+  for(int posDegrees = 0; posDegrees <= 90; posDegrees++) {
+    myServo.write(posDegrees);
+    delay(20);
+  }
+}
+
+void GateClose(Servo myServo) {  
+  for(int posDegrees = 90; posDegrees >= 0; posDegrees--) {
+    myServo.write(posDegrees);
+    delay(2000);
+  }
+}
+
 
