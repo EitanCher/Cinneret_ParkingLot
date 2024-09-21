@@ -27,6 +27,11 @@ export const FaultsCard = () => {
     handleFaults(); // Fetch faults when the component mounts
   }, []);
 
+  const handleOptionChange = (e) => {
+    setSelectedOption(e.target.value); // Update the selected option
+    setPage(1); // Reset pagination to page 1
+  };
+
   const rows = selectedOption === 'slotsFaults' ? slotsFaults : gatesFaults;
 
   // Calculate total pages
@@ -48,7 +53,7 @@ export const FaultsCard = () => {
           isRequired
           placeholder='Choose gates or slots'
           value={selectedOption}
-          onChange={(e) => setSelectedOption(e.target.value)} // Ensure correct value assignment
+          onChange={handleOptionChange}
           className='mb-4'
         >
           <SelectItem key='slotsFaults' value='slotsFaults'>

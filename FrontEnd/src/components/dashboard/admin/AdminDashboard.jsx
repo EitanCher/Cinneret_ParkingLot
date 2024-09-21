@@ -1,27 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
+
 import { Sidebar, SidebarBody, SidebarLink } from '../../ui/sidebar';
 import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconParking } from '@tabler/icons-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom'; // Ensure this import is from react-router-dom
 import { motion } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { fetchUserDetails } from '../../../api/userApi';
-import { fetchUserCounts } from '../../../api/adminApi';
-import { IncomeAndUserCount } from './IncomeAndUserCount';
-import { PlaceholderCard } from '../PlaceHolder';
-import { CitiesQuickView } from './CitiesQuickView';
-import { FaultsCard } from './Faults';
-import { RecentUsersCard } from './RecentUsers';
-import { AverageParkingCard } from './AverageParking';
-import { RecentParkingLogsCard } from './RecentParkingLogs';
+
+import { Overview } from './DashBoardScreens/Overview';
+
 function AdminDashboard() {
   const [userData, setUserData] = useState(null);
-  const [userCounts, setUserCounts] = useState({
-    inactiveUserCount: 0,
-    activeUserCount: 0,
-    totalUserCount: 0
-  });
+  const [open, setOpen] = useState(false);
   const [errors, setErrors] = useState({
     userCounts: null,
     incomeData: null,
@@ -49,22 +43,22 @@ function AdminDashboard() {
   const links = [
     {
       label: 'Overview',
-      href: '#',
+      href: '/AdminDashboard',
       icon: <IconBrandTabler className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
       label: 'Users',
-      href: '#',
+      href: '/AdminDashboard/Users',
       icon: <IconUserBolt className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
       label: 'Parking Lots',
-      href: '#',
+      href: '/AdminDashboard/ParkingLots',
       icon: <IconParking className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
       label: 'Settings',
-      href: '#',
+      href: '/AdminDashboard/Settings',
       icon: <IconSettings className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
@@ -74,17 +68,10 @@ function AdminDashboard() {
     }
   ];
 
-  const [open, setOpen] = useState(false);
-
   return (
-    <div
-      className={cn(
-        'rounded-md flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1 max-w-full mx-auto border border-neutral-200 dark:border-neutral-700 overflow-hidden',
-        'h-[60vh]'
-      )}
-    >
+    <div className={cn('flex h-full w-full max-w-full mx-auto overflow-hidden', 'bg-gray-100 dark:bg-neutral-800')}>
       <Sidebar open={open} setOpen={setOpen}>
-        <SidebarBody className=' justify-between gap-10'>
+        <SidebarBody className='justify-between gap-10'>
           <div className='flex flex-col flex-1 overflow-y-auto overflow-x-hidden'>
             {open ? <Logo /> : <LogoIcon />}
             <div className='mt-8 flex flex-col gap-2'>
@@ -122,7 +109,13 @@ function AdminDashboard() {
           </div>
         </SidebarBody>
       </Sidebar>
-      <Dashboard />
+      <div className='flex-1 overflow-auto p-4'>
+        <Routes>
+          <Route path='/' element={<Overview />} />
+          <Route path='/users' element={<Overview />} />
+        </Routes>
+        <Outlet />
+      </div>
     </div>
   );
 }
@@ -130,7 +123,7 @@ function AdminDashboard() {
 export default AdminDashboard;
 
 export const Logo = () => (
-  <Link href='#' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
+  <Link to='/AdminDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
     <div className='h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0' />
     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='font-medium text-black dark:text-white whitespace-pre'>
       Acet Labs
@@ -139,55 +132,7 @@ export const Logo = () => (
 );
 
 export const LogoIcon = () => (
-  <Link href='#' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
+  <Link to='/AdminDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
     <div className='h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0' />
   </Link>
 );
-
-const Dashboard = ({ userCounts, errors }) => {
-  // Provide default values to avoid destructuring errors
-  const { inactiveUserCount = 0, activeUserCount = 0, totalUserCount = 0 } = userCounts || {};
-
-  // Define which index to replace with the data
-  const userCountsCard = 0;
-  const AverageParking = 1;
-  const citiesQuickViewCard = 2;
-  const faultsCard = 3;
-
-  return (
-    <div className='flex flex-1'>
-      <div className='p-2 md:p-10 rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col gap-2 flex-1 w-full h-full'>
-        <div className='flex flex-col md:flex-row gap-2'>
-          {[...new Array(4)].map((_, i) =>
-            i === userCountsCard ? (
-              <IncomeAndUserCount
-                key={`card-${i}`}
-                title='User Count'
-                content={errors ? `Error: ${errors}` : `Active: ${activeUserCount} | Inactive: ${inactiveUserCount} | Total: ${totalUserCount}`}
-              />
-            ) : i === AverageParking ? (
-              <AverageParkingCard key={`card-${i}`} title='Income data' />
-            ) : i === citiesQuickViewCard ? (
-              <CitiesQuickView key={`card-${i}`} />
-            ) : i === faultsCard ? (
-              <FaultsCard key={`card-${i}`} className='bg-gray-100 dark:bg-neutral-800' />
-            ) : (
-              <PlaceholderCard key={`placeholder-${i}`} />
-            )
-          )}
-        </div>
-        <div className='flex flex-col md:flex-row gap-2 flex-1'>
-          {[...new Array(2)].map((_, i) =>
-            i === 0 ? (
-              <RecentUsersCard key={`recent-users-${i}`} className='w-full md:w-2/3 lg:w-3/4 xl:w-full bg-gray-100 dark:bg-neutral-800' />
-            ) : i === 1 ? (
-              <RecentParkingLogsCard key={`recent-parking-${i}`} className='w-full md:w-2/3 lg:w-3/4 xl:w-full bg-gray-100 dark:bg-neutral-800' />
-            ) : (
-              <div key={`placeholder-${i}`} className='h-full w-full rounded-lg bg-gray-100 dark:bg-neutral-800 animate-pulse'></div>
-            )
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};

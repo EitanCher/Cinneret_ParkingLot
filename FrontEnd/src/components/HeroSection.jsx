@@ -40,7 +40,7 @@ const HeroSection = () => {
 
             {isAuthenticated && (
               <>
-                <Button as={Link} color='primary' to='/sidebar-demo' variant='shadow'>
+                <Button as={Link} color='primary' to='/AdminDashboard' variant='shadow'>
                   <IconBrandTabler />
                   Park Now
                 </Button>

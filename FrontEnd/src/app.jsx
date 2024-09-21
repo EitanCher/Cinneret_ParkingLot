@@ -11,15 +11,14 @@ import Login from './components/Login';
 import AuthProvider from './Context/authContext';
 import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
-import AdminDashboard from './components/dashboard/admin/Dashboard';
+import AdminDashboard from './components/dashboard/admin/AdminDashboard';
 
 const App = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
 
-  // Conditionally apply 'max-w-[960px]' only if not on '/sidebar-demo'
-  const containerClass = location.pathname === '/sidebar-demo' ? 'w-full' : 'max-w-[960px]';
-  const paddingClass = location.pathname === '/sidebar-demo' ? 'p-0' : 'px-4 py-5';
+  const containerClass = location.pathname.startsWith('/AdminDashboard') ? 'w-full' : 'max-w-[960px]';
+  const paddingClass = location.pathname.startsWith('/AdminDashboard') ? 'p-0' : 'px-4 py-5';
 
   return (
     <AuthProvider>
@@ -47,7 +46,7 @@ const App = () => {
               <Route path='/subscriptions' element={<Subscriptions />} />
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
-              <Route path='/sidebar-demo' element={<AdminDashboard />} />
+              <Route path='/AdminDashboard/*' element={<AdminDashboard />} />
             </Routes>
           </div>
         </div>

@@ -41,7 +41,11 @@ export const RecentUsersCard = () => {
             )}
           </TableHeader>
           <TableBody items={paginatedRows}>
-            {(item) => <TableRow key={item.Email || item.Name}>{(columnKey) => <TableCell>{item[columnKey]}</TableCell>}</TableRow>}
+            {(item) => (
+              <TableRow key={item.Email || item.Name}>
+                {(columnKey) => <TableCell>{columnKey === 'Price' ? `$${item[columnKey]}` : item[columnKey]}</TableCell>}
+              </TableRow>
+            )}
           </TableBody>
         </Table>
 
