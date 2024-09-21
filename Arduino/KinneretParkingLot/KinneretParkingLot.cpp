@@ -92,7 +92,12 @@ void MyLotNode::onMessageCallback(WebsocketsMessage message){
 	String log = "Message received: " + message.data();
 	Serial.println(log);
 	if (msg == "TAKE_PICTURE") {
-		this->takePicture = true;
+		if (!this->isGateOpen) {
+			this->flag_takePicture = true;
+		}
+	}
+	if (msg == "OPEN_GATE") {
+		this->flag_openGate = true;
 	}
 }
 
@@ -141,7 +146,7 @@ void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int m
 
 void MyLotNode::sendPicture(const char* data, const size_t len) {
 	wsClient.sendBinary(data, len);
-	this->takePicture = false;
+	this->flag_takePicture = false;
 }
 
 
