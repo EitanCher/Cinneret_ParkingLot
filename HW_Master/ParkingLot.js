@@ -6,6 +6,7 @@ const os = require('os');
 const myDBPool = require('./db_config');
 const fs = require('fs');
 const Tesseract = require('tesseract.js');
+const exp = require('constants');
 const { createWorker } = Tesseract;
 
 
@@ -94,7 +95,6 @@ wsServer.on('connection', (ws, req) => {
                     }
                 }
             })();
-
         } 
         else {
             const message = data.toString();
@@ -279,17 +279,16 @@ async function openGate(regID, inputIP) {
 
         if (result.rows.length > 0) {
             const carID = result.rows[0].idCars;
-            console.log(`Found match for ${regID}: index ${carID}`);
+            console.log(`Found match for ${regID}: Car ID ${carID}`);
             // Find the board corresponding to the current camera:
             const targetGate = getNodePair(inputIP)[1];
             // Open the gate:
             targetGate.wsc.send('OPEN_GATE');
             // Update the Parking log:
             if (targetGate.isEntry) 
-                updateParkingLog(pgClient, carID, null, 'Entrance');
+                logEntry(pgClient, carID);
             else 
-                updateParkingLog(pgClient, carID, null, 'Exit');
-            
+                //logExit(pgClient, carID);
             console.log(`Trigger sent to open Gate ${inputIP}`);
         } 
         else {
@@ -326,34 +325,38 @@ async function processImage(imageText, inputIP) {
     return regID;
 }
 
-// Update ParkingLog table in the DB:
-async function updateParkingLog(pgClient, carID, slotID, targetColumn){
+// Add a row into Parking-Log table in the DB:
+async function logEntry(pgClient, carID){
+    // Check if Reservation exists for current car:
+    const reservationID = null;
+    const expectedExitTime = 'NOW() + INTERVAL \'6 hours\'';
     try {
-        const query = `INSERT INTO \"ParkingLog\" (\"CarID\", \"${targetColumn}\") VALUES ($1, $2) RETURNING *`;
-
-        let targetValue;
-        switch(targetColumn) {
-            case 'Entrance':
-            case 'Exit':
-                // Get valid 'Timestamp with time zone' value to send to the DB:
-                const currentDate = new Date();
-                targetValue = currentDate.toISOString().replace('Z', '+00:00'); // Convert to string with time zone
-                break;
-            case 'SlotID':
-                targetValue = slotID;
-                break;
-            case 'Violation':
-                targetValue = true;
-                break;
+        const query = `SELECT \"idReservation\" FROM \"Reservations\" WHERE \
+            \"CarID\" LIKE ${carID} AND \"ReservationStart\" < NOW() AND \"ReservationEnd\" > NOW();`;
+        
+        const result = await pgClient.query(query);            
+        if (result.rows.length > 0) {
+            reservationID = result.rows[0].idReservation;
+            expectedExitTime = 'NOW() + INTERVAL \'24 hours\''; 
         }
+    }
+    catch (err) {
+        console.error('Error executing Reservations-check query: ', err);
+    }
 
+    // Insert a row into Parking Log table having all the required values set:
+    try {
+        const query = `INSERT INTO \"ParkingLog\" \
+            (\"CarID\", \"SlotID\", \"Entrance\", \"Exit\", \"Violation\", \"ReservationID\", \"NeedToExitBy\") \
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+        
         // Values to insert (this is to avoid SQL injection):
-        const values = [carID, targetValue];
-    
+        const values = [carID, null, 'NOW()', null, false, reservationID, expectedExitTime];
+
         // Execute the query
         await pgClient.query(query, values);            
     }
-    catch {
+    catch (err) {
         console.error('Error executing ParkingLog-update query: ', err);
     }
 }
