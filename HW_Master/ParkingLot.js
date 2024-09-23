@@ -95,6 +95,7 @@ wsServer.on('connection', (ws, req) => {
                     }
                 }
             })();
+
         } 
         else {
             const message = data.toString();
@@ -109,12 +110,15 @@ wsServer.on('connection', (ws, req) => {
 
                 switch(message) {
                     case 'OBJECT_DETECTED':
-                        console.log("Message accepted")
                         if(boardData_2.wsc != null) {
                                 boardData_2.wsc.send('TAKE_PICTURE');
                                 console.log(`Trigger sent to camera ${boardData_2.ip}`);
                         } 
-                        else console.log(`Camera ${boardData_2.ip} not connected.`);
+                        else {
+                            console.log(`Camera ${boardData_2.ip} not connected.`);
+                            // Unblock Gate's proximity sensor:
+                            boardData_1.wsc.send('PREPARE_ANOTHER_SHOT');
+                        }
                         break;
                 }
             }
@@ -190,22 +194,17 @@ async function fetchBoardsDataOnInit() {
         res2.rows.forEach(row => {
             let mySlotDict = {};
             let mySlotCamDict = {};
-            mySlotDict.ip =    row.GateIP;
+            mySlotDict.ip =    row.SlotIP;
             mySlotCamDict.ip = row.CameraIP;
             mySlotDict.isFault =    row.Fault;
             mySlotCamDict.isFault = row.Fault;
-            mySlotDict.isConnected =     false;
-            mySlotCamDicts.isConnected = false;
+            mySlotDict.isConnected =    false;
+            mySlotCamDict.isConnected = false;
             
             allBoards.slots.push(mySlotDict); // Add the Slot dictionary into 'slots' array
             allBoards.slotCams.push(mySlotCamDict); // Add the Slot Cam dictionary into 'slotCams' array
         });
 
-        console.log("Gates data by the query:"); 
-        console.log(res1.rows); 
-        console.log("Slots data by the query:"); 
-        console.log(res2.rows);
-        console.log("======================================================="); 
         console.log("Boards data after \"Fetch\":")
         console.log(allBoards);
         console.log("*******   Fetch done   *********************")
@@ -280,20 +279,25 @@ async function openGate(regID, inputIP) {
         if (result.rows.length > 0) {
             const carID = result.rows[0].idCars;
             console.log(`Found match for ${regID}: Car ID ${carID}`);
-            // Find the board corresponding to the current camera:
+            // Find the Gate corresponding to the current camera and open it:
             const targetGate = getNodePair(inputIP)[1];
-            // Open the gate:
             targetGate.wsc.send('OPEN_GATE');
+
             // Update the Parking log:
             if (targetGate.isEntry) 
                 logEntry(pgClient, carID);
             else 
                 //logExit(pgClient, carID);
+            
             console.log(`Trigger sent to open Gate ${inputIP}`);
         } 
         else {
             console.log(`No matches found for ${regID}`);
             disturbancesOnCameras[inputIP] ++ ;
+            // Find the gate corresponding to the current camera and unblock its proximity sensor:
+            const targetGate = getNodePair(inputIP)[1];
+            targetGate.wsc.send('PREPARE_ANOTHER_SHOT');
+            console.log("Ready to take another shot");
         }
     } catch (err) {
         console.error('Error executing query: ', err);
@@ -312,7 +316,12 @@ async function processImage(imageText, inputIP) {
     // Check if any Pattern occurs in the Image Text:
     if (myPattern1 == null && myPattern2 == null) {
         disturbancesOnCameras[inputIP] ++ ;
-        console.log("Pattern not found");
+        console.log("Pattern not found, ready for another shot");
+
+        // Find the gate corresponding to the current camera and unblock its proximity sensor:
+        const targetGate = getNodePair(inputIP)[1];
+        targetGate.wsc.send('PREPARE_ANOTHER_SHOT');
+
         return '';
     }
     
@@ -328,17 +337,19 @@ async function processImage(imageText, inputIP) {
 // Add a row into Parking-Log table in the DB:
 async function logEntry(pgClient, carID){
     // Check if Reservation exists for current car:
-    const reservationID = null;
-    const expectedExitTime = 'NOW() + INTERVAL \'6 hours\'';
+    let reservationID = null;
+    let duration = 6;
     try {
         const query = `SELECT \"idReservation\" FROM \"Reservations\" WHERE \
-            \"CarID\" LIKE ${carID} AND \"ReservationStart\" < NOW() AND \"ReservationEnd\" > NOW();`;
+            \"CarID\" = ${carID} AND \"ReservationStart\" < NOW() AND \"ReservationEnd\" > NOW();`;
         
         const result = await pgClient.query(query);            
         if (result.rows.length > 0) {
             reservationID = result.rows[0].idReservation;
-            expectedExitTime = 'NOW() + INTERVAL \'24 hours\''; 
+            duration = 24; 
+            console.log(`Reservation found for this car (id ${reservationID})`);
         }
+        else console.log("No reservations found for this car");
     }
     catch (err) {
         console.error('Error executing Reservations-check query: ', err);
@@ -348,10 +359,10 @@ async function logEntry(pgClient, carID){
     try {
         const query = `INSERT INTO \"ParkingLog\" \
             (\"CarID\", \"SlotID\", \"Entrance\", \"Exit\", \"Violation\", \"ReservationID\", \"NeedToExitBy\") \
-            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+            VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL \'${duration} hours\') RETURNING *`;
         
         // Values to insert (this is to avoid SQL injection):
-        const values = [carID, null, 'NOW()', null, false, reservationID, expectedExitTime];
+        const values = [carID, null, 'NOW()', null, false, reservationID];
 
         // Execute the query
         await pgClient.query(query, values);            
