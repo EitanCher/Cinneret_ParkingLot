@@ -92,12 +92,15 @@ void MyLotNode::onMessageCallback(WebsocketsMessage message){
 	String log = "Message received: " + message.data();
 	Serial.println(log);
 	if (msg == "TAKE_PICTURE") {
-		if (!this->isGateOpen) {
-			this->flag_takePicture = true;
-		}
+		this->flag_takePicture = true;
+	}
+	if (msg == "PREPARE_ANOTHER_SHOT") {
+		this->flag_gateOpen = false;
+		this->block_usonic = false;
 	}
 	if (msg == "OPEN_GATE") {
-		this->flag_openGate = true;
+		this->flag_gateOpen = true;
+		this->block_usonic = false;
 	}
 }
 
@@ -131,17 +134,31 @@ void MyLotNode::readDistance(int myTrig, int myEcho) {
 }
 
 void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
-  this->readDistance(myTrig, myEcho);
+	if (!this->block_usonic) {
+		this->readDistance(myTrig, myEcho);
   
-  String msg_event = "OBJECT_DETECTED";
-  String msg_zero = myString + "_0_distance";
-  if (this->distance > 0 && this->distance < myThreshold) {
-    Serial.print("Object detected on ");
-    Serial.println(myString);
-    wsClient.send(msg_event);
-  }
-  else if (this->distance == 0) wsClient.send(msg_zero);
-  //else wsClient.send("no_object");
+		if (this->distance > 0 && this->distance < myThreshold) {
+			Serial.print("Object detected on ");
+			Serial.println(myString);
+			if (!this->flag_gateOpen) {
+				wsClient.send("OBJECT_DETECTED");	// Trigger the camera
+				this->block_usonic = true;	// Stop measuring proximity
+			}
+		}
+		else if (this->distance == 0) {
+			String msg_zero = myString + "_0_distance";
+			if (!this->flag_gateOpen) {
+				wsClient.send(msg_zero);
+			}
+		}
+		else {	// No object detected by the sensor
+			if (this->flag_gateOpen) {	// If Gate is open, close it:
+				this->flag_gateOpen = false;
+				this->flag_gateClose = true;
+			}
+		}
+	}
+	else Serial.println("Proximity measurement blocked");
 }
 
 void MyLotNode::sendPicture(const char* data, const size_t len) {
