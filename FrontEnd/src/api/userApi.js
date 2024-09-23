@@ -159,3 +159,17 @@ export const fetchSlotCountsByCityId = async (cityId) => {
     throw error;
   }
 };
+
+export const fetchUserCars = async (userId) => {
+  try {
+    console.log('user id in  user api:', userId);
+    const response = await api.get('/cars', {
+      withCredentials: true
+    });
+    console.log('user cars in userapi:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user cars:', error);
+    throw error;
+  }
+};

@@ -108,3 +108,49 @@ export const fetchRecentParkingLogs = async () => {
     throw error;
   }
 };
+
+export const postNewParkingLot = async (CityName, FullAddress, pictureUrl) => {
+  try {
+    console.log('posting');
+    const response = await api.post(
+      '/parking/add-parking-lot',
+      {
+        CityName: CityName,
+        FullAddress: FullAddress,
+        pictureUrl: pictureUrl
+      },
+      {
+        withCredentials: true
+      }
+    );
+    console.log('New parking lot added successfully: ', response.data);
+    console.log('response form backend', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding new parking lot:', error);
+    throw error;
+  }
+};
+
+export const updateParkingLot = async (CityName, FullAddress, pictureUrl) => {
+  try {
+    console.log('posting');
+    const response = await api.put(
+      '/parking/update-parking-lot',
+      {
+        CityName: CityName,
+        FullAddress: FullAddress,
+        pictureUrl: pictureUrl
+      },
+      {
+        withCredentials: true
+      }
+    );
+    console.log('Parking lot updated successfully: ', response.data);
+    console.log('response form backend', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating parking lot:', error);
+    throw error;
+  }
+};

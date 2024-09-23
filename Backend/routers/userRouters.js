@@ -16,7 +16,8 @@ const {
   getUserDetails,
   logout,
   fetchCheckoutSessionURL,
-  getUserSubscription
+  getUserSubscription,
+  getUserCars
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -62,6 +63,7 @@ router.get('/parking/slots-count/:cityId', authenticateJWT, countSlotsByCityID);
 router.patch('/:id', authenticateJWT, updateUser);
 router.post('/cars', authenticateJWT, addCarsController);
 router.delete('/cars/:id', authenticateJWT, deleteCarById);
+router.get('/cars', authenticateJWT, getUserCars);
 router.get('/parking/total-time', authenticateJWT, calculateTotalParkingTimeByUser);
 router.get('/parking/average-duration', authenticateJWT, calculateAverageParkingTimeByUser);
 router.post('/parking/reservation', authenticateJWT, bookSlotController);

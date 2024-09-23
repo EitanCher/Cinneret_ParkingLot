@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
+import { DatePicker } from '@nextui-org/react';
+import { now, getLocalTimeZone } from '@internationalized/date';
 
 import { Sidebar, SidebarBody, SidebarLink } from '../../ui/sidebar';
 import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconParking } from '@tabler/icons-react';
@@ -10,19 +12,11 @@ import { cn } from '../../../lib/utils';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { fetchUserDetails } from '../../../api/userApi';
-import { ParkingLots } from '../admin/DashBoardScreens/ParkingLots';
-import { Overview } from './DashBoardScreens/Overview';
-
-function AdminDashboard() {
+import { BookSlot } from '../user/screens/BookSlot';
+function UserDashboard() {
   const [userData, setUserData] = useState(null);
   const [open, setOpen] = useState(false);
-  const [errors, setErrors] = useState({
-    userCounts: null,
-    incomeData: null,
-    component3: null,
-    component4: null,
-    component5: null
-  });
+  const [userDataError, setUserDataError] = useState();
 
   useEffect(() => {
     const handleUserData = async () => {
@@ -30,10 +24,7 @@ function AdminDashboard() {
         const userInfo = await fetchUserDetails();
         setUserData(userInfo);
       } catch (error) {
-        setErrors((prev) => ({
-          ...prev,
-          component1: 'An error occurred while fetching user details.'
-        }));
+        setUserDataError('An error occurred while fetching user details.');
       }
     };
 
@@ -42,29 +33,9 @@ function AdminDashboard() {
 
   const links = [
     {
-      label: 'Overview',
-      href: '/AdminDashboard',
+      label: 'Book',
+      href: '/Book',
       icon: <IconBrandTabler className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
-    },
-    {
-      label: 'Users',
-      href: '/AdminDashboard/Users',
-      icon: <IconUserBolt className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
-    },
-    {
-      label: 'Parking Lots',
-      href: '/AdminDashboard/ParkingLots',
-      icon: <IconParking className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
-    },
-    {
-      label: 'Settings',
-      href: '/AdminDashboard/Settings',
-      icon: <IconSettings className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
-    },
-    {
-      label: 'Logout',
-      href: '#',
-      icon: <IconArrowLeft className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     }
   ];
 
@@ -116,9 +87,7 @@ function AdminDashboard() {
       </Sidebar>
       <div className='flex-1 overflow-auto p-4'>
         <Routes>
-          <Route path='/' element={<Overview />} />
-          <Route path='/users' element={<Overview />} />
-          <Route path='/ParkingLots/*' element={<ParkingLots />} /> {/* Note the change here */}
+          <Route path='/*' element={<BookSlot userData={userData} />} />
         </Routes>
         <Outlet />
       </div>
@@ -126,7 +95,7 @@ function AdminDashboard() {
   );
 }
 
-export default AdminDashboard;
+export default UserDashboard;
 
 export const Logo = () => (
   <Link to='/AdminDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>

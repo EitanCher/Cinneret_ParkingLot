@@ -310,6 +310,7 @@ const cancelReservation = async (idReservation, idUsers = null) => {
     where: { idReservation: validatedIdReservation }
   });
 };
+
 const carIdSchema = z.number().int().positive();
 const fetchReservationsByCarID = async (idCars) => {
   try {
@@ -334,21 +335,6 @@ const fetchReservationsByCarID = async (idCars) => {
     }
     console.error('Error fetching reservations by car ID:', error);
     throw new Error('Unable to fetch reservations');
-  }
-};
-
-const setExitTimeModel = async (idCars, exitTime) => {
-  // Validate input parameters and throw an error if invalid
-  setExitTimeModelSchema.parse({ idCars, exitTime });
-
-  try {
-    await prisma.parkingLog.update({
-      where: { idCars: idCars },
-      data: { NeedToExitBy: exitTime }
-    });
-  } catch (error) {
-    // Handle error (e.g., logging, rethrowing, etc.)
-    throw new Error('Failed to update the parking log');
   }
 };
 
@@ -553,7 +539,6 @@ module.exports = {
   createReservation,
   cancelReservation,
   fetchReservationsByCarID,
-  setExitTimeModel,
   fetchParkingHistoryByUserId,
   fetchTotalParkingTimeByUser,
   fetchAverageParkingTimeByUser,

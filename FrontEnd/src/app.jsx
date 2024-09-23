@@ -12,13 +12,15 @@ import AuthProvider from './Context/authContext';
 import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
 import AdminDashboard from './components/dashboard/admin/AdminDashboard';
+import UserDashboard from './components/dashboard/user/UserDashboard';
 
 const App = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
 
-  const containerClass = location.pathname.startsWith('/AdminDashboard') ? 'w-full' : 'max-w-[960px]';
-  const paddingClass = location.pathname.startsWith('/AdminDashboard') ? 'p-0' : 'px-4 py-5';
+  const containerClass =
+    location.pathname.startsWith('/AdminDashboard') || location.pathname.startsWith('/UserDashboard') ? 'w-full' : 'max-w-[960px]';
+  const paddingClass = location.pathname.startsWith('/AdminDashboard') || location.pathname.startsWith('/UserDashboard') ? 'p-0' : 'px-4 py-5';
 
   return (
     <AuthProvider>
@@ -46,6 +48,7 @@ const App = () => {
               <Route path='/subscriptions' element={<Subscriptions />} />
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
+              <Route path='/UserDashboard/*' element={<UserDashboard />} />
               <Route path='/AdminDashboard/*' element={<AdminDashboard />} />
             </Routes>
           </div>

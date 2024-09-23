@@ -10,9 +10,9 @@ export const IncomeDataCard = ({ title }) => {
   const [error, setError] = useState(null);
 
   const handleDateRangeChange = async (range) => {
-    if (range && range[0] && range[1]) {
-      const startDate = new Date(range[0]);
-      const endDate = new Date(range[1]);
+    if (range && range.start && range.end) {
+      const startDate = new Date(range.start);
+      const endDate = new Date(range.end);
 
       if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
         setDateRange([startDate, endDate]);
@@ -38,7 +38,6 @@ export const IncomeDataCard = ({ title }) => {
   return (
     <Card className='w-full max-w-md bg-gray-100 dark:bg-neutral-800'>
       <CardBody className='flex flex-col gap-4'>
-        <h3 className='text-lg text-center font-medium text-gray-800 dark:text-gray-200'>{error ? error : `Income for ${dateRange}`}</h3>
         <DateRangePicker aria-label='Select date range for income data' value={dateRange} onChange={handleDateRangeChange} isRequired />
         <div className='ml-2'>
           {loading ? (

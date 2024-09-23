@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Spinner, Card, CardBody, CardFooter, Image } from '@nextui-org/react'; // Import components from NextUI
 import { fetchCities } from '../api/userApi'; // Import the fetchCities function
+import { useTheme } from '../Context/ThemeContext'; // Import useTheme
 
 const Cities = () => {
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null); // State to handle errors
+  const { isDarkMode } = useTheme(); // Add this line to get the dark mode state
 
   useEffect(() => {
     const getCities = async () => {
@@ -52,7 +54,13 @@ const Cities = () => {
       </p>
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto'>
         {cities.map((city, index) => (
-          <Card className='card' shadow='sm' key={index} isPressable onPress={() => console.log(`${city.CityName} pressed`)}>
+          <Card
+            className={`card ${isDarkMode ? 'bg-card-bg text-card-text border-card-border' : 'bg-white text-gray-900'}`}
+            shadow='sm'
+            key={index}
+            isPressable
+            onPress={() => console.log(`${city.CityName} pressed`)}
+          >
             <CardBody className='overflow-visible p-0'>
               <Image
                 shadow='sm'
