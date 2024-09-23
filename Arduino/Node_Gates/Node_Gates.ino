@@ -86,8 +86,11 @@ void loop() {
       myClient_Entry.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
     }
     if(myClient_Entry.isOpenRequired()) {
-      myClient_Entry.setOpenRequest(false);
       GateOpen(servoEntry);
+    }
+    if(myClient_Entry.isCloseRequired()) {
+      GateClose(servoEntry);
+      myClient_Entry.setCloseRequest(false);
     }
   } 
   else if (isExit) {
@@ -97,9 +100,12 @@ void loop() {
       myClient_Exit.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
     }
     if(myClient_Exit.isOpenRequired()) {
-      myClient_Exit.setOpenRequest(false);
       GateOpen(servoExit);
-   }
+    }
+    if(myClient_Exit.isCloseRequired()) {
+      GateClose(servoExit);
+      myClient_Exit.setCloseRequest(false);
+    }
   }
   
   delay(2000);
@@ -110,6 +116,7 @@ void GateOpen(Servo myServo) {
     myServo.write(posDegrees);
     delay(20);
   }
+  Serial.println("GATE OPEN >>>>>>>>>>>>>>>>>>");
 }
 
 void GateClose(Servo myServo) {  
