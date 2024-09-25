@@ -83,7 +83,7 @@ wsServer.on('connection', (ws, req) => {
                 const worker = await createWorker('eng');
                 const ret = await worker.recognize(imagePath);
                 const imageText = ret.data.text;
-                console.log("TEXT FROM IMAGE: ");
+                console.log("=========== TEXT FROM IMAGE: ");
                 console.log(imageText);
                 await worker.terminate();
                 const registrationID = await processImage(imageText, ip);
@@ -220,7 +220,6 @@ function findKindOfBoard(inputIP) {
     for (let arrayName in allBoards) {
         if (allBoards[arrayName].some(item => item.ip === inputIP)) {
             // Return the name of the boards array ("gates" / "gateCams" / "slots" / "slotCams"):
-            console.log(`Current array is ${arrayName}`);
             return arrayName;
         }
     }
@@ -292,12 +291,11 @@ async function openGate(regID, inputIP) {
             console.log(`Trigger sent to open Gate ${inputIP}`);
         } 
         else {
-            console.log(`No matches found for ${regID}`);
             disturbancesOnCameras[inputIP] ++ ;
             // Find the gate corresponding to the current camera and unblock its proximity sensor:
             const targetGate = getNodePair(inputIP)[1];
             targetGate.wsc.send('PREPARE_ANOTHER_SHOT');
-            console.log("Ready to take another shot");
+            console.log(`\nNo matches found for ${regID}, ready to take another shot\n`);
         }
     } catch (err) {
         console.error('Error executing query: ', err);
@@ -316,11 +314,11 @@ async function processImage(imageText, inputIP) {
     // Check if any Pattern occurs in the Image Text:
     if (myPattern1 == null && myPattern2 == null) {
         disturbancesOnCameras[inputIP] ++ ;
-        console.log("Pattern not found, ready for another shot");
-
+        
         // Find the gate corresponding to the current camera and unblock its proximity sensor:
         const targetGate = getNodePair(inputIP)[1];
         targetGate.wsc.send('PREPARE_ANOTHER_SHOT');
+        console.log("\nPattern not found, ready to take another shot\n");
 
         return '';
     }
