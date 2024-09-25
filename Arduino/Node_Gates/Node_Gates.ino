@@ -1,8 +1,8 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <ArduinoWebsockets.h>
-#include <KinneretParkingLot.h>
 #include <ESP32Servo.h>
+#include <KinneretParkingLot_Gate.h>
 
 // === Pins Definitions: =====================================================
 // Servo pins:
@@ -18,7 +18,6 @@
 #define PIN_ECHO_EXIT 17
 // Distance threshold in centimeters:
 #define THRESHOLD_GATE 20
-#define THRESHOLD_SLOT 20
 
 bool isEntr = false, isExit = false;  // Need both of them to enable the first toggle between the modes (next code line)
 
@@ -29,8 +28,8 @@ IPAddress local_IP_entr(192, 168, 1, 2);
 IPAddress local_IP_exit(192, 168, 1, 3);
 
 // === Create objects for Clients: ==========================================
-MyLotNode myClient_Entry(local_IP_entr);
-MyLotNode myClient_Exit(local_IP_exit);
+Gate myClient_Entry(local_IP_entr);
+Gate myClient_Exit(local_IP_exit);
 
 // === Create objects for Servo Motors: =====================================
 Servo servoEntry;
@@ -40,9 +39,10 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Starting....................");
 
-  // Initialize Ultrasonic pins:
   pinMode(SWITCH_ENTR, INPUT_PULLUP);
   pinMode(SWITCH_EXIT, INPUT_PULLUP);
+
+  // Initialize Ultrasonic pins:
   pinMode(PIN_TRIG_ENTR, OUTPUT);
   pinMode(PIN_ECHO_ENTR, INPUT);
   pinMode(PIN_TRIG_EXIT, OUTPUT);
@@ -79,7 +79,7 @@ void loop() {
     if(myClient_Entry.isConnectionSucceed()) {
       Serial.println("Acting as Entry Gate -------------------------------");
       myClient_Entry.handle();
-      myClient_Entry.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
+      myClient_Entry.checkDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
     }
     // Open the Entry Gate:
     if(myClient_Entry.isOpenRequired() && !myClient_Entry.isCloseRequired()) {
@@ -96,7 +96,7 @@ void loop() {
     if(myClient_Exit.isConnectionSucceed()) {
       Serial.println("Acting as Exit Gate -------------------------------");
       myClient_Exit.handle();
-      myClient_Exit.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
+      myClient_Exit.checkDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
     }
     // Open the Exit Gate:
     if(myClient_Exit.isOpenRequired() && !myClient_Exit.isCloseRequired()) {
@@ -113,7 +113,7 @@ void loop() {
   delay(2000);
 }
 
-void GateOpen(Servo &myServo, MyLotNode &myClient) {
+void GateOpen(Servo &myServo, Gate &myClient) {
   for(int posDegrees = 0; posDegrees <= 90; posDegrees++) {
     myServo.write(posDegrees);
     delay(20);
@@ -124,7 +124,7 @@ void GateOpen(Servo &myServo, MyLotNode &myClient) {
   Serial.println("GATE OPEN >>>>>>>>>>>>>>>>>>");
 }
 
-void GateClose(Servo &myServo, MyLotNode &myClient) {  
+void GateClose(Servo &myServo, Gate &myClient) {  
   for(int posDegrees = 90; posDegrees >= 0; posDegrees--) {
     myServo.write(posDegrees);
     delay(20);
@@ -133,5 +133,3 @@ void GateClose(Servo &myServo, MyLotNode &myClient) {
   myClient.setCloseRequest(false);
   Serial.println("GATE CLOSED >>>>>>>>>>>>>>>>");
 }
-
-
