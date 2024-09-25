@@ -40,10 +40,6 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Starting....................");
 
-  // Initialize Servo pins:
-  servoEntry.attach(PIN_SERVO_ENTR);
-  servoExit.attach(PIN_SERVO_EXIT);
-
   // Initialize Ultrasonic pins:
   pinMode(SWITCH_ENTR, INPUT_PULLUP);
   pinMode(SWITCH_EXIT, INPUT_PULLUP);
@@ -85,12 +81,15 @@ void loop() {
       myClient_Entry.handle();
       myClient_Entry.sendDistance("entry", THRESHOLD_GATE, PIN_TRIG_ENTR, PIN_ECHO_ENTR);
     }
-    if(myClient_Entry.isOpenRequired()) {
-      GateOpen(servoEntry);
+    // Open the Entry Gate:
+    if(myClient_Entry.isOpenRequired() && !myClient_Entry.isCloseRequired()) {
+      servoEntry.attach(PIN_SERVO_ENTR);
+      GateOpen(servoEntry, myClient_Entry);
     }
-    if(myClient_Entry.isCloseRequired()) {
-      GateClose(servoEntry);
-      myClient_Entry.setCloseRequest(false);
+    // Close the Entry Gate:
+    if(myClient_Entry.isCloseRequired() && !myClient_Entry.isOpenRequired()) {
+      servoEntry.attach(PIN_SERVO_ENTR);
+      GateClose(servoEntry, myClient_Entry);
     }
   } 
   else if (isExit) {
@@ -99,31 +98,39 @@ void loop() {
       myClient_Exit.handle();
       myClient_Exit.sendDistance("exit", THRESHOLD_GATE, PIN_TRIG_EXIT, PIN_ECHO_EXIT);
     }
-    if(myClient_Exit.isOpenRequired()) {
-      GateOpen(servoExit);
+    // Open the Exit Gate:
+    if(myClient_Exit.isOpenRequired() && !myClient_Exit.isCloseRequired()) {
+      servoExit.attach(PIN_SERVO_EXIT);
+      GateOpen(servoExit, myClient_Entry);
     }
-    if(myClient_Exit.isCloseRequired()) {
-      GateClose(servoExit);
-      myClient_Exit.setCloseRequest(false);
+    // Close the Exit Gate:
+    if(myClient_Exit.isCloseRequired() && !myClient_Exit.isOpenRequired()) {
+      servoExit.attach(PIN_SERVO_EXIT);
+      GateClose(servoExit, myClient_Exit);
     }
   }
   
   delay(2000);
 }
 
-void GateOpen(Servo myServo) {
+void GateOpen(Servo &myServo, MyLotNode &myClient) {
   for(int posDegrees = 0; posDegrees <= 90; posDegrees++) {
     myServo.write(posDegrees);
     delay(20);
+    if(posDegrees > 90) break;  // Prevent moving the Servo back to position 0 degrees
   }
+  myClient.setCloseRequest(true);
   Serial.println("GATE OPEN >>>>>>>>>>>>>>>>>>");
 }
 
-void GateClose(Servo myServo) {  
+void GateClose(Servo &myServo, MyLotNode &myClient) {  
   for(int posDegrees = 90; posDegrees >= 0; posDegrees--) {
     myServo.write(posDegrees);
-    delay(2000);
+    delay(20);
   }
+  myServo.detach();
+  myClient.setCloseRequest(false);
+  Serial.println("GATE CLOSED >>>>>>>>>>>>>>>>");
 }
 
 
