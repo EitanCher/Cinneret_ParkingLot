@@ -11,7 +11,6 @@ MyLotNode::MyLotNode(const IPAddress& myIP)
 
 
 void MyLotNode::handle() { 
-//void handle(unsigned long currTime, unsigned long startTime) { 
 	wsClient.poll(); 
 	// Perform rollcall:
 	if (millis() - this->timer >= this->rollcallInterval) {
@@ -146,9 +145,8 @@ void MyLotNode::sendDistance(String myString, int myThreshold, int myTrig, int m
 			}
 		}
 		else if (this->distance == 0) {
-			String msg_zero = myString + "_0_distance";
 			if (!this->flag_gateOpen) {
-				wsClient.send(msg_zero);
+				wsClient.send("0_DISTANCE");
 			}
 		}
 		else {	// No object detected by the sensor
