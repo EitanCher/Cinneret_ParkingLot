@@ -47,10 +47,6 @@ void setup() {
   pinMode(PIN_ECHO_ENTR, INPUT);
   pinMode(PIN_TRIG_EXIT, OUTPUT);
   pinMode(PIN_ECHO_EXIT, INPUT);
-
-  // Initialize WIFI connection:
-  myClient_Exit.networkSetup();
-  myClient_Entry.networkSetup();
 }
 
 void loop() {
@@ -59,16 +55,20 @@ void loop() {
   int StateExit = digitalRead(SWITCH_EXIT);
   
   // Check the mode of the Gate:
-  // If changing from "EXIT" to "ENTRY" - connect the Entry object to the server (will disconnect the Exit object)
+  // If changing from "EXIT" to "ENTRY" - activate connections for the Entry object (will disconnect the Exit object)
   // and vice versa
-  if (StateEntr == LOW && StateExit == HIGH)  {// SWITCH_ENTR pin is connected to ground, SWITCH_EXIT pin unconnected
+  if (StateEntr == LOW && StateExit == HIGH)  {// SWITCH_ENTR pin is connected to ground, SWITCH_EXIT pin disconnected
     if (!isEntr) {
+      // Initialize connection to WIFI then to the server:
+      myClient_Entry.networkSetup();
       myClient_Entry.connectToServer();  
       isEntr = true; isExit = false;  // Change the mode to "ENTRY"
     }
   }
   else {
     if (!isExit) {
+      // Initialize connection to WIFI then to the server:
+      myClient_Exit.networkSetup();
       myClient_Exit.connectToServer();  
       isExit = true; isEntr = false;  // Change the mode to "EXIT"
     }
@@ -101,7 +101,7 @@ void loop() {
     // Open the Exit Gate:
     if(myClient_Exit.isOpenRequired() && !myClient_Exit.isCloseRequired()) {
       servoExit.attach(PIN_SERVO_EXIT);
-      GateOpen(servoExit, myClient_Entry);
+      GateOpen(servoExit, myClient_Exit);
     }
     // Close the Exit Gate:
     if(myClient_Exit.isCloseRequired() && !myClient_Exit.isOpenRequired()) {
@@ -119,6 +119,7 @@ void GateOpen(Servo &myServo, MyLotNode &myClient) {
     delay(20);
     if(posDegrees > 90) break;  // Prevent moving the Servo back to position 0 degrees
   }
+  delay(2000);
   myClient.setCloseRequest(true);
   Serial.println("GATE OPEN >>>>>>>>>>>>>>>>>>");
 }
