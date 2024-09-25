@@ -14,15 +14,24 @@ const WS_PORT = 5555;
 const myLocalIP = getLocalIPAddress();
 const wsServer = new webSocket.Server({port: WS_PORT}, ()=>console.log(`Websocket server is listening at ${WS_PORT}`));
 let allBoards = {gates: [], gateCams: [], slots: [], slotCams: []};    // Empty arrays - to enable push command in fetchBoardsDataOnInit()
-let disturbancesOnCameras = {};
 
-// Detect disturbances on cameras:
-for (board in disturbancesOnCameras) {
-    if (disturbancesOnCameras[board] > 10) {
-        console.log(`Disturbancy found on Camera ${board}`);
-        disturbancesOnCameras[board] = 0;
+// Detect disturbances on cameras and sensors:
+let disturbancesOnCameras = {};
+let disturbancesOnSensors = {};
+setInterval(() => {  
+    for (board in disturbancesOnCameras) {
+        if (disturbancesOnCameras[board] > 10) {
+            console.log(`\nContinuous disturbancy found on Camera ${board}\n`);
+            disturbancesOnCameras[board] = 0;
+        }
     }
-}
+    for (board in disturbancesOnSensors) {
+        if (disturbancesOnSensors[board] > 10) {
+            console.log(`\nContinuous disturbancy found on Sensor ${board}\n`);
+            disturbancesOnSensors[board] = 0;
+        }
+    }
+}, 1000);
 /*
 let lotClients = {
     gates:      [{ip: '192.168.1.3', wsc: null, isFault: false, isConnected: false}],
@@ -95,7 +104,6 @@ wsServer.on('connection', (ws, req) => {
                     }
                 }
             })();
-
         } 
         else {
             const message = data.toString();
@@ -119,6 +127,9 @@ wsServer.on('connection', (ws, req) => {
                             // Unblock Gate's proximity sensor:
                             boardData_1.wsc.send('PREPARE_ANOTHER_SHOT');
                         }
+                        break;
+                    case '0_DISTANCE':
+                        disturbancesOnSensors[ip] ++;
                         break;
                 }
             }
@@ -153,10 +164,14 @@ function connectionStatus(inputIP, inputConn, isConn) {
                     // Create key-value in the "disturbances" list (for cameras only):
                     if(boardsArray == 'gateCams' || boardsArray == 'slotCams')
                         disturbancesOnCameras[inputIP] = 0;
+                    else 
+                        disturbancesOnSensors[inputIP] = 0;
                 }
                 else {
                     if(disturbancesOnCameras.hasOwnProperty(inputIP)) 
                         delete disturbancesOnCameras.inputIP;
+                    if(disturbancesOnSensors.hasOwnProperty(inputIP)) 
+                        delete disturbancesOnSensors.inputIP;
                 }
             }
         }
@@ -286,7 +301,7 @@ async function openGate(regID, inputIP) {
             if (targetGate.isEntry) 
                 logEntry(pgClient, carID);
             else 
-                //logExit(pgClient, carID);
+                logExit(pgClient, carID);
             
             console.log(`Trigger sent to open Gate ${inputIP}`);
         } 
@@ -330,6 +345,18 @@ async function processImage(imageText, inputIP) {
     console.log(`Pattern found: ${regID}`);
     disturbancesOnCameras[inputIP] = 0;
     return regID;
+}
+
+// Remove relevant row from Parking-Log table in the DB:
+async function logExit(pgClient, carID){
+    try {
+        const query = 'DELETE FROM \"ParkingLog\" WHERE \"CarID\" = $1';
+        await pgClient.query(query, [carID]);            
+        console.log(`Log deleted for car ${carID}`);
+    }
+    catch (err) {
+        console.error('Error executing Parking_log Remove-Row query: ', err);
+    }
 }
 
 // Add a row into Parking-Log table in the DB:
