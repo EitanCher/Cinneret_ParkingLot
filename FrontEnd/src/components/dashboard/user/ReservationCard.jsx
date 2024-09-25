@@ -106,12 +106,12 @@ const ReservationCard = ({ selectedCity, userData }) => {
 
   return (
     <div className='flex flex-col items-center min-h-screen px-4'>
-      <h2 className='font-semibold text-center'>Reserve a Slot in {selectedCity.CityName}</h2>
+      <h2 className='font-semibold text-center mb-6'>Reserve a Slot in {selectedCity.CityName}</h2>
 
       <form onSubmit={handleFindSlot} className='flex flex-col items-center w-full max-w-md mb-4'>
         <div className='flex items-center w-full'>
           <DatePicker label='Select Date' className='max-w-[284px]' value={selectedDate} onChange={(date) => setSelectedDate(date)} />
-          <div className='ml-7 mt-4'>
+          <div className='ml-7 mt-1'>
             <Button color='primary' type='submit'>
               Find Slot
             </Button>

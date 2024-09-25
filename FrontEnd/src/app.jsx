@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import './index.css'; // Ensure this file does not override dark mode styles
+import './index.css';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
@@ -8,11 +8,12 @@ import ReadyToPark from './components/ReadyToPark';
 import Cities from './components/Cities';
 import Subscriptions from './components/Subscriptions';
 import Login from './components/Login';
-import AuthProvider from './Context/authContext';
+import AuthProvider from './Context/AuthContext';
 import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
 import AdminDashboard from './components/dashboard/admin/AdminDashboard';
 import UserDashboard from './components/dashboard/user/UserDashboard';
+import ProtectedRoute from './components/ProtectedRoute'; // Import the ProtectedRoute component
 
 const App = () => {
   const { isDarkMode } = useTheme();
@@ -48,8 +49,18 @@ const App = () => {
               <Route path='/subscriptions' element={<Subscriptions />} />
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
+              {/* User Dashboard (can be accessed by all authenticated users) */}
               <Route path='/UserDashboard/*' element={<UserDashboard />} />
-              <Route path='/AdminDashboard/*' element={<AdminDashboard />} />
+
+              {/* Admin Dashboard protected by the "admin" role */}
+              <Route
+                path='/AdminDashboard/*'
+                element={
+                  <ProtectedRoute requiredRole='admin'>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </div>
         </div>

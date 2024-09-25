@@ -33,13 +33,16 @@ export const ChooseParkingLot = ({ setSelectedCity }) => {
   }
 
   return (
-    <div className='flex flex-wrap justify-center'>
-      {citiesCollection.map((city) => (
-        <div key={city.idCities} className='flex flex-col items-center m-2 min-w-24'>
-          <Avatar isBordered src={city.pictureUrl} size='lg' alt={`${city.CityName} Avatar`} onClick={() => setSelectedCity(city)} />
-          <div className='mt-2 text-center flex-wrap'>{city.CityName}</div>
-        </div>
-      ))}
+    <div className='flex flex-col justify-center items-center'>
+      <h3 className='mb-4'>Choose a Parking Lot</h3>
+      <div className='flex flex-row flex-wrap justify-center gap-4'>
+        {citiesCollection.map((city) => (
+          <div key={city.idCities} className='flex flex-col items-center'>
+            <Avatar isBordered src={city.pictureUrl} size='lg' alt={`${city.CityName} Avatar`} onClick={() => setSelectedCity(city)} />
+            <div className='mt-2 text-center'>{city.CityName}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
