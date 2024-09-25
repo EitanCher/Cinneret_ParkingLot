@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
-import { DatePicker } from '@nextui-org/react';
-import { now, getLocalTimeZone } from '@internationalized/date';
-
+import { useLocation, Link, Routes, Route, Outlet } from 'react-router-dom';
 import { Sidebar, SidebarBody, SidebarLink } from '../../ui/sidebar';
-import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconParking } from '@tabler/icons-react';
-import { Link } from 'react-router-dom'; // Ensure this import is from react-router-dom
+import { IconUserBolt, IconBrandTabler } from '@tabler/icons-react';
+import { LazyLoadImage } from 'react-lazy-load-image-component';
 import { motion } from 'framer-motion';
 import { cn } from '../../../lib/utils';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import 'react-lazy-load-image-component/src/effects/blur.css';
 import { fetchUserDetails } from '../../../api/userApi';
 import { BookSlot } from '../user/screens/BookSlot';
+
 function UserDashboard() {
   const [userData, setUserData] = useState(null);
   const [open, setOpen] = useState(false);
@@ -34,7 +29,7 @@ function UserDashboard() {
   const links = [
     {
       label: 'Book',
-      href: '/Book',
+      href: '/UserDashboard',
       icon: <IconBrandTabler className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     }
   ];
@@ -43,13 +38,13 @@ function UserDashboard() {
     <div
       className={cn(
         'rounded-md flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1  mx-auto border border-neutral-200 dark:border-neutral-700 overflow-hidden',
-        'h-[60vh]' // for your use case, use `h-screen` instead of `h-[60vh]`
+        'h-[60vh]'
       )}
     >
       <Sidebar open={open} setOpen={setOpen}>
         <SidebarBody className='justify-between gap-10'>
           <div className='flex flex-col flex-1 overflow-y-auto overflow-x-hidden'>
-            {open ? <Logo /> : <LogoIcon />}
+            {open ? <Logo /> : <LogoIcon />} {/* Ensure LogoIcon is defined */}
             <div className='mt-8 flex flex-col gap-2'>
               {links.map((link, idx) => (
                 <SidebarLink key={idx} link={link} />

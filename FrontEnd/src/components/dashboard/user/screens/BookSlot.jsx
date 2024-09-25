@@ -6,22 +6,20 @@ import ReservationCard from '../ReservationCard'; // Ensure the path is correct
 export const BookSlot = ({ userData }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { cityName } = useParams(); // Get the city name from the URL
+  const { cityName } = useParams(); // Get city name from URL
   const [selectedCity, setSelectedCity] = useState(null);
 
   useEffect(() => {
-    // Reset selectedCity if navigating away from the BookSlot
     if (pathname === '/UserDashboard') {
       setSelectedCity(null);
     } else if (cityName) {
-      // Assuming you have a way to get the city object by name
-      setSelectedCity({ CityName: cityName }); // Simplified example
+      setSelectedCity({ CityName: cityName }); // Set the selected city based on URL
     }
   }, [pathname, cityName]);
 
   const handleCitySelection = (city) => {
     setSelectedCity(city);
-    navigate(`/UserDashboard/${city.CityName}/book`); // Update URL with selected city
+    navigate(`/UserDashboard/${city.CityName}/book`); // Use city.CityName instead
   };
 
   const handleReservation = (car, date) => {
@@ -34,6 +32,7 @@ export const BookSlot = ({ userData }) => {
         <div className='flex w-full flex-col'>
           <Routes>
             <Route path='/' element={<ChooseParkingLot setSelectedCity={handleCitySelection} />} />
+            <Route path='/:cityName' element={<ChooseParkingLot setSelectedCity={handleCitySelection} />} /> {/* Add this line */}
           </Routes>
           {selectedCity && <ReservationCard selectedCity={selectedCity} userData={userData} onReserve={handleReservation} />}
         </div>

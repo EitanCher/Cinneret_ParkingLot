@@ -1,4 +1,3 @@
-// socket.js
 require('dotenv').config();
 const http = require('http');
 const { Server } = require('socket.io');
@@ -11,96 +10,119 @@ const pgPool = new Pool({
 });
 
 const availableSpotsMap = new Map();
+const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 async function countAvailableSpots(cityID) {
   try {
-    console.log('try block countavailablespots');
-    const areaIds = await getAreaIdsByCityId(cityID); // Await the result of getAreaIdsByCityId
+    console.log(`Counting available spots for city ID: ${cityID}`); // Debug log
+    const areaIds = await getAreaIdsByCityId(cityID);
+    console.log(`Fetched area IDs for city ${cityID}:`, areaIds); // Debug log for fetched area IDs
 
     const availableSpots = await prisma.slots.count({
       where: {
-        AreaID: {
-          in: areaIds // Filter by the list of area IDs
-        },
+        AreaID: { in: areaIds },
         Busy: false,
         Reservations: {
           none: {
-            ReservationStart: {
-              lte: new Date() // Reservation start time should be less than or equal to now
-            },
-            ReservationEnd: {
-              gte: new Date() // Reservation end time should be greater than or equal to now
-            }
+            ReservationStart: { lte: new Date() }, // Only count slots with no ongoing reservations
+            ReservationEnd: { gte: new Date() }
           }
         }
       }
     });
-    availableSpotsMap.set(cityID, availableSpots);
 
-    io.to(cityID).emit('count_available_spots', cityID, availableSpots);
-    console.log(`Initial count of available spots for city ${cityID}: ${availableSpots}`);
+    console.log(`Available spots for city ${cityID}: ${availableSpots}`); // Debug available spots
+    availableSpotsMap.set(cityID, availableSpots);
+    io.to(cityID).emit('count_available_spots', cityID, availableSpots); // Emit available spots to all clients in the room
   } catch (error) {
     console.error(`Error counting available spots for city ${cityID}:`, error.message);
   }
 }
 
-// Function to update available spots based on notifications
-async function updateAvailableSpots(cityID, isBusy) {
+async function updateAvailableSpots(cityID) {
   try {
-    let availableSpots = availableSpotsMap.get(cityID) || 0;
-    const areaIds = await getAreaIdsByCityId(cityID); // Await the result of getAreaIdsByCityId
-    if (isBusy) availableSpots -= 1;
-    if (!isBusy) availableSpots += 1;
-    availableSpotsMap.set(cityID, availableSpots); // Update the map with the new count
+    // Recalculate the available spots from the database for the given cityID
+    console.log(`Recalculating available spots for city ${cityID}`); // Debug log
+
+    // Fetch the area IDs for the city
+    const areaIds = await getAreaIdsByCityId(cityID);
+
+    // Count the number of available slots (Busy = false, no ongoing reservations)
+    const availableSpots = await prisma.slots.count({
+      where: {
+        AreaID: { in: areaIds },
+        Busy: false,
+        Reservations: {
+          none: {
+            ReservationStart: { lte: new Date() }, // No reservations starting before now
+            ReservationEnd: { gte: new Date() } // No reservations ending after now
+          }
+        }
+      }
+    });
+
+    console.log(`Recalculated available spots for city ${cityID}: ${availableSpots}`); // Debug log
+
+    // Update the available spots map
+    availableSpotsMap.set(cityID, availableSpots);
+
+    // Emit the updated count to all clients subscribed to this city
     io.to(cityID).emit('updateAvailableSpots', cityID, availableSpots);
-    console.log(`Updated available spots for city ${cityID}: ${availableSpots}`);
   } catch (error) {
-    console.error('Error updating available spots:', error.message);
+    console.error(`Error recalculating available spots for city ${cityID}:`, error.message);
   }
 }
 
 const server = http.createServer(app); // Create an HTTP server with Express app
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5500', 'http://127.0.0.1:5500'], // Allow both origins
-    methods: ['GET', 'POST']
+    origin: [frontendURL], // Use the FRONTEND_URL from the .env file
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
 pgPool.connect().then((client) => {
   client.query('LISTEN slot_change');
+  console.log('Listening for PostgreSQL notifications on channel "slot_change"'); // Debug when listener starts
+
   client.on('notification', async (msg) => {
     const payload = JSON.parse(msg.payload);
+    console.log(`Received notification for slot change:`, payload); // Debug incoming payload
+
     const areaID = payload.area_id;
     const isBusy = payload.is_busy;
-    console.log(`Received notification for area ${areaID}: ${payload}`);
+
     try {
       const cityIdResult = await prisma.areas.findUnique({
         where: { idAreas: areaID },
         select: { CityID: true }
       });
+
       if (cityIdResult) {
         const cityID = cityIdResult.CityID;
-        await updateAvailableSpots(cityID, isBusy); // Await the result of updateAvailableSpots
+        console.log(`Area ${areaID} belongs to city ${cityID}`); // Debug for cityID
+        await updateAvailableSpots(cityID, isBusy);
       } else {
-        console.error(`Area ID ${areaID} not found`);
+        console.error(`Area ID ${areaID} not found`); // Debug if area ID is not found
       }
     } catch (error) {
-      console.error('Error resolving city ID:', error.message);
+      console.error('Error resolving city ID:', error.message); // Error resolving city
     }
   });
-  console.log('Listening for PostgreSQL notifications on channel "slot_change"');
 });
 
 io.on('connection', (socket) => {
-  console.log('a user connected');
+  console.log('A user connected:', socket.id); // Log when a user connects
+
   socket.on('subscribe_to_city', async (cityID) => {
     socket.join(cityID);
-    console.log(`User subscribed to city ${cityID}`);
-    await countAvailableSpots(cityID);
+    console.log(`User ${socket.id} subscribed to city ${cityID}`); // Log subscription
+    await countAvailableSpots(cityID); // Emit initial available spots
   });
+
   socket.on('disconnect', () => {
-    console.log('A user disconnected:', socket.id);
+    console.log('A user disconnected:', socket.id); // Log disconnections
   });
 });
 

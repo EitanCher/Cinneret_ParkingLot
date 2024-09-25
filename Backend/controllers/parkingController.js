@@ -15,7 +15,8 @@ const {
   fetchTotalParkingTimeByUser,
   fetchAverageParkingTimeByUser,
   findCityById,
-  countSlotsByCityId
+  countSlotsByCityId,
+  countActivePendingReservations
 } = require('../models/parkingModel');
 const passport = require('../utils/passport-config');
 const bcrypt = require('bcrypt');
@@ -40,93 +41,119 @@ const getParkingLotCities = async (req, res) => {
 
 const findAvailableSlotController = async (req, res) => {
   try {
+    console.log('Start of try block in find slot controller');
     const { idCities, StartDate } = req.query;
 
     const cityID = parseInt(idCities, 10);
     if (isNaN(cityID) || !StartDate) {
       return res.status(400).json({ error: 'idCities and StartDate are required and idCities must be a valid number' });
     }
+
     const startDateTime = new Date(StartDate);
-    if (isNaN(startDateTime.getTime())) {
+    const localDate = new Date(startDateTime.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+
+    if (isNaN(localDate.getTime())) {
       return res.status(400).json({ error: 'Invalid StartDate format' });
     }
 
-    // Find the best slot
-    const bestSlotResult = await findBestSlot(cityID, startDateTime);
-    if (!bestSlotResult) {
-      return res.status(404).json({ error: 'No available slots found for the specified criteria' });
+    console.log('Hitting find best slot model');
+    const bestSlotResult = await findBestSlot(cityID, localDate);
+
+    if (!bestSlotResult.success) {
+      return res.status(400).json({ error: bestSlotResult.message });
     }
 
-    // Return the best slot and the maximum duration available
     return res.status(200).json({
-      slot: bestSlotResult.slot,
-      maxDuration: bestSlotResult.maxDuration
+      slots: bestSlotResult.slots
     });
   } catch (error) {
-    console.error('Error finding available slot:', error.message);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error finding available slot:', error);
+    return res.status(500).json({ error: 'Server error' });
   }
 };
 
 const bookSlotController = async (req, res) => {
   try {
-    // Define fields to be sanitized
-    const stringFields = ['slotId', 'StartDate', 'Duration', 'idCars'];
-
-    // Sanitize the request body
+    console.log('Incoming booking request:', req.body);
+    const stringFields = ['slotId', 'StartDate', 'EndDate', 'idCars'];
     const sanitizedBody = sanitizeObject(req.body, stringFields);
-    const { slotId, StartDate, Duration, idCars } = sanitizedBody;
+    const { slotId, StartDate, EndDate, idCars } = sanitizedBody;
 
-    // Log sanitized body for debugging
-    console.log('Sanitized body:', sanitizedBody);
+    console.log('Sanitized request body:', sanitizedBody);
 
-    // Get the user ID from JWT (assuming `req.user.idUsers` is populated by authentication middleware)
-
-    const idUsers = req.user.idUsers;
+    const idUsers = req.user.id;
     if (!idUsers) {
+      console.log('User not logged in.');
       return res.status(401).send({ error: 'User not logged in' });
     }
 
-    // Validate required fields
-    if (!slotId || !StartDate || !Duration || !idCars) {
+    if (!slotId || !StartDate || !EndDate || !idCars) {
+      console.log('Missing required fields:', { slotId, StartDate, EndDate, idCars });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate StartDate format
     const startDateTime = new Date(StartDate);
-    if (isNaN(startDateTime.getTime())) {
-      return res.status(400).json({ error: 'Invalid StartDate format' });
+    const endDateTime = new Date(EndDate);
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      console.log('Invalid date format:', { StartDate, EndDate });
+      return res.status(400).json({ error: 'Invalid date format' });
     }
 
-    // Validate Duration
-    if (Duration <= 0 || Duration > maxDurationReservation) {
+    // Validate duration
+    const durationHours = (endDateTime - startDateTime) / (1000 * 60 * 60);
+    console.log('Calculated Duration in Hours:', durationHours);
+    if (durationHours <= 0 || durationHours > maxDurationReservation) {
+      console.log('Invalid Duration:', durationHours);
       return res.status(400).json({
-        error: `Your requested parking duration of ${Duration} exceeds the maximum of ${maxDurationReservation}`
+        error: `Your requested parking duration of ${durationHours} exceeds the maximum of ${maxDurationReservation} hours`
       });
     }
 
-    // Fetch the user’s cars
+    // Validate that the car belongs to the user
+    console.log('Fetching user cars for user ID:', idUsers);
     const userCars = await fetchAllCarIdsByUserID(idUsers);
     if (!userCars.includes(idCars)) {
+      console.log('User attempting to book a reservation for a non-owned car:', idCars);
       return res.status(403).json({ error: 'Cannot book a reservation for a car that does not belong to you' });
     }
 
-    // Check current active reservations
-    const activeReservationsCount = await countActiveReservations(userCars);
+    // Check active and pending reservations
+    console.log('Checking active and pending reservations for user ID:', idUsers);
+    const activeAndPendingReservations = await countActivePendingReservations(userCars);
 
-    // Get the max allowed reservations for the user’s subscription plan
+    // Retrieve max allowed reservations for the user
+    console.log('Retrieving max allowed reservations for user ID:', idUsers);
     const maxReservations = await maxReservationsByUser(idUsers);
 
-    // Ensure the user has not exceeded their reservation limit
-    if (activeReservationsCount >= maxReservations) {
-      return res.status(403).json({ error: 'Cannot create more reservations; limit reached' });
+    if (!maxReservations) {
+      console.log('No max reservations found for this user.');
+      return res.status(403).json({ error: 'Unable to determine the maximum allowed reservations for your subscription.' });
     }
 
-    // Create the reservation
-    const reservation = await createReservation(idUsers, idCars, slotId, startDateTime, Duration);
+    console.log('Current active/pending reservations:', activeAndPendingReservations);
+    console.log('Max allowed reservations:', maxReservations);
+
+    if (activeAndPendingReservations >= maxReservations) {
+      console.log('Reservation limit reached for user ID:', idUsers);
+      return res.status(403).json({
+        error: 'Cannot create more reservations; limit reached',
+        maxReservations
+      });
+    }
+
+    // Create the reservation with the provided time range
+    console.log('Creating reservation with data:', {
+      userId: idUsers,
+      carId: idCars,
+      slotId,
+      startDateTime,
+      endDateTime
+    });
+    const reservation = await createReservation(idUsers, idCars, slotId, startDateTime, endDateTime);
+    console.log('Reservation created:', reservation);
     return res.status(201).json({ message: 'Reservation successful', reservation });
   } catch (error) {
-    console.error('Error booking slot:', error.message);
+    console.log('Error booking slot:', error.message);
     res.status(500).json({ error: 'Server error' });
   }
 };

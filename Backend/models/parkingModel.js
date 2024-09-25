@@ -66,7 +66,7 @@ const maxReservationsByUser = async (idUsers) => {
     const subscriptionPlan = await prisma.userSubscriptions.findFirst({
       where: {
         UserID: idUsers,
-        Status: 'active' // You might need to adjust this to match your schema logic
+        Status: 'active' // Ensure we're fetching the active subscription
       },
       select: {
         SubscriptionPlanID: true
@@ -78,7 +78,7 @@ const maxReservationsByUser = async (idUsers) => {
     }
 
     // Fetch the max reservations allowed for the user's subscription plan
-    const maxReservations = await prisma.subscriptionPlans.findUnique({
+    const subscriptionPlanDetails = await prisma.subscriptionPlans.findUnique({
       where: {
         idSubscriptionPlans: subscriptionPlan.SubscriptionPlanID
       },
@@ -87,11 +87,12 @@ const maxReservationsByUser = async (idUsers) => {
       }
     });
 
-    if (!maxReservations) {
-      throw new Error('No subscription plan found for this user.');
+    if (!subscriptionPlanDetails) {
+      throw new Error('No subscription plan details found for this user.');
     }
 
-    return maxReservations.MaxReservations;
+    console.log(`Max reservations allowed for user ${idUsers}: ${subscriptionPlanDetails.MaxActiveReservations}`);
+    return subscriptionPlanDetails.MaxActiveReservations; // Ensure we return a valid number
   } catch (error) {
     console.error('Error fetching max reservations by user:', error.message);
     throw new Error('Unable to fetch max reservations');
@@ -148,91 +149,110 @@ async function getAreaIdsByCityId(cityId) {
 
 async function findBestSlot(idCities, reservationStart) {
   try {
-    // Validate inputs
-    idCitySchema.parse(idCities);
-    reservationStartSchema.parse(new Date(reservationStart));
+    console.log('Starting findBestSlot model');
 
-    // Convert reservationStart to Date object
-    const reservationStartDate = new Date(reservationStart);
-
-    // Get Area IDs for the given city ID
     const areaIds = await getAreaIdsByCityId(idCities);
-    if (areaIds.length === 0) {
-      console.log('No areas found for the city ID: ' + idCities);
-      return { success: false, message: 'No areas found for the city.' };
-    }
+    console.log('Fetched area IDs:', areaIds);
 
-    // Find all available slots starting at reservationStart
+    const currentDateTime = new Date();
+    console.log('Current date and time (UTC):', currentDateTime.toISOString());
+
+    const reservationStartDate = new Date(reservationStart);
+    console.log('Original reservation start date:', reservationStartDate.toISOString());
+
+    // Fetch available slots
     const slots = await prisma.slots.findMany({
       where: {
-        AreaID: {
-          in: areaIds
-        },
+        AreaID: { in: areaIds },
         Active: true,
-        Reservations: {
-          none: {
-            ReservationStart: {
-              lt: reservationStartDate
-            }
-          }
-        }
+        Fault: false
       },
       include: {
-        Reservations: true // Include reservations to calculate availability
+        ParkingLog: true,
+        Reservations: true,
+        Areas: true
       }
     });
 
-    if (slots.length === 0) {
-      console.log('No available slots found');
-      return { success: false, message: 'No available slots found for the given criteria.' };
-    }
+    console.log('Slots fetched:', slots.length);
 
-    // Find the slot with the maximum duration
-    let maxDuration = 0;
-    let bestSlot = null;
+    const slotsWithTimeframes = slots.map((slot) => {
+      const timeFrames = [];
+      let startTime = new Date(reservationStartDate);
 
-    for (const slot of slots) {
-      // Filter reservations that start after the requested time
-      const futureReservations = slot.Reservations.filter((r) => new Date(r.ReservationStart) > reservationStartDate);
+      for (let i = 0; i < 24; i++) {
+        // 24-hour range
+        const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 60-minute increments
 
-      // Determine the earliest future reservation start time
-      const nextReservationStart =
-        futureReservations.length > 0
-          ? Math.min(...futureReservations.map((r) => new Date(r.ReservationStart).getTime()))
-          : reservationStartDate.getTime() + maxDurationReservation * 60 * 60 * 1000;
+        // Ensure timeframes in the past are excluded
+        if (endTime <= currentDateTime) {
+          startTime = endTime; // Move to the next block
+          continue;
+        }
 
-      // Calculate the maximum possible duration for this slot
-      const maxAllowedEnd = reservationStartDate.getTime() + maxDurationReservation * 60 * 60 * 1000;
-      const slotEnd = new Date(Math.min(nextReservationStart, maxAllowedEnd));
+        const isAvailable = slot.Reservations.every((reservation) => {
+          const resStart = new Date(reservation.ReservationStart);
+          const resEnd = new Date(reservation.ReservationEnd);
+          return endTime <= resStart || startTime >= resEnd;
+        });
 
-      const duration = (slotEnd.getTime() - reservationStartDate.getTime()) / (60 * 60 * 1000);
+        const isOccupied = slot.ParkingLog.some((log) => {
+          const exitTime = log.Exit ? new Date(log.Exit) : new Date();
+          return startTime <= exitTime && exitTime <= endTime;
+        });
 
-      if (duration > maxDuration) {
-        maxDuration = duration;
-        bestSlot = slot;
+        timeFrames.push({
+          start: startTime.toISOString(),
+          end: endTime.toISOString(),
+          available: isAvailable && !isOccupied
+        });
+
+        // Move to the next 60-minute block
+        startTime = endTime;
       }
-    }
 
-    return bestSlot ? { success: true, slot: bestSlot, maxDuration } : { success: false, message: 'No suitable slot found.' };
+      return {
+        slotId: slot.idSlots,
+        areaName: slot.Areas?.AreaName,
+        timeFrames
+      };
+    });
+
+    return {
+      success: true,
+      slots: slotsWithTimeframes
+    };
   } catch (err) {
     console.error('Error finding best slot:', err.message);
     return { success: false, message: 'An error occurred while finding the best slot.' };
   }
 }
 
-const createReservation = async (userId, carId, slotId, reservationStart, duration) => {
-  try {
-    // Calculate the end time based on the start time and duration
-    const reservationEnd = new Date(reservationStart.getTime() + duration * 60 * 60 * 1000);
+// Helper function to get area name
+async function getAreaName(areaId) {
+  const area = await prisma.areas.findUnique({
+    where: { idAreas: areaId }
+  });
+  return area ? area.AreaName : null;
+}
 
-    // Validate the reservation (e.g., slot availability)
-    // Assuming you have a model function `validateSlotAvailability`
+const createReservation = async (userId, carId, slotId, reservationStart, reservationEnd) => {
+  try {
+    console.log('Creating reservation:');
+    console.log('User ID:', userId);
+    console.log('Car ID:', carId);
+    console.log('Slot ID:', slotId);
+    console.log('Start Time:', reservationStart);
+    console.log('End Time:', reservationEnd);
+
+    // Validate the slot's availability for the entire timeframe
     const isSlotAvailable = await validateSlotAvailability(slotId, reservationStart, reservationEnd);
     if (!isSlotAvailable) {
+      console.log('Slot is not available for the selected time range.');
       throw new Error('Slot is no longer available');
     }
 
-    // Create the reservation
+    // Create the reservation for the selected time range
     const reservation = await prisma.reservations.create({
       data: {
         CarID: carId,
@@ -244,12 +264,14 @@ const createReservation = async (userId, carId, slotId, reservationStart, durati
       }
     });
 
+    console.log('Reservation created successfully:', reservation);
     return reservation;
   } catch (err) {
     console.error('Error creating reservation:', err.message);
     throw err;
   }
 };
+
 const validateSlotAvailability = async (slotId, reservationStart, reservationEnd) => {
   try {
     // Check if the slot is available for the given reservation period
@@ -528,6 +550,24 @@ const countSlotsByCityId = async (cityId) => {
   }
 };
 
+const countActivePendingReservations = async (userCars) => {
+  try {
+    // Query to count reservations with "pending" or "active" status for the user's cars
+    const activePendingReservations = await prisma.reservations.count({
+      where: {
+        CarID: { in: userCars },
+        OR: [{ Status: 'active' }, { Status: 'pending' }]
+      }
+    });
+
+    console.log('Active and pending reservations for user:', activePendingReservations);
+    return activePendingReservations;
+  } catch (error) {
+    console.error('Error fetching active/pending reservations:', error);
+    throw error;
+  }
+};
+
 // model/parking.js
 
 module.exports = {
@@ -544,7 +584,8 @@ module.exports = {
   fetchAverageParkingTimeByUser,
   getAreaIdsByCityId,
   findCityById,
-  countSlotsByCityId
+  countSlotsByCityId,
+  countActivePendingReservations
 };
 
 //TODO

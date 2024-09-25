@@ -54,10 +54,10 @@ model ParkingLog {
   CarID         Int
   SlotID        Int? // Make SlotID nullable
   Entrance      DateTime      @db.Timestamptz(6)
-  Exit          DateTime? // Make Exit nullable
+  Exit          DateTime?     @db.Timestamptz(6) // Changed to timestamp with timezone
   Violation     Boolean
   ReservationID Int?
-  NeedToExitBy  DateTime? // Make NeedToExitBy nullable
+  NeedToExitBy  DateTime?     @db.Timestamptz(6) // Changed to timestamp with timezone
   Cars          Cars          @relation(fields: [CarID], references: [idCars])
   Reservations  Reservations? @relation(fields: [ReservationID], references: [idReservation])
   Slots         Slots?        @relation(fields: [SlotID], references: [idSlots]) // Make Slots nullable
