@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import './index.css'; // Ensure this file does not override dark mode styles
+import './index.css';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
@@ -8,18 +8,20 @@ import ReadyToPark from './components/ReadyToPark';
 import Cities from './components/Cities';
 import Subscriptions from './components/Subscriptions';
 import Login from './components/Login';
-import AuthProvider from './Context/authContext';
+import AuthProvider from './Context/AuthContext';
 import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
-import SidebarDemo from './components/dashboard/admin/SidebarDemo';
+import AdminDashboard from './components/dashboard/admin/AdminDashboard';
+import UserDashboard from './components/dashboard/user/UserDashboard';
+import ProtectedRoute from './components/ProtectedRoute'; // Import the ProtectedRoute component
 
 const App = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
 
-  // Conditionally apply 'max-w-[960px]' only if not on '/sidebar-demo'
-  const containerClass = location.pathname === '/sidebar-demo' ? 'w-full' : 'max-w-[960px]';
-  const paddingClass = location.pathname === '/sidebar-demo' ? 'p-0' : 'px-4 py-5';
+  const containerClass =
+    location.pathname.startsWith('/AdminDashboard') || location.pathname.startsWith('/UserDashboard') ? 'w-full' : 'max-w-[960px]';
+  const paddingClass = location.pathname.startsWith('/AdminDashboard') || location.pathname.startsWith('/UserDashboard') ? 'p-0' : 'px-4 py-5';
 
   return (
     <AuthProvider>
@@ -47,7 +49,18 @@ const App = () => {
               <Route path='/subscriptions' element={<Subscriptions />} />
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
-              <Route path='/sidebar-demo' element={<SidebarDemo />} />
+              {/* User Dashboard (can be accessed by all authenticated users) */}
+              <Route path='/UserDashboard/*' element={<UserDashboard />} />
+
+              {/* Admin Dashboard protected by the "admin" role */}
+              <Route
+                path='/AdminDashboard/*'
+                element={
+                  <ProtectedRoute requiredRole='admin'>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </div>
         </div>

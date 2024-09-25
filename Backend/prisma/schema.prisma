@@ -52,15 +52,15 @@ model Gates {
 model ParkingLog {
   idParkingLog  Int           @id @default(autoincrement())
   CarID         Int
-  SlotID        Int
+  SlotID        Int? // Make SlotID nullable
   Entrance      DateTime      @db.Timestamptz(6)
-  Exit          DateTime      @db.Timestamptz(6)
+  Exit          DateTime?     @db.Timestamptz(6) // Changed to timestamp with timezone
   Violation     Boolean
   ReservationID Int?
-  NeedToExitBy  DateTime      @db.Timestamptz(6)
+  NeedToExitBy  DateTime?     @db.Timestamptz(6) // Changed to timestamp with timezone
   Cars          Cars          @relation(fields: [CarID], references: [idCars])
   Reservations  Reservations? @relation(fields: [ReservationID], references: [idReservation])
-  Slots         Slots         @relation(fields: [SlotID], references: [idSlots])
+  Slots         Slots?        @relation(fields: [SlotID], references: [idSlots]) // Make Slots nullable
 }
 
 model Slots {

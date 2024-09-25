@@ -9,14 +9,14 @@ const {
   findAndBookSlot,
   cancelReservation,
   fetchReservationsByCarID,
-  setExitTimeModel,
   createReservation,
   findBestSlot,
   fetchParkingHistoryByUserId,
   fetchTotalParkingTimeByUser,
   fetchAverageParkingTimeByUser,
   findCityById,
-  countSlotsByCityId
+  countSlotsByCityId,
+  countActivePendingReservations
 } = require('../models/parkingModel');
 const passport = require('../utils/passport-config');
 const bcrypt = require('bcrypt');
@@ -41,93 +41,119 @@ const getParkingLotCities = async (req, res) => {
 
 const findAvailableSlotController = async (req, res) => {
   try {
+    console.log('Start of try block in find slot controller');
     const { idCities, StartDate } = req.query;
 
     const cityID = parseInt(idCities, 10);
     if (isNaN(cityID) || !StartDate) {
       return res.status(400).json({ error: 'idCities and StartDate are required and idCities must be a valid number' });
     }
+
     const startDateTime = new Date(StartDate);
-    if (isNaN(startDateTime.getTime())) {
+    const localDate = new Date(startDateTime.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+
+    if (isNaN(localDate.getTime())) {
       return res.status(400).json({ error: 'Invalid StartDate format' });
     }
 
-    // Find the best slot
-    const bestSlotResult = await findBestSlot(cityID, startDateTime);
-    if (!bestSlotResult) {
-      return res.status(404).json({ error: 'No available slots found for the specified criteria' });
+    console.log('Hitting find best slot model');
+    const bestSlotResult = await findBestSlot(cityID, localDate);
+
+    if (!bestSlotResult.success) {
+      return res.status(400).json({ error: bestSlotResult.message });
     }
 
-    // Return the best slot and the maximum duration available
     return res.status(200).json({
-      slot: bestSlotResult.slot,
-      maxDuration: bestSlotResult.maxDuration
+      slots: bestSlotResult.slots
     });
   } catch (error) {
-    console.error('Error finding available slot:', error.message);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error finding available slot:', error);
+    return res.status(500).json({ error: 'Server error' });
   }
 };
 
 const bookSlotController = async (req, res) => {
   try {
-    // Define fields to be sanitized
-    const stringFields = ['slotId', 'StartDate', 'Duration', 'idCars'];
-
-    // Sanitize the request body
+    console.log('Incoming booking request:', req.body);
+    const stringFields = ['slotId', 'StartDate', 'EndDate', 'idCars'];
     const sanitizedBody = sanitizeObject(req.body, stringFields);
-    const { slotId, StartDate, Duration, idCars } = sanitizedBody;
+    const { slotId, StartDate, EndDate, idCars } = sanitizedBody;
 
-    // Log sanitized body for debugging
-    console.log('Sanitized body:', sanitizedBody);
+    console.log('Sanitized request body:', sanitizedBody);
 
-    // Get the user ID from JWT (assuming `req.user.idUsers` is populated by authentication middleware)
-
-    const idUsers = req.user.idUsers;
+    const idUsers = req.user.id;
     if (!idUsers) {
+      console.log('User not logged in.');
       return res.status(401).send({ error: 'User not logged in' });
     }
 
-    // Validate required fields
-    if (!slotId || !StartDate || !Duration || !idCars) {
+    if (!slotId || !StartDate || !EndDate || !idCars) {
+      console.log('Missing required fields:', { slotId, StartDate, EndDate, idCars });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate StartDate format
     const startDateTime = new Date(StartDate);
-    if (isNaN(startDateTime.getTime())) {
-      return res.status(400).json({ error: 'Invalid StartDate format' });
+    const endDateTime = new Date(EndDate);
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      console.log('Invalid date format:', { StartDate, EndDate });
+      return res.status(400).json({ error: 'Invalid date format' });
     }
 
-    // Validate Duration
-    if (Duration <= 0 || Duration > maxDurationReservation) {
+    // Validate duration
+    const durationHours = (endDateTime - startDateTime) / (1000 * 60 * 60);
+    console.log('Calculated Duration in Hours:', durationHours);
+    if (durationHours <= 0 || durationHours > maxDurationReservation) {
+      console.log('Invalid Duration:', durationHours);
       return res.status(400).json({
-        error: `Your requested parking duration of ${Duration} exceeds the maximum of ${maxDurationReservation}`
+        error: `Your requested parking duration of ${durationHours} exceeds the maximum of ${maxDurationReservation} hours`
       });
     }
 
-    // Fetch the user’s cars
+    // Validate that the car belongs to the user
+    console.log('Fetching user cars for user ID:', idUsers);
     const userCars = await fetchAllCarIdsByUserID(idUsers);
     if (!userCars.includes(idCars)) {
+      console.log('User attempting to book a reservation for a non-owned car:', idCars);
       return res.status(403).json({ error: 'Cannot book a reservation for a car that does not belong to you' });
     }
 
-    // Check current active reservations
-    const activeReservationsCount = await countActiveReservations(userCars);
+    // Check active and pending reservations
+    console.log('Checking active and pending reservations for user ID:', idUsers);
+    const activeAndPendingReservations = await countActivePendingReservations(userCars);
 
-    // Get the max allowed reservations for the user’s subscription plan
+    // Retrieve max allowed reservations for the user
+    console.log('Retrieving max allowed reservations for user ID:', idUsers);
     const maxReservations = await maxReservationsByUser(idUsers);
 
-    // Ensure the user has not exceeded their reservation limit
-    if (activeReservationsCount >= maxReservations) {
-      return res.status(403).json({ error: 'Cannot create more reservations; limit reached' });
+    if (!maxReservations) {
+      console.log('No max reservations found for this user.');
+      return res.status(403).json({ error: 'Unable to determine the maximum allowed reservations for your subscription.' });
     }
 
-    // Create the reservation
-    const reservation = await createReservation(idUsers, idCars, slotId, startDateTime, Duration);
+    console.log('Current active/pending reservations:', activeAndPendingReservations);
+    console.log('Max allowed reservations:', maxReservations);
+
+    if (activeAndPendingReservations >= maxReservations) {
+      console.log('Reservation limit reached for user ID:', idUsers);
+      return res.status(403).json({
+        error: 'Cannot create more reservations; limit reached',
+        maxReservations
+      });
+    }
+
+    // Create the reservation with the provided time range
+    console.log('Creating reservation with data:', {
+      userId: idUsers,
+      carId: idCars,
+      slotId,
+      startDateTime,
+      endDateTime
+    });
+    const reservation = await createReservation(idUsers, idCars, slotId, startDateTime, endDateTime);
+    console.log('Reservation created:', reservation);
     return res.status(201).json({ message: 'Reservation successful', reservation });
   } catch (error) {
-    console.error('Error booking slot:', error.message);
+    console.log('Error booking slot:', error.message);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -136,36 +162,57 @@ const bookSlotController = async (req, res) => {
 //users authenticate with jwt, system authenticates with api key
 //users will send idUsers and idReservation
 //system will send idCars which will transalte to idReservation
+
+// needs to cancel reservation only if reservation exists and the car actually used it.
+
 const cancelReservationController = async (req, res) => {
   try {
-    // Extract the user's ID from the authenticated request
-    const idUsers = req.user ? req.user.idUsers : null;
-
     // Extract reservation ID or car ID from the request body
     const { idReservation, idCars } = req.body;
     console.log('idReservations from req.body is: ' + idReservation);
-    console.log('idUsers from req.user is: ' + idUsers);
     console.log('idCars from req.body is: ' + idCars);
 
     let reservationIdToCancel = idReservation;
 
     // If idReservation is not provided, find it using idCars
     if (!idReservation && idCars) {
-      const reservation = await prisma.reservations.findUnique({
+      // First, check the ParkingLog to find the ReservationID associated with the car
+      const parkingLog = await prisma.parkingLog.findFirst({
         where: {
-          carId: idCars // Assuming carId is the foreign key in the reservations table
+          CarID: idCars,
+          Exit: null // Ensure the car is still parked
+        },
+        select: {
+          ReservationID: true
         }
       });
-      console.log('reservation variable (const) is: ' + reservation);
-      if (reservation) {
-        reservationIdToCancel = reservation.idReservation;
+
+      // If there's a parking log, use its ReservationID
+      if (parkingLog && parkingLog.ReservationID) {
+        reservationIdToCancel = parkingLog.ReservationID;
       } else {
-        return res.status(404).json({ error: 'Reservation not found for the provided car ID' });
+        return res.status(404).json({ error: 'No active reservation found for the provided car ID' });
       }
     }
 
-    // Call the model function to cancel the reservation
-    await cancelReservation(reservationIdToCancel, idUsers);
+    // Check if the reservation exists
+    const reservation = await prisma.reservations.findUnique({
+      where: {
+        idReservation: reservationIdToCancel
+      }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+
+    // Now cancel the reservation
+    await prisma.reservations.delete({
+      where: {
+        idReservation: reservationIdToCancel
+      }
+    });
+
     res.status(200).json({ message: 'Reservation canceled successfully' });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -182,16 +229,14 @@ const cancelReservationController = async (req, res) => {
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
-    if (err.message === 'Unauthorized to cancel this reservation') {
-      return res.status(403).json({ error: 'Unauthorized to cancel this reservation' });
-    }
-
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
+//combine to also take care of slotid and reservation id if he has a reservation
 const setExitTimeController = async (req, res) => {
   const idCars = parseInt(req.params.id, 10); // Ensure idCars is a number
+  const idParkingLog = parseInt(req.params.idParkingLog, 10); // Ensure idParkingLog is a number
 
   try {
     // Fetch the reservation asynchronously
@@ -202,19 +247,27 @@ const setExitTimeController = async (req, res) => {
 
     let exitTime;
 
-    // Set exit time on parking log according to the current entrance (no reservation)
+    // Set exit time based on whether there is a reservation
     if (!reservation) {
       exitTime = new Date(currentTime.getTime() + maxDurationParkingNoReservation * 60 * 60 * 1000);
     } else {
       // Set exit time according to reservation start
-      exitTime = new Date(reservation.startDate.getTime() + maxDurationReservation * 60 * 60 * 1000);
+      exitTime = new Date(reservation.ReservationStart.getTime() + maxDurationReservation * 60 * 60 * 1000);
     }
 
-    // Call the model to update the exit time in the database
-    await setExitTimeModel(idCars, exitTime);
+    // Update the ParkingLog in the database
+    const response = await prisma.parkingLog.update({
+      where: {
+        idParkingLog: idParkingLog
+      },
+      data: {
+        ReservationID: reservation ? reservation.idReservation : null, // Use null if no reservation
+        NeedToExitBy: exitTime
+      }
+    });
 
     // Return a success response
-    return res.status(200).json({ message: 'Exit time set successfully', exitTime });
+    return res.status(200).json({ message: 'Exit time set successfully', response });
   } catch (error) {
     // Handle specific errors from models or validation
     if (error instanceof z.ZodError) {

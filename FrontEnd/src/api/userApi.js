@@ -159,3 +159,60 @@ export const fetchSlotCountsByCityId = async (cityId) => {
     throw error;
   }
 };
+
+export const fetchUserCars = async () => {
+  try {
+    const response = await api.get('/cars', {
+      withCredentials: true
+    });
+    console.log('user cars in userapi:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user cars:', error);
+    throw error;
+  }
+};
+export const fetchMatchingSlots = async (idCities, startDateTime) => {
+  try {
+    const response = await api.get('/parking/find-best-slot', {
+      params: { idCities, StartDate: startDateTime },
+      withCredentials: true
+    });
+    return response.data;
+  } catch (error) {
+    // Check if the error response has a specific message
+    if (error.response && error.response.data && error.response.data.error) {
+      throw new Error(error.response.data.error); // Propagate the error message
+    } else {
+      throw new Error('An error occurred while fetching matching slots.');
+    }
+  }
+};
+
+export const postBookSlot = async (slotId, StartDate, EndDate, idCars) => {
+  try {
+    console.log('Sending booking request with:', {
+      slotId,
+      StartDate,
+      EndDate,
+      idCars
+    });
+
+    // Ensure `EndDate` is passed instead of `Duration`
+    const response = await api.post(
+      '/parking/reservation',
+      {
+        slotId,
+        StartDate,
+        EndDate, // Ensure EndDate is passed correctly
+        idCars
+      },
+      { withCredentials: true }
+    );
+    console.log('Booking request successful:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error booking slot:', error);
+    throw error;
+  }
+};

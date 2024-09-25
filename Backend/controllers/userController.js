@@ -421,6 +421,21 @@ const fetchCheckoutSessionURL = async (req, res) => {
   }
 };
 
+const getUserCars = async (req, res) => {
+  try {
+    console.log('start of get cars controller');
+    const userId = req.user.id; // Extract user ID from JWT token
+    const cars = await prisma.cars.findMany({
+      where: { OwnerID: userId }
+    });
+
+    res.json(cars);
+  } catch (error) {
+    console.error('Error fetching user cars:', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   updateUser,
   deleteUser,
@@ -433,5 +448,6 @@ module.exports = {
   getUserDetails,
   logout,
   fetchCheckoutSessionURL,
-  getUserSubscription
+  getUserSubscription,
+  getUserCars
 };

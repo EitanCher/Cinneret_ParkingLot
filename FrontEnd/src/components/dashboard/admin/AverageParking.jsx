@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { CircularProgress, Card, CardBody, CardFooter, Chip } from '@nextui-org/react';
-import {} from '../../../api/adminApi';
 import { fetchAverageParkingTimeAllUsers } from '../../../api/adminApi';
 let maxDurationReservation = 24;
 

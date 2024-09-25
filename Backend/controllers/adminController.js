@@ -118,17 +118,17 @@ async function updateParkingLot(req, res) {
     const idCities = parseInt(req.params.idCities, 10); // Ensure this matches the route parameter name
     console.log('idCities in controller:', idCities);
 
-    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress']);
+    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress', 'pictureUrl']);
     console.log('sanitized data:' + JSON.stringify(sanitizedData));
     const { CityName, FullAddress } = sanitizedData; // Extract parameters from sanitized data
 
     // Validate input with schema
-    CityUpdateSchema.parse({ CityName, FullAddress });
+    CityUpdateSchema.parse({ CityName, FullAddress, pictureUrl });
 
     // Update the city record in the database
     const updatedCity = await prisma.cities.update({
       where: { idCities: idCities }, // Use the parsed integer here
-      data: { CityName, FullAddress }
+      data: { CityName, FullAddress, pictureUrl }
     });
 
     if (!updatedCity) {
@@ -139,7 +139,8 @@ async function updateParkingLot(req, res) {
     return res.status(200).json({
       idCities: updatedCity.id,
       CityName: updatedCity.CityName,
-      FullAddress: updatedCity.FullAddress
+      FullAddress: updatedCity.FullAddress,
+      pictureUrl: updatedCity.pictureUrl
     });
   } catch (error) {
     console.error('Error updating city:', error);
