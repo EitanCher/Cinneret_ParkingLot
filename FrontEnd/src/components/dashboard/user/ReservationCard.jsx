@@ -98,14 +98,13 @@ const ReservationCard = ({ selectedCity, userData }) => {
       if (error.response && error.response.status === 403) {
         setResponseError(`You exceeded your maximum reservations limit of ${error.response.data.maxReservations}`);
       } else {
-        // Handle other types of errors
         setResponseError('An error occurred while booking the reservation. Please try again.');
       }
     }
   };
 
   return (
-    <div className='flex flex-col items-center min-h-screen px-4'>
+    <div className='flex flex-col items-center overflow-hidden  px-4'>
       <h2 className='font-semibold text-center mb-6'>Reserve a Slot in {selectedCity.CityName}</h2>
 
       <form onSubmit={handleFindSlot} className='flex flex-col items-center w-full max-w-md mb-4'>
@@ -119,7 +118,8 @@ const ReservationCard = ({ selectedCity, userData }) => {
         </div>
       </form>
 
-      <Image isZoomed width={670} height={300} alt={`Image of ${selectedCity.CityName}`} src={selectedCity.pictureUrl} />
+      {/* Conditionally render the image only if no slots are found yet */}
+      {!matchingSlots && <Image isZoomed width={670} height={500} alt={`Image of ${selectedCity.CityName}`} src={selectedCity.pictureUrl} />}
 
       {matchingSlots && matchingSlots.slots && (
         <div className='mt-4 w-full max-w-2xl'>
