@@ -44,7 +44,7 @@ const AvatarWithPopover = ({ city }) => {
       if (cityID === city.idCities) {
         setSlotCounts((prev) => ({
           ...prev,
-          notBusy: availableSpots // Update only the available spots via WebSocket
+          notBusy: availableSpots
         }));
       }
     });
@@ -79,7 +79,7 @@ export const CitiesQuickView = () => {
   useEffect(() => {
     const handleCities = async () => {
       try {
-        const response = await fetchCities(); // Ensure `fetchCities` is defined in your API
+        const response = await fetchCities();
         if (response && Array.isArray(response.cities)) {
           setCities(response.cities);
         } else {
@@ -91,7 +91,7 @@ export const CitiesQuickView = () => {
         setError('An error occurred while fetching cities.');
       }
     };
-    handleCities(); // Fetch cities when the component mounts
+    handleCities();
   }, []);
 
   return (
