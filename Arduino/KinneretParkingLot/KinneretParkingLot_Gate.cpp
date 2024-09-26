@@ -10,37 +10,39 @@ void Gate::onMessageCallback(WebsocketsMessage message) {
 		this->flag_gateOpen = false;
 		this->block_usonic = false;
 	}
-	if (msg == "OPEN_GATE") {
+	else if (msg == "OPEN_GATE") {
 		this->flag_gateOpen = true;
 		this->block_usonic = false;
 	}
 }
 
-void Gate::readDistance(int myTrig, int myEcho) {
-  uint16_t duration;
+uint16_t Gate::readDistance(int myTrig, int myEcho) {
+	uint16_t duration;
+	uint16_t distance;
 
-  // Trigger the HC-SR04 to send an ultrasonic pulse:
-  digitalWrite(myTrig, LOW);
-  delayMicroseconds(2);
-  digitalWrite(myTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(myTrig, LOW);
+	// Trigger the HC-SR04 to send an ultrasonic pulse:
+	digitalWrite(myTrig, LOW);
+	delayMicroseconds(2);
+	digitalWrite(myTrig, HIGH);
+	delayMicroseconds(10);
+	digitalWrite(myTrig, LOW);
 
-  // Read the echo time:
-  duration = pulseIn(myEcho, HIGH); //Returns the length of the pulse in microseconds or 0 if no complete pulse was received within the timeout
+	// Read the echo time:
+	duration = pulseIn(myEcho, HIGH); //Returns the length of the pulse in microseconds or 0 if no complete pulse was received within the timeout
 
-  // Calculate the distance in centimeters
-  this->distance = duration * 0.034 / 2;	// Sound speed is about 34mps
-  Serial.print("Distance: ");
-  Serial.print(this->distance);
-  Serial.println(" cm");
+	// Calculate the distance in centimeters
+	distance = duration * 0.034 / 2;	// Sound speed is about 34mps
+	Serial.print("Distance: ");
+	Serial.print(distance);
+	Serial.println(" cm");
+	return distance;
 }
 
 void Gate::checkDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
 	if (!this->block_usonic) {
-		this->readDistance(myTrig, myEcho);
+		uint16_t distance = this->readDistance(myTrig, myEcho);
   
-		if (this->distance > 0 && this->distance < myThreshold) {
+		if (distance > 0 && distance < myThreshold) {
 			Serial.print("Object detected on ");
 			Serial.println(myString);
 			if (!this->flag_gateOpen) {
@@ -48,7 +50,7 @@ void Gate::checkDistance(String myString, int myThreshold, int myTrig, int myEch
 				this->block_usonic = true;	// Stop measuring proximity
 			}
 		}
-		else if (this->distance == 0) {
+		else if (distance <= 0) {
 			if (!this->flag_gateOpen) {
 				wsClient.send("0_DISTANCE");
 			}
