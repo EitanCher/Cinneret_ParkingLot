@@ -3,13 +3,13 @@
 
 #include "KinneretParkingLot.h"
 
-class Camera : public MyLotNode {
+class ParkingCamera : public MyLotNode {
 	
 private:
 	bool flag_takePicture = false;
 
 public:
-	Camera(const IPAddress& myIP);
+	ParkingCamera(const IPAddress& myIP);
 	bool 	isShotRequired() { return flag_takePicture; }
 	void 	onMessageCallback(WebsocketsMessage message) override;
 	void 	sendPicture(const char* data, const size_t len);
