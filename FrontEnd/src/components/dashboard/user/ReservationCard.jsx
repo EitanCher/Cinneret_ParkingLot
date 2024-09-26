@@ -58,7 +58,9 @@ const ReservationCard = ({ selectedCity, userData }) => {
   };
 
   // Handle slot reservation
-  const handleReserve = async () => {
+  const handleReserve = async (event) => {
+    event.preventDefault();
+
     if (selectedTimeframes.length === 0) {
       console.error('No timeframes selected!');
       setResponseError('Please select one or more timeframes.');
@@ -98,19 +100,20 @@ const ReservationCard = ({ selectedCity, userData }) => {
       if (error.response && error.response.status === 403) {
         setResponseError(`You exceeded your maximum reservations limit of ${error.response.data.maxReservations}`);
       } else {
+        // Handle other types of errors
         setResponseError('An error occurred while booking the reservation. Please try again.');
       }
     }
   };
 
   return (
-    <div className='flex flex-col items-center overflow-hidden  px-4'>
+    <div className='flex flex-col items-center overflow-hidden px-4'>
       <h2 className='font-semibold text-center mb-6'>Reserve a Slot in {selectedCity.CityName}</h2>
 
       <form onSubmit={handleFindSlot} className='flex flex-col items-center w-full max-w-md mb-4'>
         <div className='flex items-center w-full'>
           <DatePicker label='Select Date' className='max-w-[284px]' value={selectedDate} onChange={(date) => setSelectedDate(date)} />
-          <div className='ml-7 mt-1'>
+          <div className='ml-7'>
             <Button color='primary' type='submit'>
               Find Slot
             </Button>
@@ -128,8 +131,8 @@ const ReservationCard = ({ selectedCity, userData }) => {
       )}
 
       {matchingSlots && matchingSlots.slots && (
-        <div className='mt-4 w-full flex items-center justify-center'>
-          <Select isRequired label='Select Your Car' className='max-w-xs' onChange={handleCarChange}>
+        <form onSubmit={handleReserve} className='mt-4 w-full flex items-center justify-center'>
+          <Select isRequired label='Select Your Car' className='max-w-[284px]' onChange={handleCarChange}>
             {cars.map((car) => (
               <SelectItem key={car.idCars} value={car.idCars.toString()} textValue={car.Model}>
                 {car.Model}
@@ -138,13 +141,13 @@ const ReservationCard = ({ selectedCity, userData }) => {
           </Select>
 
           {selectedCar && (
-            <div className='ml-4'>
-              <Button color='success' onClick={handleReserve}>
+            <div className='ml-7'>
+              <Button color='success' type='submit'>
                 Reserve
               </Button>
             </div>
           )}
-        </div>
+        </form>
       )}
 
       {responseError && <div className='mt-4 text-red-600 text-center'>{responseError}</div>}

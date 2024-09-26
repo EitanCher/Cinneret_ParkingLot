@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Avatar, Popover, PopoverTrigger, PopoverContent, Card, CardBody } from '@nextui-org/react';
-import { fetchCities, fetchSlotCountsByCityId } from '../../../api/userApi';
+import { fetchSlotCountsByCityId, fetchCities } from '../../../api/userApi';
+import io from 'socket.io-client';
+
+// Connect to the WebSocket server
+const socket = io('http://localhost:3001'); // Adjust the URL as needed
 
 const AvatarWithPopover = ({ city }) => {
   const [slotCounts, setSlotCounts] = useState({ total: 0, notBusy: 0 });
@@ -8,14 +12,15 @@ const AvatarWithPopover = ({ city }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Fetch the initial total and available slots from the API
     const fetchSlotCounts = async () => {
       try {
         const response = await fetchSlotCountsByCityId(city.idCities);
 
         if (response) {
           setSlotCounts({
-            total: response.totalSlotsCount,
-            notBusy: response.availableSlotsCount
+            total: response.totalSlotsCount, // Set the total slots (static)
+            notBusy: response.availableSlotsCount // Set initial available slots
           });
         } else {
           console.error('Unexpected response format:', response);
@@ -30,6 +35,24 @@ const AvatarWithPopover = ({ city }) => {
     };
 
     fetchSlotCounts();
+
+    // Subscribe to WebSocket updates for available spots
+    socket.emit('subscribe_to_city', city.idCities); // Subscribe to this city
+
+    // Listen for updates to the available spots
+    socket.on('updateAvailableSpots', (cityID, availableSpots) => {
+      if (cityID === city.idCities) {
+        setSlotCounts((prev) => ({
+          ...prev,
+          notBusy: availableSpots // Update only the available spots via WebSocket
+        }));
+      }
+    });
+
+    // Cleanup the socket connection when the component unmounts
+    return () => {
+      socket.off('updateAvailableSpots'); // Remove the event listener when the component unmounts
+    };
   }, [city.idCities]);
 
   return (
@@ -42,8 +65,8 @@ const AvatarWithPopover = ({ city }) => {
       </PopoverTrigger>
       <PopoverContent className='p-4'>
         <div className='mb-2'>{city.CityName}</div>
-        <p>Total occupancy: {slotCounts.total}</p>
-        <p>Available slots: {slotCounts.notBusy}</p>
+        <p>Total Slots: {slotCounts.total}</p>
+        <p>Available slots: {loading ? 'Loading...' : error ? 'Error fetching slots' : slotCounts.notBusy}</p>
       </PopoverContent>
     </Popover>
   );
@@ -56,7 +79,7 @@ export const CitiesQuickView = () => {
   useEffect(() => {
     const handleCities = async () => {
       try {
-        const response = await fetchCities();
+        const response = await fetchCities(); // Ensure `fetchCities` is defined in your API
         if (response && Array.isArray(response.cities)) {
           setCities(response.cities);
         } else {
