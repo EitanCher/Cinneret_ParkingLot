@@ -53,10 +53,20 @@ wsServer.on('connection', (ws, req) => {
     console.log('New client connected:', ip);
     // Store the client in allBoards and return data of itself and its node-"partner"
     connectionStatus(ip, ws, true);
+    const nodeType = findKindOfBoard(ip);
     ws.isAlive = true;
     let isPingable = true;
-   
-    // Send a ping to the client every 60 seconds:
+    let slotID;
+    if(nodeType == 'slots') {
+        for (const boardsArray in allBoards) {
+            const myArray = allBoards[boardsArray];
+            for (const boardDict of myArray)
+                if(boardDict.ip === ip)
+                    slotID = boardDict.id;
+        }
+    }
+
+    // Send a ping to the client every 300 seconds:
     setInterval(() => {
         if (isPingable) {
             if (ws.isAlive === false) {
@@ -70,7 +80,26 @@ wsServer.on('connection', (ws, req) => {
         ws.isAlive = false;
         console.log(`Sending ping to: ${ip}`)
         ws.ping();
-    }, 60000);
+    }, 300000);
+
+    // For Slots: check if reserved:
+    setInterval(async () => {
+        if(nodeType == 'slots'){
+            const pgClient = await myDBPool.connect();
+            try {
+                const querySlot = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" WHERE \"SlotID\" = $1);`;
+                const result = await pgClient.query(querySlot, [slotID]);
+                const isReserved = result.rows[0].exists;
+            
+                if(isReserved) 
+                    ws.send('RESERVATION_ON');
+                else 
+                    ws.send('RESERVATION_OFF');
+            }
+            catch (err) {}
+            finally { pgClient.release(); }
+        }
+    }, 30000);
 
     ws.on('pong', () => {
         ws.isAlive = true;
@@ -97,14 +126,15 @@ wsServer.on('connection', (ws, req) => {
                 await worker.terminate();
                 const registrationID = await processImage(imageText, ip);
                 if (registrationID != '') {
-                    if (findKindOfBoard(ip) == 'gateCams')
+                    if (nodeType == 'gateCams')
                         await openGate(registrationID, ip);
-                    else if (findKindOfBoard(ip) == 'slotCams'){
-
+                    else if (nodeType == 'slotCams'){
+                        await respondOnSlotEntry(registrationID, ip);
                     }
                 }
             })();
         } 
+        // If not a binary data but a simple text message:
         else {
             const message = data.toString();
             console.log('Received:', message);
@@ -117,6 +147,7 @@ wsServer.on('connection', (ws, req) => {
                 if (!boardData_1.isConnected) boardData_1.isConnected = true;
 
                 switch(message) {
+                    case 'PARKING_ATTEMPT_SUCCESS':
                     case 'OBJECT_DETECTED':
                         if(boardData_2.wsc != null) {
                                 boardData_2.wsc.send('TAKE_PICTURE');
@@ -124,12 +155,24 @@ wsServer.on('connection', (ws, req) => {
                         } 
                         else {
                             console.log(`Camera ${boardData_2.ip} not connected.`);
-                            // Unblock Gate's proximity sensor:
+                            // Unblock proximity sensor:
                             boardData_1.wsc.send('PREPARE_ANOTHER_SHOT');
                         }
                         break;
                     case '0_DISTANCE':
                         disturbancesOnSensors[ip] ++;
+                        break;
+                    case 'PARKING_ATTEMPT_DETECTED':
+                        // TBD: 
+                        // - Read the Car ID;
+                        // - Connect to the DB;
+                        // - Inform the user on the allowed parking duration
+                        boardData_1.wsc.send('PARKING_ATTEMPT_ACKNOWLEDGED')
+                        break;
+                    case 'PARKING_FINISHED':
+                        // Update the DB:
+                        console.log("EXIT THE SLOT, UPDATING THE DB")
+                        updateExitSlot(slotID);
                         break;
                 }
             }
@@ -148,9 +191,98 @@ wsServer.on('connection', (ws, req) => {
 //         FUNCTIONS:
 //===============================================================
 
+async function updateExitSlot(slotID) {
+    const pgClient = await myDBPool.connect();
+    try {
+        const queryUpdatBusy = `UPDATE \"Slots\" SET \"Busy\" = $1 WHERE \"idSlots\" = $2;`;
+        console.log("Parking finished - UPDATING THE DB");
+        await pgClient.query(queryUpdatBusy, [false, slotID]);
+    }
+    catch (err) {}
+    finally {await pgClient.release();}
+}
+
+// Parking started:
+async function respondOnSlotEntry(regID, inputIP) {
+    const pgClient = await myDBPool.connect();
+    try {
+        // Verify the Pattern is registered in the DB as a valid ID:
+        const query = `SELECT \"idCars\" FROM \"Cars\" WHERE \"RegistrationID\" LIKE $1;`;
+        const values = [`%${regID}%`];
+        const result = await pgClient.query(query, values);
+
+        if (result.rows.length > 0) {
+            const carID = result.rows[0].idCars;
+            console.log(`Found match for ${regID}: Car ID ${carID}`);
+
+            // Find the Slot corresponding to the current camera and open it:
+            const targetSlot = getNodePair(inputIP)[1];
+            const slotID = targetSlot.id;
+
+            // Update Slot status to Busy:
+            try {
+                const queryUpdatBusy = `UPDATE \"Slots\" SET \"Busy\" = $1 WHERE \"idSlots\" = $2;`;
+                await pgClient.query(queryUpdatBusy, [true, slotID]);
+            }
+            catch (err) {}
+
+            // Check if the Slot is free or reserved:
+            try {
+                const querySlot = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" WHERE \"SlotID\" = $1);`;
+                const result = await pgClient.query(querySlot, [slotID]);
+                const isReserved = result.rows[0].exists;
+            
+                if (isReserved) {
+                    // Check if the Slot is reserved for the current Car ID 
+                    try {
+                        const queryReserved = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" \
+                            WHERE \"SlotID\" = $1 AND \"CarID\" = $2);`;
+                        const result = await pgClient.query(queryReserved, [slotID, carID]);
+                        const isConfirmed = result.rows[0].exists;
+                        
+                        if(isConfirmed) {
+                            console.log(`The Slot ${inputIP} is reserved for current Car ID - SENDING APPROVAL`);
+                            targetSlot.wsc.send('PARKING_SUCCESS_ACKNOWLEDGED');
+                        }
+                        else {
+                            console.log(`The Slot ${inputIP} is reserved for another Car ID - SENDING VIOLATION`);
+                            // Update the DB log:
+                            try {
+                                const queryUpdatViolation = `UPDATE \"ParkingLog\" SET \"Violation\" = $1 WHERE \"CarID\" = $2;`;
+                                console.log("Violation occured - UPDATING THE DB");
+                                await pgClient.query(queryUpdatViolation, [true, carID]);
+                            }
+                            catch (err) {}
+                            targetSlot.wsc.send('VIOLATION_ON');
+                        }
+                    }
+                    catch (err) {}
+                }
+                else {
+                    console.log(`The Slot ${inputIP} is not reserved - SENDING APPROVAL`);
+                    targetSlot.wsc.send('PARKING_SUCCESS_ACKNOWLEDGED');
+                }
+            }
+            catch (err) {}
+        } 
+        else {
+            // 
+            disturbancesOnCameras[inputIP] ++ ;
+            // Find the Slot corresponding to the current camera and unblock its proximity sensor:
+            const targetSlot = getNodePair(inputIP)[1];
+            targetSlot.wsc.send('PREPARE_ANOTHER_SHOT');
+            console.log(`\nNo matches found for ${regID} parking at Slot ${inputIP}, ready to take another shot\n`);
+        }
+    } catch (err) {
+        console.error('Error executing query: ', err);
+    } finally {
+        // Release the client back to the pool after query accomplished:
+        await pgClient.release();
+    }
+}
+
 // Update status of the node in the network:
 function connectionStatus(inputIP, inputConn, isConn) {
-    if (isConn) console.log("Clients already connected:");
     for (const boardsArray in allBoards) {
         const myArray = allBoards[boardsArray];
         for (const boardDict of myArray){
@@ -184,7 +316,7 @@ async function fetchBoardsDataOnInit() {
     const pgClient = await myDBPool.connect();
     try {
         const res1 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"GateIP\", \"Entrance\" FROM \"Gates\";');
-        const res2 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"SlotIP\" FROM \"Slots\";');        
+        const res2 = await pgClient.query('SELECT \"Fault\", \"CameraIP\", \"SlotIP\", \"idSlots\" FROM \"Slots\";');        
         
         // Purge the existing metadata:
         for (boardsArray in allBoards) boardsArray = [];
@@ -209,6 +341,7 @@ async function fetchBoardsDataOnInit() {
         res2.rows.forEach(row => {
             let mySlotDict = {};
             let mySlotCamDict = {};
+            mySlotDict.id =    row.idSlots;
             mySlotDict.ip =    row.SlotIP;
             mySlotCamDict.ip = row.CameraIP;
             mySlotDict.isFault =    row.Fault;
@@ -238,7 +371,7 @@ function findKindOfBoard(inputIP) {
             return arrayName;
         }
     }
-    return null;  // Return null if not found
+    return null;
 }
 
 function getLocalIPAddress() {
