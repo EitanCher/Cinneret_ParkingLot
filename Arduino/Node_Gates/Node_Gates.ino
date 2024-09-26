@@ -133,3 +133,5 @@ void GateClose(Servo &myServo, Gate &myClient) {
   myClient.setCloseRequest(false);
   Serial.println("GATE CLOSED >>>>>>>>>>>>>>>>");
 }
+
+
