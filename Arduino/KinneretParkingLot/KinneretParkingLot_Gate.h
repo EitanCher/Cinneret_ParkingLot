@@ -6,7 +6,6 @@
 class Gate : public MyLotNode {
 	
 protected:
-	uint16_t distance;
 	bool 	 block_usonic = false;
 	bool 	 flag_gateClose = false;
 	bool 	 flag_gateOpen = false;
@@ -14,11 +13,11 @@ protected:
 public:
 	Gate(const IPAddress& myIP);
 	virtual void checkDistance(String myString, int myThreshold, int myTrig, int myEcho);
-	bool 	isCloseRequired() { return flag_gateClose; }
-	bool 	isOpenRequired() { return flag_gateOpen; }
-	void 	onMessageCallback(WebsocketsMessage message) override;
-	void 	readDistance(int myTrig, int myEcho);
-	void 	setCloseRequest(bool b) { flag_gateClose = b; }
+	bool 		isCloseRequired() { return flag_gateClose; }
+	bool 		isOpenRequired() { return flag_gateOpen; }
+	void 		onMessageCallback(WebsocketsMessage message) override;
+	uint16_t	readDistance(int myTrig, int myEcho);
+	void 		setCloseRequest(bool b) { flag_gateClose = b; }
 };
 
 #endif
