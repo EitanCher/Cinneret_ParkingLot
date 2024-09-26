@@ -2,7 +2,7 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <ArduinoWebsockets.h>
-#include <KinneretParkingLot.h>
+#include <KinneretParkingLot_Camera.h>
 
 // Local IP is manually set for current device (Camera on Slot #N). 
 // The IP has to be verified not to conflict with other devices.
@@ -16,7 +16,7 @@ static auto hiRes = esp32cam::Resolution::find(800, 600);
 
 
 // === Create objects for Clients: ==========================================
-MyLotNode myCameraClient(local_IP);
+ParkingCamera myCameraClient(local_IP);
 
 void setup() {
   Serial.begin(9600);
