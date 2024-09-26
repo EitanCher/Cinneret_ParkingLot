@@ -1,29 +1,81 @@
 #include "KinneretParkingLot_Slot.h"
 
-Slot::Slot(const IPAddress& myIP) : Gate(myIP) {}
+Slot::Slot(const IPAddress& myIP) : Gate(myIP) {
+	updateStage(0);
+	// Stages breakdown:
+	// 	0: (true)	No parking detected
+	// 	1: (false)	Waiting for 1 minute to accomplish parking attempt
+	// 	2: (false)	Waiting for the parking to be finished
+}
 
-void Slot::onMessageCallback(WebsocketsMessage message) {}
+void Slot::updateStage(int myStage) {
+	for (int i = 0; i < 3; i++) { parkStages[i] = false; }
+	parkStages[myStage] = true;
+}
+
+void Slot::onMessageCallback(WebsocketsMessage message) {
+	String msg = message.data();
+	String log = "Message received: " + message.data();
+	Serial.println(log);
+	
+	if (msg == "PARKING_ATTEMPT_ACKNOWLEDGED") {
+		this->block_usonic = false;
+		this->updateStage(1);	// Move to stage 1 (Waiting to accomplish parking attempt)
+		this->timerStart = millis();
+	}
+	else if (msg == "PARKING_SUCCESS_ACKNOWLEDGED") {
+		this->block_usonic = false;
+		Serial.println("Parking acknowledged by the Server");
+		this->updateStage(2);	// Move to stage 2 (Waiting for the parking to be finished)
+	}
+	else if (msg == "PREPARE_ANOTHER_SHOT") { this->block_usonic = false; }
+	else if (msg == "RESERVATION_ON") 		{ this->isReserved = true; }
+	else if (msg == "RESERVATION_OFF") 		{ this->isReserved = false; }
+	else if (msg == "VIOLATION_ON") { 
+		this->isViolated = true; 
+		this->updateStage(2);	// Move to stage 2 (Waiting for the parking to be finished)
+		this->block_usonic = false;
+	}
+}
 
 void Slot::checkDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
-	this->readDistance(myTrig, myEcho);
+	if (!this->block_usonic) {
+		uint16_t distance = this->readDistance(myTrig, myEcho);
 
-	if (this->distance > 0 && this->distance < myThreshold) {
-		Serial.print("Object detected on ");
-		Serial.println(myString);
-		if (!this->flag_gateOpen) {
-			wsClient.send("OBJECT_DETECTED");	// Trigger the camera
-			this->block_usonic = true;	// Stop measuring proximity
+		if (distance > 0 && distance < myThreshold) {
+			this->isFree = false;
+			if (parkStages[0]) {
+				Serial.print("New object detected on the slot");
+				wsClient.send("PARKING_ATTEMPT_DETECTED");	// Trigger the camera
+				this->block_usonic = true;	// Stop measuring proximity
+			}
+			else if (parkStages[1]) {
+				Serial.print("Waiting for parking attempt to be accomplished");
+				if(millis() - this->timerStart >= this->limitAttemptDuration) {
+					Serial.print("Parking attempt succeeded");				
+					wsClient.send("PARKING_ATTEMPT_SUCCESS");	// Trigger the camera
+					this->block_usonic = true;	// Stop measuring proximity
+				}
+			}
+			else if (parkStages[2]) {
+				Serial.println("Slot is in use  **************");
+				this->block_usonic = false;
+			}
+		}
+		else if (distance <= 0) { 
+			this->isFree = false;
+			wsClient.send("0_DISTANCE"); 
+		}
+		else {	// No object detected by the sensor
+			// Make several attempts in case of occasional interrupt:
+			if(!this->isFree && (this->cntAttempts++ >= this->limitAttempts)) {
+				this->updateStage(0);	// Reset the stages
+				wsClient.send("PARKING_FINISHED");
+				Serial.println("Exit from slot detected =============");
+				this->isFree = true;
+				this->isViolated = false;
+			}
 		}
 	}
-	else if (this->distance == 0) {
-		if (!this->flag_gateOpen) {
-			wsClient.send("0_DISTANCE");
-		}
-	}
-	else {	// No object detected by the sensor
-		if (this->flag_gateOpen) {	// If Gate is open, close it:
-			this->flag_gateOpen = false;
-			this->flag_gateClose = true;
-		}
-	}
+	else Serial.println("Proximity measurement blocked");
 }
