@@ -91,10 +91,11 @@ function UserDashboard() {
 }
 
 export default UserDashboard;
-
 export const Logo = () => (
-  <Link to='/AdminDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
-    <div className='h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0' />
+  <Link to='/UserDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
+    <svg viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-5 h-5 text-black dark:text-white'>
+      <path d='M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z' fill='currentColor'></path>
+    </svg>
     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='font-medium text-black dark:text-white whitespace-pre'>
       ParkNow
     </motion.span>
@@ -102,7 +103,9 @@ export const Logo = () => (
 );
 
 export const LogoIcon = () => (
-  <Link to='/AdminDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
-    <div className='h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0' />
+  <Link to='/UserDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
+    <svg viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-5 h-5 text-black dark:text-white'>
+      <path d='M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z' fill='currentColor'></path>
+    </svg>
   </Link>
 );

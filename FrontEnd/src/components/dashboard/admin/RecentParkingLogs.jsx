@@ -30,7 +30,7 @@ export const RecentParkingLogsCard = () => {
   }, []);
 
   return (
-    <Card className='w-full min-h-60 bg-gray-100 dark:bg-neutral-800'>
+    <Card className='w-full min-h-96 bg-gray-100 dark:bg-neutral-800'>
       <CardBody>
         <h4 className='text-blue-600 font-semibold text-lg text-center mb-4'>Recent Parking Logs</h4>
 
