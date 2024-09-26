@@ -10,8 +10,8 @@ using namespace websockets;
 
 class MyLotNode {
 protected:
-	const char* 	SSID = "inanforever";
-	const char* 	PSWD = "0509232623";
+	const char* 	SSID = "-------";
+	const char* 	PSWD = "-------";
 	const char* 	websocket_server = "192.168.1.10";
 	const uint16_t	websocket_port = 5555;
 	const uint32_t	connectionTimeout = 300000; // Set timeout to 5 minutes
