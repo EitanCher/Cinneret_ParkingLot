@@ -3,7 +3,7 @@ import { Routes, Route, useLocation, Outlet, Link, useNavigate } from 'react-rou
 import { Tabs, Tab } from '@nextui-org/react';
 import { AddParkingLot } from '../AddParkingLot';
 import { ChooseParkingLot } from '../ChooseParkingLot';
-
+import { ParkingLotsGeneral } from '../DashBoardScreens/ParkingLotsGeneral';
 export const ParkingLots = () => {
   const { pathname } = useLocation(); // Get the current path
   const navigate = useNavigate(); // Hook to programmatically navigate
@@ -61,7 +61,7 @@ export const ParkingLots = () => {
             <Route path='choose-parking-lot' element={<ChooseParkingLot setSelectedCity={handleCitySelection} />} />
             {selectedCity && (
               <>
-                <Route path='general' element={<div>General Info for {selectedCity.idCities}</div>} />
+                <Route path='general' element={<ParkingLotsGeneral selectedCity={selectedCity} />} />
                 <Route path='areas' element={<div>Areas in {selectedCity.idCities}</div>} />
                 <Route path='slots' element={<div>Slots in {selectedCity.idCities}</div>} />
                 <Route path='gates' element={<div>Gates in {selectedCity.idCities}</div>} />

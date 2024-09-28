@@ -27,7 +27,6 @@ export function validateConfirmPassword(password, confirmPassword) {
   return password === confirmPassword ? null : 'Passwords do not match.';
 }
 
-// Combined validation function
 export function validateSignUpForm({ persId, firstName, lastName, email, phone, password, confirmPassword }) {
   let errorMessage;
 

@@ -114,20 +114,27 @@ async function addParkingLot(req, res) {
 //NEEDS TESTING
 async function updateParkingLot(req, res) {
   try {
-    // Sanitize input
+    // Parse and validate city ID from request parameters
     const idCities = parseInt(req.params.idCities, 10); // Ensure this matches the route parameter name
     console.log('idCities in controller:', idCities);
 
-    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress', 'pictureUrl']);
-    console.log('sanitized data:' + JSON.stringify(sanitizedData));
-    const { CityName, FullAddress } = sanitizedData; // Extract parameters from sanitized data
+    if (isNaN(idCities)) {
+      return res.status(400).json({ message: 'Invalid city ID provided' });
+    }
 
-    // Validate input with schema
+    // Sanitize input data (make sure the sanitizeObject function is correctly implemented)
+    const sanitizedData = sanitizeObject(req.body, ['CityName', 'FullAddress', 'pictureUrl']);
+    console.log('Sanitized data:', sanitizedData);
+
+    // Destructure the sanitized fields
+    const { CityName, FullAddress, pictureUrl } = sanitizedData;
+
+    // Validate input with schema (ensure CityUpdateSchema is correctly defined)
     CityUpdateSchema.parse({ CityName, FullAddress, pictureUrl });
 
     // Update the city record in the database
     const updatedCity = await prisma.cities.update({
-      where: { idCities: idCities }, // Use the parsed integer here
+      where: { idCities: idCities },
       data: { CityName, FullAddress, pictureUrl }
     });
 
@@ -137,41 +144,60 @@ async function updateParkingLot(req, res) {
 
     // Return the updated city details
     return res.status(200).json({
-      idCities: updatedCity.id,
+      idCities: updatedCity.idCities, // Ensure that updatedCity has an idCities field
       CityName: updatedCity.CityName,
       FullAddress: updatedCity.FullAddress,
       pictureUrl: updatedCity.pictureUrl
     });
   } catch (error) {
-    console.error('Error updating city:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error updating city:', error); // Log the entire error object for better debugging
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 }
 
 async function removeParkingLot(req, res) {
   try {
-    const idCities = parseInt(req.params.idCities, 10); // Directly parse the parameter
+    const idCities = parseInt(req.params.idCities, 10); // Parse the city ID from request parameters
     console.log('idCities:', idCities);
 
     if (isNaN(idCities)) {
       return res.status(400).json({ message: 'Invalid city ID' });
     }
 
-    // Remove dependent records in the Areas table
+    // Fetch all area IDs associated with the city
+    const areaIds = await prisma.areas.findMany({
+      where: { CityID: idCities },
+      select: { idAreas: true }
+    });
+
+    if (!areaIds.length) {
+      return res.status(404).json({ message: 'No areas found for the given city ID' });
+    }
+
+    const areaIdsArray = areaIds.map((area) => area.idAreas);
+
+    // Delete all slots associated with the fetched area IDs
+    await prisma.slots.deleteMany({
+      where: {
+        AreaID: { in: areaIdsArray }
+      }
+    });
+
+    // Delete all areas associated with the city ID
     await prisma.areas.deleteMany({
       where: { CityID: idCities }
     });
 
-    // Now, delete the city record
+    // Finally, delete the city itself
     const deletedCity = await prisma.cities.delete({
-      where: { idCities: idCities } // Use the correct field name
+      where: { idCities: idCities }
     });
 
     if (!deletedCity) {
       return res.status(404).json({ message: 'City not found' });
     }
 
-    return res.status(200).json({ message: `City '${deletedCity.CityName}' has been deleted` });
+    return res.status(200).json({ message: `City '${deletedCity.CityName}' has been deleted along with its areas and slots` });
   } catch (err) {
     console.error('Error removing city:', err.message); // Log the error message
     return res.status(500).json({ message: 'Internal Server Error' });

@@ -1,66 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { Input, Button } from '@nextui-org/react';
-import { updateParkingLot, fetchParkingLotById } from '../../../api/adminApi';
+import React, { useState } from 'react';
+import { Input, Button, Card, CardBody } from '@nextui-org/react';
+import { updateParkingLot } from '@/api/adminApi';
 
-export const UpdateParkingLot = ({ idCities }) => {
-  const [cityName, setCityName] = useState('');
-  const [fullAddress, setFullAddress] = useState('');
-  const [pictureUrl, setPictureUrl] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+export const UpdateParkingLot = ({ selectedCity }) => {
+  // Use the selectedCity values as initial state
+  const [cityName, setCityName] = useState(selectedCity.CityName || '');
+  const [fullAddress, setFullAddress] = useState(selectedCity.FullAddress || '');
+  const [pictureUrl, setPictureUrl] = useState(selectedCity.pictureUrl || '');
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const loadParkingLot = async () => {
-      try {
-        const parkingLot = await fetchParkingLotById(idCities);
-        setCityName(parkingLot.CityName);
-        setFullAddress(parkingLot.FullAddress);
-        setPictureUrl(parkingLot.pictureUrl);
-      } catch (error) {
-        setError('Failed to load parking lot details.');
-      }
-    };
-
-    loadParkingLot();
-  }, [idCities]);
-
-  const handleOnSubmit = async (e) => {
-    e.preventDefault(); // Prevent the default form submission
-
+  const handleUpdateParkingLot = async (e) => {
     try {
-      await updateParkingLot(idCities, cityName, fullAddress);
-      setSuccess('Parking lot updated successfully!');
-      setError('');
+      e.preventDefault();
+
+      const response = await updateParkingLot(selectedCity.idCities, cityName, fullAddress, pictureUrl);
+
+      if (response.status === 200) {
+        console.log('Parking lot updated successfully!');
+        // Refresh the selectedCity data to reflect the updated values
+        selectedCity.CityName = cityName;
+        selectedCity.FullAddress = fullAddress;
+        selectedCity.pictureUrl = pictureUrl;
+      }
     } catch (error) {
       setError('Failed to update parking lot. Please try again later.');
-      setSuccess('');
     }
   };
 
+  // <div className='flex items-center justify-center bg-white dark:bg-neutral-900'>
+  {
+    /* <div className='p-6 md:p-10 rounded-2xl my-20 bg-white dark:bg-neutral-900 flex flex-col gap-4 w-full max-w-md'> */
+  }
   return (
-    <div className='flex items-center justify-center bg-white dark:bg-neutral-900'>
-      <div className='p-6 md:p-10 rounded-2xl my-20 bg-white dark:bg-neutral-900 flex flex-col gap-4 w-full max-w-md'>
+    <Card className='flex max-w-96 min-w-96 bg-white dark:bg-neutral-900'>
+      <CardBody>
         <h4 className='text-center text-xl font-semibold'>Update Parking Lot</h4>
-        {error && <p className='text-red-500 text-center'>{error}</p>}
-        {success && <p className='text-green-500 text-center'>{success}</p>}
-        <form className='flex flex-col gap-4' onSubmit={handleOnSubmit}>
+        <form className='flex flex-col gap-4' onSubmit={handleUpdateParkingLot}>
           <Input
             type='text'
             variant='underlined'
             size='sm'
             label='Name'
-            placeholder='Parking lot name'
+            placeholder='City Name'
             value={cityName}
-            onChange={(e) => setCityName(e.target.value)}
+            onChange={(e) => setCityName(e.target.value)} // Allow user to edit
           />
           <Input
             type='text'
             variant='underlined'
             size='sm'
             label='Address'
-            placeholder='Parking lot address'
+            placeholder='Full Address'
             value={fullAddress}
-            onChange={(e) => setFullAddress(e.target.value)}
+            onChange={(e) => setFullAddress(e.target.value)} // Allow user to edit
           />
           <Input
             type='url'
@@ -69,13 +61,13 @@ export const UpdateParkingLot = ({ idCities }) => {
             label='Picture URL'
             placeholder='Picture URL'
             value={pictureUrl}
-            onChange={(e) => setPictureUrl(e.target.value)}
+            onChange={(e) => setPictureUrl(e.target.value)} // Allow user to edit
           />
           <Button type='submit' color='primary'>
             Submit
           </Button>
         </form>
-      </div>
-    </div>
+      </CardBody>
+    </Card>
   );
 };
