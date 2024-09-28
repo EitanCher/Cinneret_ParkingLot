@@ -57,6 +57,7 @@ wsServer.on('connection', (ws, req) => {
     ws.isAlive = true;
     let isPingable = true;
     let slotID;
+    let isReservedGlobal = false;   // Support updating the Slot only when status changed
     if(nodeType == 'slots') {
         for (const boardsArray in allBoards) {
             const myArray = allBoards[boardsArray];
@@ -87,14 +88,20 @@ wsServer.on('connection', (ws, req) => {
         if(nodeType == 'slots'){
             const pgClient = await myDBPool.connect();
             try {
-                const querySlot = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" WHERE \"SlotID\" = $1);`;
-                const result = await pgClient.query(querySlot, [slotID]);
+                const querySlot = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" \
+                    WHERE \"SlotID\" = $1 AND \"Status\" LIKE $2);`;
+                const result = await pgClient.query(querySlot, [slotID, 'pending']);
                 const isReserved = result.rows[0].exists;
             
-                if(isReserved) 
+                if (isReserved && !isReservedGlobal) {
                     ws.send('RESERVATION_ON');
-                else 
+                    isReservedGlobal = true;
+                }
+                else if (!isReserved && isReservedGlobal) {
                     ws.send('RESERVATION_OFF');
+                    isReservedGlobal = false;
+                }
+                else isReserved = false; isReservedGlobal = false;
             }
             catch (err) {}
             finally { pgClient.release(); }
@@ -215,7 +222,7 @@ async function respondOnSlotEntry(regID, inputIP) {
             const carID = result.rows[0].idCars;
             console.log(`Found match for ${regID}: Car ID ${carID}`);
 
-            // Find the Slot corresponding to the current camera and open it:
+            // Find the Slot corresponding to the current camera:
             const targetSlot = getNodePair(inputIP)[1];
             const slotID = targetSlot.id;
 
@@ -228,42 +235,52 @@ async function respondOnSlotEntry(regID, inputIP) {
 
             // Check if the Slot is free or reserved:
             try {
-                const querySlot = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" WHERE \"SlotID\" = $1);`;
-                const result = await pgClient.query(querySlot, [slotID]);
+                console.log("Checking if the Slot is reserved...");
+                const querySlot = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" \
+                    WHERE \"SlotID\" = $1 AND \"Status\" LIKE $2);`;
+                const result = await pgClient.query(querySlot, [slotID, 'pending']);
                 const isReserved = result.rows[0].exists;
             
                 if (isReserved) {
                     // Check if the Slot is reserved for the current Car ID 
                     try {
+                        console.log("Checking if reserved for the current Car ID...");
                         const queryReserved = `SELECT EXISTS (SELECT 1 FROM \"Reservations\" \
-                            WHERE \"SlotID\" = $1 AND \"CarID\" = $2);`;
-                        const result = await pgClient.query(queryReserved, [slotID, carID]);
+                            WHERE \"SlotID\" = $1 AND \"CarID\" = $2 AND \"Status\" LIKE $3);`;
+                        const result = await pgClient.query(queryReserved, [slotID, carID, 'pending']);
                         const isConfirmed = result.rows[0].exists;
                         
-                        if(isConfirmed) {
+                        if (isConfirmed) {
                             console.log(`The Slot ${inputIP} is reserved for current Car ID - SENDING APPROVAL`);
                             targetSlot.wsc.send('PARKING_SUCCESS_ACKNOWLEDGED');
+                            // Update the Reservation status:
+                            try {
+                                console.log("Updating Reservation Status to active...");
+                                const queryReservation = `UPDATE \"Reservations\" SET \"Status\" = $1 WHERE \"CarID\" = $2;`;
+                                await pgClient.query(queryReservation, ['active', carID]);
+                            }
+                            catch (err) { console.error('Error adding violation in the Log: ', err); }
                         }
                         else {
                             console.log(`The Slot ${inputIP} is reserved for another Car ID - SENDING VIOLATION`);
-                            // Update the DB log:
+                            // Update Violation in the DB log:
                             try {
-                                const queryUpdatViolation = `UPDATE \"ParkingLog\" SET \"Violation\" = $1 WHERE \"CarID\" = $2;`;
-                                console.log("Violation occured - UPDATING THE DB");
-                                await pgClient.query(queryUpdatViolation, [true, carID]);
+                                console.log("Violation occured - UPDATING THE DB...");
+                                const queryViolation = `UPDATE \"ParkingLog\" SET \"Violation\" = $1 WHERE \"CarID\" = $2;`;
+                                await pgClient.query(queryViolation, [true, carID]);
                             }
-                            catch (err) {}
+                            catch (err) { console.error('Error adding violation in the Log: ', err); }
                             targetSlot.wsc.send('VIOLATION_ON');
                         }
                     }
-                    catch (err) {}
+                    catch (err) { console.error('Error checking reservation match: ', err); }
                 }
                 else {
                     console.log(`The Slot ${inputIP} is not reserved - SENDING APPROVAL`);
                     targetSlot.wsc.send('PARKING_SUCCESS_ACKNOWLEDGED');
                 }
             }
-            catch (err) {}
+            catch (err) { console.error('Error checking if reservation exists: ', err); }
         } 
         else {
             // 
@@ -273,12 +290,9 @@ async function respondOnSlotEntry(regID, inputIP) {
             targetSlot.wsc.send('PREPARE_ANOTHER_SHOT');
             console.log(`\nNo matches found for ${regID} parking at Slot ${inputIP}, ready to take another shot\n`);
         }
-    } catch (err) {
-        console.error('Error executing query: ', err);
-    } finally {
-        // Release the client back to the pool after query accomplished:
-        await pgClient.release();
-    }
+    } 
+    catch (err) { console.error('Error executing query: ', err); } 
+    finally { await pgClient.release(); }
 }
 
 // Update status of the node in the network:
@@ -480,16 +494,25 @@ async function processImage(imageText, inputIP) {
     return regID;
 }
 
-// Remove relevant row from Parking-Log table in the DB:
 async function logExit(pgClient, carID){
+    // Remove relevant row from Reservations table in the DB (if present):
     try {
-        const query = 'DELETE FROM \"ParkingLog\" WHERE \"CarID\" = $1';
-        await pgClient.query(query, [carID]);            
-        console.log(`Log deleted for car ${carID}`);
+        console.log(`Deleting Reservation log for car ${carID}...`);
+        const query1 = 'DELETE FROM \"Reservations\" WHERE \"CarID\" = $1';
+        await pgClient.query(query1, [carID]);            
     }
-    catch (err) {
-        console.error('Error executing Parking_log Remove-Row query: ', err);
+    catch (err) { console.error('Error removing row from Reservations: ', err); }
+
+    // Update Log table:
+    try {
+        console.log(`Updating the latest log for car ${carID}...`);
+        const query2 = 'UPDATE \"ParkingLog\" \
+            SET \"Exit\" = $1 \
+            WHERE \"CarID\" = $2 AND \"Entrance\" = \
+                (SELECT MAX(\"Entrance\") FROM \"ParkingLog\" WHERE \"CarID\" = $2)';
+        await pgClient.query(query2, ['NOW()', carID]);
     }
+    catch (err) { console.error('Error updating Exit Time in Log: ', err); }
 }
 
 // Add a row into Parking-Log table in the DB:
