@@ -7,7 +7,7 @@
 // Local IP is manually set for current device (Camera on Exit). 
 // The IP has to be verified not to conflict with other devices.
 // The IP has to match the relevant data in the DB
-IPAddress local_IP(192, 168, 1, 5);
+IPAddress local_IP(192, 168, 110, 55);
 
 #define PIN_FLASH 4
 static auto loRes = esp32cam::Resolution::find(320, 240);
