@@ -25,7 +25,7 @@ int LEDs[LED_COUNT] = {PIN_LED_GRN, PIN_LED_BLU, PIN_LED_RED, PIN_LED_YEL};
 // Local IPs are manually set for current devices (Ultrasonic Sensors on Entry/Exist). 
 // The IPs have to be verified not to conflict with other devices.
 // The IPs have to match the relevant data in the DB
-IPAddress local_IP(192, 168, 1, 6); 
+IPAddress local_IP(192, 168, 110, 66); 
 const char* slotID = "slot_19";
 
 // === Create object for Client: ==========================================
