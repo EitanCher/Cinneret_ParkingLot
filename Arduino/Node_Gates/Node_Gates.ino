@@ -24,8 +24,8 @@ bool isEntr = false, isExit = false;  // Need both of them to enable the first t
 // Local IPs are manually set for current devices (Ultrasonic Sensors on Entry/Exist). 
 // The IPs have to be verified not to conflict with other devices.
 // The IPs have to match the relevant data in the DB
-IPAddress local_IP_entr(192, 168, 1, 2); 
-IPAddress local_IP_exit(192, 168, 1, 3);
+IPAddress local_IP_entr(192, 168, 110, 22); 
+IPAddress local_IP_exit(192, 168, 110, 33);
 
 // === Create objects for Clients: ==========================================
 Gate myClient_Entry(local_IP_entr);
