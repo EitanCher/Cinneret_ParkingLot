@@ -1,6 +1,6 @@
 #include "KinneretParkingLot_Slot.h"
 
-Slot::Slot(const IPAddress& myIP) : Gate(myIP) {
+ParkingSlot::ParkingSlot(const IPAddress& myIP) : ParkingSensor(myIP) {
 	updateStage(0);
 	// Stages breakdown:
 	// 	0: (true)	No parking detected
@@ -8,12 +8,12 @@ Slot::Slot(const IPAddress& myIP) : Gate(myIP) {
 	// 	2: (false)	Waiting for the parking to be finished
 }
 
-void Slot::updateStage(int myStage) {
+void ParkingSlot::updateStage(int myStage) {
 	for (int i = 0; i < 3; i++) { parkStages[i] = false; }
 	parkStages[myStage] = true;
 }
 
-void Slot::onMessageCallback(WebsocketsMessage message) {
+void ParkingSlot::onMessageCallback(WebsocketsMessage message) {
 	String msg = message.data();
 	String log = "Message received: " + message.data();
 	Serial.println(log);
@@ -24,7 +24,7 @@ void Slot::onMessageCallback(WebsocketsMessage message) {
 		this->timerStart = millis();
 	}
 	else if (msg == "PARKING_SUCCESS_ACKNOWLEDGED") {
-		this->block_usonic = false;
+		block_usonic = false;
 		Serial.println("Parking acknowledged by the Server");
 		this->updateStage(2);	// Move to stage 2 (Waiting for the parking to be finished)
 	}
@@ -38,28 +38,28 @@ void Slot::onMessageCallback(WebsocketsMessage message) {
 	}
 }
 
-void Slot::checkDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
-	if (!this->block_usonic) {
-		uint16_t distance = this->readDistance(myTrig, myEcho);
+void ParkingSlot::checkDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
+	if (!block_usonic) {
+		uint16_t distance = readDistance(myTrig, myEcho);
 
 		if (distance > 0 && distance < myThreshold) {
 			this->isFree = false;
 			if (parkStages[0]) {
 				Serial.print("New object detected on the slot");
 				wsClient.send("PARKING_ATTEMPT_DETECTED");	// Trigger the camera
-				this->block_usonic = true;	// Stop measuring proximity
+				block_usonic = true;	// Stop measuring proximity
 			}
 			else if (parkStages[1]) {
 				Serial.print("Waiting for parking attempt to be accomplished");
 				if(millis() - this->timerStart >= this->limitAttemptDuration) {
 					Serial.print("Parking attempt succeeded");				
 					wsClient.send("PARKING_ATTEMPT_SUCCESS");	// Trigger the camera
-					this->block_usonic = true;	// Stop measuring proximity
+					block_usonic = true;	// Stop measuring proximity
 				}
 			}
 			else if (parkStages[2]) {
 				Serial.println("Slot is in use  **************");
-				this->block_usonic = false;
+				block_usonic = false;
 			}
 		}
 		else if (distance <= 0) { 
