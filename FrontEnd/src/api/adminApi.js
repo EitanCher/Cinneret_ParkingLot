@@ -132,25 +132,38 @@ export const postNewParkingLot = async (CityName, FullAddress, pictureUrl) => {
   }
 };
 
-export const updateParkingLot = async (CityName, FullAddress, pictureUrl) => {
+export const updateParkingLot = async (idCities, CityName, FullAddress, pictureUrl) => {
   try {
-    console.log('posting');
+    console.log('Updating parking lot...');
+
     const response = await api.put(
-      '/parking/update-parking-lot',
+      `/parking/update-parking-lot/${idCities}`,
       {
-        CityName: CityName,
-        FullAddress: FullAddress,
-        pictureUrl: pictureUrl
+        CityName,
+        FullAddress,
+        pictureUrl
       },
-      {
-        withCredentials: true
-      }
+      { withCredentials: true }
     );
-    console.log('Parking lot updated successfully: ', response.data);
-    console.log('response form backend', response.data);
+
+    console.log('Parking lot updated successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error updating parking lot:', error);
+    console.error('Error updating parking lot:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+export const deleteCity = async (idCities) => {
+  try {
+    const response = await api.delete(`/parking/parkinglot/${idCities}`, {
+      withCredentials: true
+    });
+
+    if ((await response.status) == 200) console.log('delete city updated successfully: ', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting city:', error);
     throw error;
   }
 };
