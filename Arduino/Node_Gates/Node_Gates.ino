@@ -24,12 +24,14 @@ bool isEntr = false, isExit = false;  // Need both of them to enable the first t
 // Local IPs are manually set for current devices (Ultrasonic Sensors on Entry/Exist). 
 // The IPs have to be verified not to conflict with other devices.
 // The IPs have to match the relevant data in the DB
-IPAddress local_IP_entr(192, 168, 110, 22); 
-IPAddress local_IP_exit(192, 168, 110, 33);
+IPAddress local_IP_entr(192, 168, 1, 2); 
+IPAddress local_IP_exit(192, 168, 1, 3); 
+//IPAddress local_IP_entr(192, 168, 110, 22); 
+//IPAddress local_IP_exit(192, 168, 110, 33);
 
 // === Create objects for Clients: ==========================================
-Gate myClient_Entry(local_IP_entr);
-Gate myClient_Exit(local_IP_exit);
+ParkingGate myClient_Entry(local_IP_entr);
+ParkingGate myClient_Exit(local_IP_exit);
 
 // === Create objects for Servo Motors: =====================================
 Servo servoEntry;
@@ -113,7 +115,7 @@ void loop() {
   delay(2000);
 }
 
-void GateOpen(Servo &myServo, Gate &myClient) {
+void GateOpen(Servo &myServo, ParkingGate &myClient) {
   for(int posDegrees = 0; posDegrees <= 90; posDegrees++) {
     myServo.write(posDegrees);
     delay(20);
@@ -124,7 +126,7 @@ void GateOpen(Servo &myServo, Gate &myClient) {
   Serial.println("GATE OPEN >>>>>>>>>>>>>>>>>>");
 }
 
-void GateClose(Servo &myServo, Gate &myClient) {  
+void GateClose(Servo &myServo, ParkingGate &myClient) {  
   for(int posDegrees = 90; posDegrees >= 0; posDegrees--) {
     myServo.write(posDegrees);
     delay(20);
