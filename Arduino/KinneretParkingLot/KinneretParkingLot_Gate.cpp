@@ -1,8 +1,8 @@
 #include "KinneretParkingLot_Gate.h"
 
-Gate::Gate(const IPAddress& myIP) : MyLotNode(myIP) {}
+ParkingGate::ParkingGate(const IPAddress& myIP) : ParkingSensor(myIP) {}
 
-void Gate::onMessageCallback(WebsocketsMessage message) {
+void ParkingGate::onMessageCallback(WebsocketsMessage message) {
 	String msg = message.data();
 	String log = "Message received: " + message.data();
 	Serial.println(log);
@@ -16,38 +16,16 @@ void Gate::onMessageCallback(WebsocketsMessage message) {
 	}
 }
 
-uint16_t Gate::readDistance(int myTrig, int myEcho) {
-	uint16_t duration;
-	uint16_t distance;
-
-	// Trigger the HC-SR04 to send an ultrasonic pulse:
-	digitalWrite(myTrig, LOW);
-	delayMicroseconds(2);
-	digitalWrite(myTrig, HIGH);
-	delayMicroseconds(10);
-	digitalWrite(myTrig, LOW);
-
-	// Read the echo time:
-	duration = pulseIn(myEcho, HIGH); //Returns the length of the pulse in microseconds or 0 if no complete pulse was received within the timeout
-
-	// Calculate the distance in centimeters
-	distance = duration * 0.034 / 2;	// Sound speed is about 34mps
-	Serial.print("Distance: ");
-	Serial.print(distance);
-	Serial.println(" cm");
-	return distance;
-}
-
-void Gate::checkDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
-	if (!this->block_usonic) {
-		uint16_t distance = this->readDistance(myTrig, myEcho);
+void ParkingGate::checkDistance(String myString, int myThreshold, int myTrig, int myEcho) {  
+	if (!block_usonic) {
+		uint16_t distance = readDistance(myTrig, myEcho);
   
 		if (distance > 0 && distance < myThreshold) {
 			Serial.print("Object detected on ");
 			Serial.println(myString);
 			if (!this->flag_gateOpen) {
 				wsClient.send("OBJECT_DETECTED");	// Trigger the camera
-				this->block_usonic = true;	// Stop measuring proximity
+				block_usonic = true;	// Stop measuring proximity
 			}
 		}
 		else if (distance <= 0) {
@@ -64,4 +42,3 @@ void Gate::checkDistance(String myString, int myThreshold, int myTrig, int myEch
 	}
 	else Serial.println("Proximity measurement blocked");
 }
-
