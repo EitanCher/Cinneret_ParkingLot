@@ -1,9 +1,9 @@
 #ifndef PARKINGSLOT
 #define PARKINGSLOT
 
-#include "KinneretParkingLot_Gate.h"
+#include "KinneretParkingLot_Sensor.h"
 
-class Slot : public Gate {
+class ParkingSlot : public ParkingSensor {
 
 private:
 	const uint32_t 	limitAttemptDuration = 5000; // Set duration for parking attempt to 1 minute
@@ -17,13 +17,13 @@ private:
 	bool			isViolated = false;
 
 public:
-	Slot(const IPAddress& myIP);
-	void 	checkDistance(String myString, int myThreshold, int myTrig, int myEcho) override;
-	bool	checkFree() 	{return isFree;}
-	bool	checkReserved() {return isReserved;}
-	bool	checkViolated() {return isViolated;}
-	void 	onMessageCallback(WebsocketsMessage message) override;
-	void	updateStage(int myStage);
+	ParkingSlot(const IPAddress& myIP);
+	void checkDistance(String myString, int myThreshold, int myTrig, int myEcho) override;
+	bool checkFree() 	{return isFree;}
+	bool checkReserved() {return isReserved;}
+	bool checkViolated() {return isViolated;}
+	void onMessageCallback(WebsocketsMessage message) override;
+	void updateStage(int myStage);
 };
 
 #endif
