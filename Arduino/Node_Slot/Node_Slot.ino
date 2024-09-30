@@ -22,14 +22,15 @@ int LEDs[LED_COUNT] = {PIN_LED_GRN, PIN_LED_BLU, PIN_LED_RED, PIN_LED_YEL};
 #define THRESHOLD_SLOT 20
 #define THRESHOLD_LINE 20
 
-// Local IPs are manually set for current devices (Ultrasonic Sensors on Entry/Exist). 
+// Local IPs are manually set for current devices (Ultrasonic Sensors on Slot). 
 // The IPs have to be verified not to conflict with other devices.
 // The IPs have to match the relevant data in the DB
-IPAddress local_IP(192, 168, 110, 66); 
+//IPAddress local_IP(192, 168, 110, 66); 
+IPAddress local_IP(192, 168, 1, 6); 
 const char* slotID = "slot_19";
 
 // === Create object for Client: ==========================================
-Slot myClient(local_IP);
+ParkingSlot myClient(local_IP);
 
 void setup() {
   Serial.begin(9600);
