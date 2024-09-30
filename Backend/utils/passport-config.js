@@ -40,7 +40,7 @@ passport.use(
 passport.use(
   new LocalStrategy({ usernameField: 'Email', passwordField: 'Password' }, async (email, password, done) => {
     try {
-      console.log('Local strategy try block');
+      console.log('email and password in passport config local strategy:', email + '' + password);
       const user = await prisma.users.findUnique({
         where: { Email: email }
       });

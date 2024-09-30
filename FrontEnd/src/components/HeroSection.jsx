@@ -31,21 +31,21 @@ const HeroSection = () => {
               Welcome to ParkNow
             </h1>
             <h2 className='text-white text-sm font-normal leading-normal md:text-base'>
-              The smarter way to park. Pay for parking on the go and receive reminders before time runs out. Extend your session without leaving your
-              spot.
+              The smarter way to park. Reserve a spot and receive reminders before time runs out. Extend your session without leaving your spot.
             </h2>
           </div>
           <div className='flex flex-wrap gap-3'>
+            {/* Conditional rendering based on authentication and role */}
             {!isAuthenticated ? (
               <>
                 <Button as={Link} color='primary' to='/login' variant='shadow'>
                   Log In
                 </Button>
-                <Button as={Link} color='default' to='/subscriptions' variant='shadow'>
+                <Button as={Link} color='default' to='/signup' variant='shadow'>
                   Sign Up
                 </Button>
               </>
-            ) : user.Role == 'admin' ? (
+            ) : user?.Role === 'admin' ? ( // Ensure `user` is defined before accessing its properties
               <Button as={Link} color='primary' to='/AdminDashboard' variant='shadow'>
                 <IconBrandTabler />
                 Dashboard

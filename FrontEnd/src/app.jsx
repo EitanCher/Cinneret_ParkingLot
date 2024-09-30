@@ -13,8 +13,8 @@ import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
 import AdminDashboard from './components/dashboard/admin/AdminDashboard';
 import UserDashboard from './components/dashboard/user/UserDashboard';
-import ProtectedRoute from './components/ProtectedRoute'; // Import the ProtectedRoute component
-
+import ProtectedRouteAdmin from './components/ProtectedRouteAdmin'; // Import the ProtectedRoute component
+import ProtectedRouteUser from './components/ProtectedRouteUser';
 const App = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
@@ -50,15 +50,21 @@ const App = () => {
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
               {/* User Dashboard (can be accessed by all authenticated users) */}
-              <Route path='/UserDashboard/*' element={<UserDashboard />} />
-
+              <Route
+                path='/UserDashboard/*'
+                element={
+                  <ProtectedRouteUser>
+                    <UserDashboard />
+                  </ProtectedRouteUser>
+                }
+              />
               {/* Admin Dashboard protected by the "admin" role */}
               <Route
                 path='/AdminDashboard/*'
                 element={
-                  <ProtectedRoute requiredRole='admin'>
+                  <ProtectedRouteAdmin requiredRole='admin'>
                     <AdminDashboard />
-                  </ProtectedRoute>
+                  </ProtectedRouteAdmin>
                 }
               />
             </Routes>

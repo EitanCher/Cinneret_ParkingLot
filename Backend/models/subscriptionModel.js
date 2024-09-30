@@ -138,7 +138,7 @@ const checkExistingActiveSubscription = async (userId) => {
 
 // Function to update subscription status
 
-const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscriptionPlanIdForCheckout, status, subscriptionId) => {
+const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscriptionPlanIdForCheckout, status, SubscriptionId) => {
   // Validate input data
   const userIdInt = parseInt(userId, 10);
   const prevSubscriptionPlanIdInt = parseInt(prevSubscriptionPlanID, 10);
@@ -156,6 +156,7 @@ const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscrip
     throw new Error('Invalid status');
   }
 
+  // Step 1: Update the status of the existing subscription
   await prisma.userSubscriptions.updateMany({
     where: {
       UserID: userIdInt,
@@ -163,12 +164,26 @@ const updateSubscriptionStatus = async (userId, prevSubscriptionPlanID, subscrip
       Status: 'pending'
     },
     data: {
-      Status: status,
-      SubscriptionPlanID: subscriptionPlanIdForCheckoutInt,
-      subscriptionId: subscriptionId // Add the subscriptionId field
+      Status: status, // Only update the status initially
+      SubscriptionId: SubscriptionId
     }
   });
+
+  // Step 2: If the subscriptionPlanIdForCheckout is different, update it separately
+  if (prevSubscriptionPlanIdInt !== subscriptionPlanIdForCheckoutInt) {
+    await prisma.userSubscriptions.updateMany({
+      where: {
+        UserID: userIdInt,
+        SubscriptionPlanID: prevSubscriptionPlanIdInt,
+        Status: status
+      },
+      data: {
+        SubscriptionPlanID: subscriptionPlanIdForCheckoutInt // Update the SubscriptionPlanID if it has changed
+      }
+    });
+  }
 };
+
 // Function to get subscription plan details by ID
 const getUserSubscriptionPlanById = async (subscriptionPlanId) => {
   // Validate input data
