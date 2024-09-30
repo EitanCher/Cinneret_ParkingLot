@@ -60,18 +60,21 @@ void loop() {
   }
 
   // Check which LED to toggle on:
-  if(!myClient.checkFree() && !myClient.checkReserved() && !myClient.checkViolated())       {toggleLED(PIN_LED_YEL);}
-  else if (myClient.checkFree() && !myClient.checkReserved() && !myClient.checkViolated())  {toggleLED(PIN_LED_GRN);}
-  if(myClient.checkReserved() && !myClient.checkViolated())                                 {toggleLED(PIN_LED_BLU);}
-  if(myClient.checkViolated())                                                              {toggleLED(PIN_LED_RED);}
+  if (myClient.checkFree()) 
+    if (myClient.checkReserved()) toggleLED(PIN_LED_BLU);
+    else                          toggleLED(PIN_LED_GRN);
+  else 
+    if(myClient.checkViolated())  toggleLED(PIN_LED_RED);
+    else                          toggleLED(PIN_LED_YEL);
   
   delay(2000);
 }
 
 void toggleLED(int myLed) {
-  for (int i = 0; i < LED_COUNT; i++) { 
-    if(LEDs[i] == myLed) { digitalWrite(LEDs[i], HIGH); }
-    else { digitalWrite(LEDs[i], LOW); }  
-  }
+  for (int i = 0; i < LED_COUNT; i++) 
+    if(LEDs[i] == myLed) 
+      digitalWrite(LEDs[i], HIGH); 
+    else 
+      digitalWrite(LEDs[i], LOW); 
 }
 
