@@ -50,7 +50,7 @@ void ParkingSlot::checkDistance(String myString, int myThreshold, int myTrig, in
 				block_usonic = true;	// Stop measuring proximity
 			}
 			else if (parkStages[1]) {
-				Serial.print("Waiting for parking attempt to be accomplished");
+				Serial.print("Waiting for parking attempt to be accomplished...\n");
 				if(millis() - this->timerStart >= this->limitAttemptDuration) {
 					Serial.print("Parking attempt succeeded");				
 					wsClient.send("PARKING_ATTEMPT_SUCCESS");	// Trigger the camera
@@ -74,6 +74,7 @@ void ParkingSlot::checkDistance(String myString, int myThreshold, int myTrig, in
 				Serial.println("Exit from slot detected =============");
 				this->isFree = true;
 				this->isViolated = false;
+				this->isReserved = false;
 			}
 		}
 	}
