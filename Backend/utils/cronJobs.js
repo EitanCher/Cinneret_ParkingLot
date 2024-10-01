@@ -26,6 +26,8 @@ const checkExpiredSubscriptions = async () => {
 };
 
 const checkReservations = async () => {
+  console.log('checking reservations');
+
   try {
     // Fetch reservations that are pending and past their end time
     const reservations = await prisma.reservations.findMany({
@@ -51,5 +53,7 @@ const checkReservations = async () => {
   } catch (error) {}
 };
 
-cron.schedule('0 0 * * *', checkExpiredSubscriptions); // Run daily at midnight
-cron.schedule('0 0 * * *', checkReservations); // Run daily at midnight
+cron.schedule('* * * * *', checkExpiredSubscriptions); // Run daily at midnight
+cron.schedule('* * * * *', checkReservations); // Run daily at midnight
+
+//just changed it to every minute

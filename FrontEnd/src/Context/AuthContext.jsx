@@ -1,8 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
-
-import { login, fetchUserDetails, logout } from '../api/userApi';
+import { login, signUpUser as signUp, fetchUserDetails, logout } from '../api/userApi';
 
 const AuthContext = createContext();
 
@@ -12,12 +10,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Fetch user details on initial load to check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const userData = await fetchUserDetails();
         setIsAuthenticated(true);
-        setUser(userData); // Ensure user data has a `Role` property
+        setUser(userData); // Update context with fetched user data
       } catch (error) {
         setIsAuthenticated(false);
         setUser(null);
@@ -43,6 +42,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const signUpUser = async (persId, firstName, lastName, email, phone, password) => {
+    try {
+      const response = await signUp(persId, firstName, lastName, email, phone, password);
+      const { user } = response;
+
+      // Update the AuthContext state with new user data
+      setIsAuthenticated(true);
+      setUser(user);
+      return user;
+    } catch (error) {
+      setIsAuthenticated(false);
+      setUser(null);
+      throw error;
+    }
+  };
+
   const logoutUser = async () => {
     try {
       await logout();
@@ -54,10 +69,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  return <AuthContext.Provider value={{ isAuthenticated, user, loginUser, logoutUser, loading }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ isAuthenticated, user, loginUser, signUpUser, logoutUser, loading }}>{children}</AuthContext.Provider>;
 };
 
-const useAuth = () => useContext(AuthContext);
-
+export const useAuth = () => useContext(AuthContext);
 export default AuthProvider;
-export { useAuth };

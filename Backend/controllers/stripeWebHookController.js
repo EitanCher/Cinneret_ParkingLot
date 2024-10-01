@@ -69,7 +69,7 @@ const handleCheckoutSessionCompleted = async (req, res) => {
 
   try {
     // Stripe expects the raw body as a Buffer
-    const body = req.body; // Ensure req.rawBody is the raw body as a Buffer
+    const body = req.body;
     console.log('req.rawBody in webhook controller:', body);
 
     // Construct the event from the raw body

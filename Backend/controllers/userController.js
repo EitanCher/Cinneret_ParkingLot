@@ -190,11 +190,18 @@ const addCarsController = async (req, res) => {
 };
 
 const login = (req, res, next) => {
+  // Clear any existing JWT cookie to avoid conflicts
+  res.clearCookie('jwt', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Strict'
+  });
+
   passport.authenticate('local', (err, user, info) => {
     if (err) return next(err);
     if (!user) return res.status(401).json({ message: info.message });
 
-    // Generate JWT token
+    // Generate a new JWT token for the authenticated user
     const token = jwt.sign(
       {
         id: user.idUsers,
@@ -206,7 +213,7 @@ const login = (req, res, next) => {
     );
     console.log('Generated JWT Token:', token);
 
-    // Set cookie
+    // Set the new JWT token in the HTTP-only cookie
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -214,13 +221,14 @@ const login = (req, res, next) => {
       maxAge: 2592000000 // 30 days
     });
 
-    // Send user data
+    // Respond with user data and a success message
     res.status(200).json({
       user: {
         id: user.idUsers,
         email: user.Email,
         role: user.role
-      }
+      },
+      message: 'Login successful'
     });
   })(req, res, next);
 };
@@ -229,15 +237,14 @@ const login = (req, res, next) => {
 const logout = (req, res) => {
   console.log('Logout process started in controller');
   try {
-    res.cookie('jwt', '', {
+    // Clear the JWT cookie to log out the user
+    res.clearCookie('jwt', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: 0 // Set to 0 to immediately expire the cookie
+      sameSite: 'Strict'
     });
 
-    // Optionally log additional information or perform cleanup here
-    console.log('before res.status');
+    console.log('JWT cookie cleared successfully');
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Error during logout:', error);
@@ -310,12 +317,15 @@ const getUserCarsController = async (req, res) => {
 
 const getUserDetails = async (req, res) => {
   try {
-    const user = req.user; // Correctly getting userId
+    const user = req.user; // Fetch the user object from the JWT payload
+    console.log('user id in getUserDetails ', user.id); // Log to confirm the user ID being used
+
     if (!user) {
       // Check if userId is undefined or null
       return res.status(404).send('User ID is not provided');
     }
 
+    // Find the user in the database using the ID from the JWT payload
     const resultUser = await prisma.users.findUnique({
       where: { idUsers: user.id }
     });
@@ -324,6 +334,15 @@ const getUserDetails = async (req, res) => {
       return res.status(404).send('User not found');
     }
 
+    // Correct the user ID field used in the activeSubscription query
+    const activeSubscription = await prisma.userSubscriptions.findFirst({
+      where: { UserID: user.id, Status: 'active' } // Use user.id instead of user.idUsers
+    });
+    console.log(activeSubscription);
+    // Attach the subscription status to the resultUser object
+    resultUser.hasSubscription = !!activeSubscription;
+
+    // Send the user object with the subscription status back to the client
     res.json(resultUser);
   } catch (error) {
     console.error('Error fetching user details:', error);

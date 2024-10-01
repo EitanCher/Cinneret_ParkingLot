@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('../backend/utils/cronJobs');
 const http = require('http');
 const { Server } = require('socket.io');
 const prisma = require('./prisma/prismaClient');
@@ -15,25 +16,23 @@ const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
 async function countAvailableSpots(cityID) {
   try {
     console.log(`Counting available spots for city ID: ${cityID}`); // Debug log
+
     const areaIds = await getAreaIdsByCityId(cityID);
     console.log(`Fetched area IDs for city ${cityID}:`, areaIds); // Debug log for fetched area IDs
 
+    // Count available spots based on `Busy: false` only
     const availableSpots = await prisma.slots.count({
       where: {
-        AreaID: { in: areaIds },
-        Busy: false,
-        Reservations: {
-          none: {
-            ReservationStart: { lte: new Date() }, // Only count slots with no ongoing reservations
-            ReservationEnd: { gte: new Date() }
-          }
-        }
+        AreaID: { in: areaIds }, // Areas must be in the specified city
+        Busy: false // Slot must not be busy
       }
     });
 
     console.log(`Available spots for city ${cityID}: ${availableSpots}`); // Debug available spots
-    availableSpotsMap.set(cityID, availableSpots);
-    io.to(cityID).emit('count_available_spots', cityID, availableSpots); // Emit available spots to all clients in the room
+    availableSpotsMap.set(cityID, availableSpots); // Update the in-memory map
+
+    // Emit the available spots count to clients subscribed to this city's room
+    io.to(cityID).emit('updateAvailableSpots', cityID, availableSpots);
   } catch (error) {
     console.error(`Error counting available spots for city ${cityID}:`, error.message);
   }
@@ -41,32 +40,22 @@ async function countAvailableSpots(cityID) {
 
 async function updateAvailableSpots(cityID) {
   try {
-    // Recalculate the available spots from the database for the given cityID
     console.log(`Recalculating available spots for city ${cityID}`); // Debug log
 
-    // Fetch the area IDs for the city
     const areaIds = await getAreaIdsByCityId(cityID);
 
-    // Count the number of available slots (Busy = false, no ongoing reservations)
+    // Count available spots based on `Busy: false` only
     const availableSpots = await prisma.slots.count({
       where: {
-        AreaID: { in: areaIds },
-        Busy: false,
-        Reservations: {
-          none: {
-            ReservationStart: { lte: new Date() }, // No reservations starting before now
-            ReservationEnd: { gte: new Date() } // No reservations ending after now
-          }
-        }
+        AreaID: { in: areaIds }, // Areas must be in the specified city
+        Busy: false // Slot must not be busy
       }
     });
 
     console.log(`Recalculated available spots for city ${cityID}: ${availableSpots}`); // Debug log
+    availableSpotsMap.set(cityID, availableSpots); // Update the in-memory map
 
-    // Update the available spots map
-    availableSpotsMap.set(cityID, availableSpots);
-
-    // Emit the updated count to all clients subscribed to this city
+    // Emit the updated count to all clients subscribed to this city's room
     io.to(cityID).emit('updateAvailableSpots', cityID, availableSpots);
   } catch (error) {
     console.error(`Error recalculating available spots for city ${cityID}:`, error.message);

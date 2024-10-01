@@ -3,7 +3,8 @@ import { Input, Checkbox, Button, Divider } from '@nextui-org/react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import { validateSignUpForm } from '../utils/validationUtils'; // Import combined validation function
-import { signUpUser } from '../api/userApi';
+import { useAuth } from '../Context/AuthContext'; // Import useAuth hook
+
 const Signup = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [persId, setPersId] = useState('');
@@ -15,6 +16,7 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
 
+  const { signUpUser, loginUser } = useAuth(); // Access signUpUser from context
   const navigate = useNavigate();
 
   const toggleVisibility = () => {
@@ -32,22 +34,9 @@ const Signup = () => {
 
     // Proceed with the signup logic
     try {
-      console.log('start of try block in userapi');
-      console.log('Payload structure before API call:', {
-        persId,
-        firstName,
-        lastName,
-        email,
-        phone,
-        password
-      });
-      const userData = await signUpUser(persId, firstName, lastName, email, phone, password);
-      console.log('user data is', userData);
-      if (userData) {
-        navigate('/');
-      } else {
-        setError('Signup failed. Please try again.');
-      }
+      await signUpUser(persId, firstName, lastName, email, phone, password); // Use signUpUser from context
+      await loginUser(email, password);
+      navigate('/'); // Navigate to the UserDashboard after successful signup
     } catch (error) {
       console.error('Signup failed:', error);
       setError('Signup failed. Please check your details and try again.');
