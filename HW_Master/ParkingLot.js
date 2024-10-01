@@ -9,7 +9,7 @@ const Tesseract = require('tesseract.js');
 const exp = require('constants');
 const { createWorker } = Tesseract;
 
-const WS_PORT = 5555;
+const WS_PORT = 7777;
 const myLocalIP = getLocalIPAddress();
 const wsServer = new webSocket.Server({ port: WS_PORT }, () => console.log(`Websocket server is listening at ${WS_PORT}`));
 let allBoards = { gates: [], gateCams: [], slots: [], slotCams: [] }; // Empty arrays - to enable push command in fetchBoardsDataOnInit()
