@@ -12,12 +12,15 @@ const ProtectedRouteUser = ({ children }) => {
     return <div>Loading...</div>; // Show a loading indicator while user data is being fetched
   }
 
+  if (user === undefined) return <Navigate to='/subscriptions' replace />;
+
   // If the user is not authenticated, redirect to the login page
   if (!isAuthenticated) {
     return <Navigate to='/login' replace />;
   }
 
   if (user && !user.hasSubscription) {
+    console.log('user in protected route user:', user);
     // If user does not have an active subscription, redirect to the subscription page
     return <Navigate to='/subscriptions' replace />;
   }

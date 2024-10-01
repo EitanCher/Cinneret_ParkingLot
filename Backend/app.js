@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 3001;
 const path = require('path');
-
+require('../backend/utils/cronJobs');
 // Middleware setup
 app.use('/api/users/webhook', bodyParser.raw({ type: 'application/json' }));
 app.use(express.json());

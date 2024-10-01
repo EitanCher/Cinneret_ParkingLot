@@ -4,7 +4,7 @@ import { fetchSlotCountsByCityId, fetchCities } from '../../../api/userApi';
 import io from 'socket.io-client';
 
 // Connect to the WebSocket server
-const socket = io('http://localhost:3001'); // Adjust the URL as needed
+const socket = io('http://localhost:3001');
 
 const AvatarWithPopover = ({ city }) => {
   const [slotCounts, setSlotCounts] = useState({ total: 0, notBusy: 0 });
@@ -58,9 +58,11 @@ const AvatarWithPopover = ({ city }) => {
   return (
     <Popover backdrop='blur' showArrow placement='bottom'>
       <PopoverTrigger>
-        <div className='cursor-pointer flex flex-col items-center'>
-          <Avatar src={city.pictureUrl} size='lg' />
-          <h4 className='mt-2 text-center text-xs text-ellipsis overflow-hidden whitespace-normal'>{city.CityName}</h4>
+        <div className={`cursor-pointer flex flex-col items-center ${loading ? 'animate-pulse' : ''}`}>
+          <Avatar src={loading ? '' : city.pictureUrl} size='lg' className={loading ? 'bg-gray-200' : ''} />
+          <h4 className={`mt-2 text-center text-xs text-ellipsis overflow-hidden whitespace-normal ${loading ? 'bg-gray-300 w-12 h-4 rounded' : ''}`}>
+            {loading ? '' : city.CityName}
+          </h4>
         </div>
       </PopoverTrigger>
       <PopoverContent className='p-4'>

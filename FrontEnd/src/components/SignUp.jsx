@@ -16,7 +16,7 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
 
-  const { signUpUser } = useAuth(); // Access signUpUser from context
+  const { signUpUser, loginUser } = useAuth(); // Access signUpUser from context
   const navigate = useNavigate();
 
   const toggleVisibility = () => {
@@ -35,7 +35,7 @@ const Signup = () => {
     // Proceed with the signup logic
     try {
       await signUpUser(persId, firstName, lastName, email, phone, password); // Use signUpUser from context
-
+      await loginUser(email, password);
       navigate('/'); // Navigate to the UserDashboard after successful signup
     } catch (error) {
       console.error('Signup failed:', error);
