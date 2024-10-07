@@ -18,6 +18,7 @@ const {
   deleteSlotsCriteriaSchema,
   UserCriteriaSchema,
   IdSchema,
+  SlotCreateSchema,
   createSubscriptionPlanSchema
 } = require('../db-postgres/zodSchema');
 const { promise } = require('zod');
@@ -68,7 +69,9 @@ async function addSlotsBulk(idAreas, numOfSlots) {
       Busy: false, //HAS DEFAULT VALUES ANYWAY SO CAN DROP
       Active: true, //HAS DEFAULT VALUES ANYWAY SO CAN DROP
       Fault: false, //HAS DEFAULT VALUES ANYWAY SO CAN DROP
-      BorderRight: Math.floor(Math.random() * 100) /// NEED TO DECIDE WHAT TO DO WITH THIS
+      BorderRight: Math.floor(Math.random() * 100), /// NEED TO DECIDE WHAT TO DO WITH THIS
+      SlotIp: null,
+      CameraIP: null
     }));
 
     const result = await prisma.slots.createMany({
@@ -317,42 +320,50 @@ async function viewSlotsByCriteria(cityId, active, areaId, busy) {
   }
 }
 
-async function updateSlotByID(idSlots, { BorderRight, Active }) {
+// Updated model function to handle all fields
+async function updateSlotByID(idSlots, { BorderRight, Active, Busy, Fault, AreaID, CameraIP, SlotIP }) {
   try {
     // Ensure idSlots is parsed correctly
-    const slotId = parseInt(idSlots, 10); // Convert to number if necessary
+    const slotId = parseInt(idSlots, 10);
 
-    const validatedInput = updateSlotSchema.parse({ BorderRight, Active });
+    // Create a schema that validates all fields
+    const validatedInput = updateSlotSchema.parse({ BorderRight, Active, Busy, Fault, AreaID, CameraIP, SlotIP });
+    console.log(validatedInput);
 
     // Check if slotId is valid
     if (isNaN(slotId)) {
       throw new Error('Invalid slot ID');
     }
 
+    // Check if the slot exists
     const existingSlot = await prisma.slots.findUnique({
-      where: { idSlots: slotId } // Use slotId here
+      where: { idSlots: slotId }
     });
 
     if (!existingSlot) {
       throw new Error('Slot not found');
     }
+    console.log('slot found');
 
+    // Create fields to update based on the validated input
     const fieldsToUpdate = {};
-    if (validatedInput.BorderRight !== undefined && existingSlot.BorderRight !== validatedInput.BorderRight) {
-      fieldsToUpdate.BorderRight = validatedInput.BorderRight;
-    }
-    if (validatedInput.Active !== undefined && existingSlot.Active !== validatedInput.Active) {
-      fieldsToUpdate.Active = validatedInput.Active;
+    for (const key in validatedInput) {
+      if (validatedInput[key] !== undefined && existingSlot[key] !== validatedInput[key]) {
+        fieldsToUpdate[key] = validatedInput[key];
+      }
     }
 
+    // If no fields to update, return a message
     if (Object.keys(fieldsToUpdate).length === 0) {
       return { message: 'No changes detected; no update performed.' };
     }
-
+    console.log('changes indeeed detected');
+    // Update the slot with the fieldsToUpdate object
     const updatedSlot = await prisma.slots.update({
-      where: { idSlots: slotId }, // Use slotId here
+      where: { idSlots: slotId },
       data: fieldsToUpdate
     });
+    console.log('updated slot:', updatedSlot);
 
     return updatedSlot;
   } catch (error) {
@@ -361,97 +372,26 @@ async function updateSlotByID(idSlots, { BorderRight, Active }) {
   }
 }
 
-async function updateSlotsByCriteria({ cityId, areaId, active, updates }) {
+async function addIndividualSlotModel(slotData) {
   try {
-    // Validate criteria and update data
-    const validatedCriteria = updateCriteriaSchema.parse({ cityId, areaId, active });
-    const validatedUpdates = updateSlotSchema.parse(updates);
-    console.log('validated city : ' + validatedCriteria.cityId);
-    console.log('validated updates :', JSON.stringify(validatedUpdates, null, 2));
-    // Build the criteria for selecting slots
-    const updateCriteria = {
-      Areas: {
-        ...(validatedCriteria.cityId && { CityID: validatedCriteria.cityId }),
-        ...(validatedCriteria.areaId && { idAreas: validatedCriteria.areaId })
-      },
-      ...(validatedCriteria.active !== undefined && { Active: validatedCriteria.active })
-    };
+    // Validate the slot data using the SlotCreateSchema
+    const validatedData = SlotCreateSchema.parse(slotData);
 
-    // Prepare the data to update
-    const updateData = {};
-    if (validatedUpdates.BorderRight !== undefined) {
-      updateData.BorderRight = validatedUpdates.BorderRight;
-    }
-    if (validatedUpdates.Active !== undefined) {
-      updateData.Active = validatedUpdates.Active;
-    }
+    console.log('Validated data to be added:', validatedData);
 
-    // Perform the update operation
-    const updatedSlots = await prisma.slots.updateMany({
-      where: updateCriteria,
-      data: updateData
+    // Create a new slot in the database using Prisma's create method
+    const newSlot = await prisma.slots.create({
+      data: validatedData
     });
 
-    if (updatedSlots.count === 0) {
-      return { message: 'No slots found matching the criteria' };
-    }
+    console.log('New slot added successfully:', newSlot);
 
-    return updatedSlots;
+    return newSlot; // Return the newly created slot
   } catch (error) {
-    console.error('Error updating slots by criteria:', error);
-    throw new Error('Internal Server Error');
+    console.error('Error adding new slot:', error);
+    throw new Error(error.message || 'Internal Server Error');
   }
 }
-
-async function deleteSlotsByCriteria(criteria) {
-  // Validate the criteria using Zod
-  const validatedCriteria = deleteSlotsCriteriaSchema.parse(criteria);
-  console.log('Validated Criteria:', validatedCriteria);
-
-  try {
-    // Find all area IDs in the city if AreaID is not provided
-    const areaIds = validatedCriteria.AreaID
-      ? [validatedCriteria.AreaID] // Use the provided AreaID if available
-      : await prisma.areas
-          .findMany({
-            where: {
-              CityID: validatedCriteria.cityId
-            },
-            select: {
-              idAreas: true
-            }
-          })
-          .then((areas) => areas.map((area) => area.idAreas));
-
-    // Debugging: Log areaIds and criteria
-    console.log('Area IDs:', areaIds);
-
-    // Build the query filters based on the validated criteria
-    const filters = {
-      AreaID: {
-        in: areaIds
-      },
-      ...(validatedCriteria.Active !== undefined && { Active: validatedCriteria.Active }) // Ensure Active filter is correctly applied
-    };
-
-    // Debugging: Log filters to be used
-    console.log('Filters:', filters);
-
-    // Perform the deletion
-    const deletedSlots = await prisma.slots.deleteMany({
-      where: filters
-    });
-
-    // Log the number of deleted slots
-    console.log(`Deleted ${deletedSlots.count} slots`);
-
-    return deletedSlots;
-  } catch (error) {
-    console.error('Error deleting slots:', error);
-    throw new Error('Failed to delete slots');
-  }
-}
-
 async function deleteSlotByID(idSlots) {
   try {
     // Attempt to delete the slot by its ID
@@ -849,8 +789,7 @@ module.exports = {
   calculateIncomeByTimeFrame,
   viewSlotsByCriteria,
   updateSlotByID,
-  updateSlotsByCriteria,
-  deleteSlotsByCriteria,
+  addIndividualSlotModel,
   deleteSlotByID,
   getUsersByCriteria,
   toggleSubscriptionStatusById,

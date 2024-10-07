@@ -15,16 +15,15 @@ const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 async function countAvailableSpots(cityID) {
   try {
-    console.log(`Counting available spots for city ID: ${cityID}`); // Debug log
+    console.log(`Counting available spots for city ID: ${cityID}`);
 
     const areaIds = await getAreaIdsByCityId(cityID);
-    console.log(`Fetched area IDs for city ${cityID}:`, areaIds); // Debug log for fetched area IDs
+    console.log(`Fetched area IDs for city ${cityID}:`, areaIds);
 
-    // Count available spots based on `Busy: false` only
     const availableSpots = await prisma.slots.count({
       where: {
-        AreaID: { in: areaIds }, // Areas must be in the specified city
-        Busy: false // Slot must not be busy
+        AreaID: { in: areaIds },
+        Busy: false
       }
     });
 

@@ -455,6 +455,52 @@ const getUserCars = async (req, res) => {
   }
 };
 
+const getUpcomingReservations = async (req, res) => {
+  try {
+    console.log('Start of get upcoming reservations controller');
+    const userId = req.user.id; // Extract user ID from JWT token
+
+    // Get the current date and time
+    const currentDate = new Date();
+
+    // Fetch all reservations for the user that are not in the past, including related city information
+    const reservations = await prisma.reservations.findMany({
+      where: {
+        UserID: userId,
+        ReservationEnd: {
+          gte: currentDate // Filter out reservations that have already ended
+        }
+      },
+      include: {
+        Cars: true, // Include the Cars model
+        Slots: {
+          include: {
+            Areas: {
+              include: {
+                Cities: true // Include the related Cities model to get city information
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        ReservationStart: 'asc' // Sort by start date in ascending order
+      }
+    });
+
+    // Check if there are any reservations
+    if (reservations && reservations.length > 0) {
+      return res.json({ reservations, status: 'success' });
+    }
+
+    // If no reservations are found, return an appropriate message
+    return res.json({ status: 'no reservations' });
+  } catch (error) {
+    console.error('Error fetching reservations:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   updateUser,
   deleteUser,
@@ -468,5 +514,6 @@ module.exports = {
   logout,
   fetchCheckoutSessionURL,
   getUserSubscription,
-  getUserCars
+  getUserCars,
+  getUpcomingReservations
 };

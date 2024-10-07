@@ -111,18 +111,11 @@ const Cities = () => {
                 isPressable
               >
                 <CardBody className='overflow-visible p-0'>
-                  <Image
-                    shadow='sm'
-                    radius='lg'
-                    width='100%'
-                    alt={city.CityName}
-                    className='w-full object-cover h-[140px]'
-                    src={city.pictureUrl} // Placeholder image
-                  />
+                  <Image shadow='sm' radius='lg' width='100%' alt={city.CityName} className='w-full object-cover h-[140px]' src={city.pictureUrl} />
                 </CardBody>
                 <CardFooter className='text-small flex items-center justify-between'>
                   <b>{city.CityName}</b>
-                  <p className='text-default-500 text-right'>{city.FullAddress}</p>
+                  <p className='text-default-500 text-right dark:text-gray-300'>{city.FullAddress}</p>
                 </CardFooter>
               </Card>
             </PopoverTrigger>

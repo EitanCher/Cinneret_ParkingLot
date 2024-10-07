@@ -53,7 +53,7 @@ const checkReservations = async () => {
   } catch (error) {}
 };
 
-cron.schedule('* * * * *', checkExpiredSubscriptions); // Run daily at midnight
-cron.schedule('* * * * *', checkReservations); // Run daily at midnight
+cron.schedule('0 0 * * *', checkExpiredSubscriptions); // Run daily at midnight
+cron.schedule('0 0 * * *', checkReservations); // Run daily at midnight
 
 //just changed it to every minute

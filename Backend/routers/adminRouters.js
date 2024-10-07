@@ -8,8 +8,6 @@ const {
   addArea,
   updateArea,
   removeArea,
-  deleteSlotsByIdRangeController,
-  toggleSlot,
   addSlotsToArea,
   updateSubscriptionController,
   addSubscriptionController,
@@ -18,8 +16,6 @@ const {
   mostActiveUsersController,
   viewSlotsByCriteriaController,
   updateIndividualSlot,
-  updateSlotsByCriteriaController,
-  deleteSlotsByStatusAreaCity,
   deleteSlotByIDController,
   viewUsersByCriteria,
   updateCityPicture,
@@ -29,7 +25,9 @@ const {
   getParkingLotsFaultsController,
   getRecentSubscriptionsController,
   calculateAverageParkingTimeAllUsersController,
-  getRecentParkingLogsController
+  getRecentParkingLogsController,
+  addIndividualSlot,
+  editArea
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -44,6 +42,7 @@ const { authenticateJWT } = require('../middlewares/authenticateJWT');
 router.use(authenticateJWT);
 router.use(checkAdminRole);
 
+router.post('/parking/slots/add-individual', addIndividualSlot);
 router.get('/parking/recent-parking-logs', getRecentParkingLogsController);
 router.get('/parking/average-parking-time', calculateAverageParkingTimeAllUsersController);
 router.get('/income-by-dates', incomeByTimeFrame);
@@ -54,18 +53,15 @@ router.get('/parking/all-parking-lots', getParkingLotCities);
 router.patch('/parking/picture/:idCities', updateCityPicture); // NEEDS TESTING
 router.get('/users/counts', userCountController);
 router.post('/parking/areas', addArea);
+router.put('/parking/areas/:idAreas', editArea);
 router.delete('/parking/areas/:idAreas', removeArea);
-router.get('/parking/areas/:cityId', areasByCityID);
+router.get('/parking/areas/:idCities', areasByCityID);
 router.get('/parking/faulty/:cityId', getParkingLotsFaultsController); //send city id for city faults. or leave empty for all cities faults
 router.delete('/parking/slots/:idSlots', deleteSlotByIDController);
-router.delete('/parking/slots/criteria/:cityID', deleteSlotsByStatusAreaCity);
 router.get('/users/recent/', getRecentSubscriptionsController);
-router.delete('/parking/slots/range', deleteSlotsByIdRangeController); //NEEDS TESTING
-router.patch('/parking/slots/bulk-update', updateSlotsByCriteriaController);
-router.post('/parking/slots/changestatus/:id', toggleSlot); //activate/deactivate
 router.get('/parking/slots', viewSlotsByCriteriaController);
 router.patch('/parking/slots/update/:idSlots', updateIndividualSlot);
-router.post('/parking/slots/add', addSlotsToArea); //  although need to decide what to do with borderright and ips
+router.post('/parking/slots/add', addSlotsToArea);
 router.post('/subscriptions', addSubscriptionController);
 router.patch('/subscriptions/:idSubscriptionPlans', updateSubscriptionController);
 router.delete('/subscriptions/:idSubscriptionPlans', removeSubscriptionController);

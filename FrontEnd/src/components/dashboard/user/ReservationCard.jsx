@@ -3,6 +3,7 @@ import { Select, SelectItem, Button, Image, DatePicker } from '@nextui-org/react
 import { parseDate } from '@internationalized/date';
 import { fetchUserCars, fetchMatchingSlots, postBookSlot } from '../../../api/userApi';
 import ReservationTable from './ReservationTable';
+import { useNavigate } from 'react-router-dom';
 
 const ReservationCard = ({ selectedCity, userData }) => {
   const [selectedCar, setSelectedCar] = useState(null);
@@ -11,6 +12,7 @@ const ReservationCard = ({ selectedCity, userData }) => {
   const [matchingSlots, setMatchingSlots] = useState(null);
   const [responseError, setResponseError] = useState(null);
   const [selectedTimeframes, setSelectedTimeframes] = useState([]); // Store selected timeframes
+  const navigate = useNavigate();
 
   // Fetch the user's cars when the component mounts
   useEffect(() => {
@@ -93,6 +95,7 @@ const ReservationCard = ({ selectedCity, userData }) => {
     try {
       const response = await postBookSlot(selectedTimeframes[0].slotId, startTime.toISOString(), endTime.toISOString(), selectedCar.idCars);
       console.log('Reservation successful:', response);
+      navigate('/UserDashboard');
     } catch (error) {
       console.error('Error in handleReserve:', error.message);
 

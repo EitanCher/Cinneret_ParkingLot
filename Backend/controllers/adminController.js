@@ -12,7 +12,6 @@ const {
   calculateIncomeByTimeFrame,
   viewSlotsByCriteria,
   updateSlotByID,
-  deleteSlotsByCriteria,
   updateSlotsByCriteria,
   deleteSlotByID,
   getUsersByCriteria,
@@ -22,7 +21,8 @@ const {
   getParkingLotsFaultsModel,
   getRecentSubscriptionsModel,
   calculateAverageParkingTimeAllUsers,
-  getRecentParkingLogs
+  getRecentParkingLogs,
+  addIndividualSlotModel
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -204,19 +204,72 @@ async function removeParkingLot(req, res) {
   }
 }
 
+async function editArea(req, res) {
+  try {
+    console.log('Start of try block in editArea function');
+
+    const { idAreas } = req.params;
+    const { AreaName } = req.body;
+
+    console.log('ID of area being updated:', idAreas);
+    console.log('New AreaName provided:', AreaName);
+
+    // Check if an area with the same AreaName already exists, but exclude the current area being updated
+    const existingArea = await prisma.areas.findFirst({
+      where: {
+        AreaName: AreaName,
+        NOT: { idAreas: parseInt(idAreas, 10) } // Exclude the current area
+      }
+    });
+
+    if (existingArea) {
+      // If an area with the same AreaName exists, return a 409 conflict error
+      return res.status(409).json({ message: 'Area with this name already exists' });
+    }
+
+    // Sanitize and update the area name
+    const sanitizedData = sanitizeObject(req.body, ['AreaName']);
+
+    // Perform the update
+    const updatedArea = await prisma.areas.update({
+      where: { idAreas: parseInt(idAreas, 10) },
+      data: { ...sanitizedData }
+    });
+
+    return res.status(200).json({ message: 'Area updated successfully', updatedArea });
+  } catch (error) {
+    console.error('Error updating area:', error);
+
+    // If there was a Prisma error (e.g., record not found), send a 404 status
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Area not found' });
+    }
+
+    // If unique constraint error (P2002), send 409 conflict status
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'Area with this name already exists' });
+    }
+
+    // Send a generic 500 status for other errors
+    return res.status(500).json({ message: 'An error occurred while updating the area' });
+  }
+}
+
 //NEEDS TESTING
 async function areasByCityID(req, res) {
   try {
     const { idCities } = req.params;
+    console.log('idCities:', idCities);
+    const cityIDInt = parseInt(idCities, 10);
     const areas = await prisma.areas.findMany({
-      where: { CityID: idCities },
+      where: { CityID: cityIDInt },
       select: { idAreas: true, AreaName: true }
     });
 
     if (areas.length === 0) {
       return res.status(404).json({ message: 'City not found' });
     }
-
+    console.log('areas:', areas);
     // Return the area IDs and names associated with the city
     return res.status(200).json({
       areas: areas.map((area) => ({
@@ -225,7 +278,6 @@ async function areasByCityID(req, res) {
       }))
     });
   } catch (err) {
-    // Handle the error
     // Handle the error
     console.error(err);
     return res.status(500).json({ message: 'An error occurred while retrieving areas.' });
@@ -236,11 +288,21 @@ async function areasByCityID(req, res) {
 
 async function addArea(req, res) {
   try {
+    // Log the incoming request body to check what is being sent
+    console.log('Incoming Request Body:', req.body);
+
     // Sanitize and extract required data
     const sanitizedData = sanitizeObject(req.body, ['CityID', 'AreaName']);
-    const { CityID, AreaName } = sanitizedData; // Corrected to use CityID
+    console.log('Sanitized Data:', sanitizedData);
 
-    // Parse using Zod, make sure AreaCreateSchema expects an object
+    // Destructure the sanitized data to get CityID and AreaName
+    const { CityID, AreaName } = sanitizedData;
+
+    // Log types and values before validation
+    console.log('CityID:', CityID, 'Type:', typeof CityID);
+    console.log('AreaName:', AreaName, 'Type:', typeof AreaName);
+
+    // Parse using Zod, ensure AreaCreateSchema expects an object with CityID and AreaName
     AreaCreateSchema.parse({ CityID, AreaName });
 
     // Create the area in the database
@@ -260,7 +322,7 @@ async function addArea(req, res) {
     console.error('Error adding area:', err);
 
     // Send appropriate error response
-    if (err.name === 'ZodError') {
+    if (err instanceof z.ZodError) {
       return res.status(400).json({ message: 'Validation failed', errors: err.errors });
     }
 
@@ -294,33 +356,6 @@ async function removeArea(req, res) {
 //NEEDS TESTING
 
 //NEEDS TESTING
-async function toggleSlot(req, res) {
-  try {
-    // Extract the slot ID from the request parameters
-    const { idSlots } = req.params;
-
-    // Retrieve the current status of the slot
-    const slot = await prisma.slots.findUnique({
-      where: { idSlots: Number(idSlots) }
-    });
-
-    // Check if the slot exists
-    if (!slot) {
-      return res.status(404).json({ message: 'Slot not found' });
-    }
-
-    // Toggle the isActive status
-    const updatedSlot = await prisma.slots.update({
-      where: { idSlots: Number(idSlots) },
-      data: { Active: !slot.Active }
-    });
-
-    return res.status(200).json({ message: `Slot ${updatedSlot.isActive ? 'activated' : 'deactivated'} successfully` });
-  } catch (err) {
-    console.error('Error toggling slot:', err);
-    return res.status(500).json({ message: 'Internal Server Error' });
-  }
-}
 
 //SUBSCRIPTIONS
 //NEEDS TESTING  || ALREADY REFACTORED WITH A MODEL
@@ -470,36 +505,29 @@ async function addSlotsToArea(req, res) {
     res.status(500).json({ message: 'Internal server error' });
   }
 }
-//NEEDS TESTING
-const deleteSlotsByIdRangeController = async (req, res) => {
-  console.log('Received DELETE request for /api/slots/range');
-  console.log('Request Body:', req.body); // Log request body
 
-  const { startId, endId } = req.body;
-
+async function addIndividualSlot(req, res) {
   try {
-    // Validate input
-    rangeSchema.parse({ startId, endId });
+    console.log('Incoming request to add an individual slot.');
 
-    // Perform the deletion
-    const result = await prisma.slots.deleteMany({
-      where: {
-        idSlots: {
-          gte: startId,
-          lte: endId
-        }
-      }
-    });
+    const stringFields = ['CameraIP', 'SlotIP'];
+    const sanitizedData = sanitizeObject(req.body, stringFields); // Sanitize incoming data
 
-    res.status(200).json({
-      message: `Slots deleted successfully`,
-      count: result.count
-    });
-  } catch (err) {
-    console.error('Error deleting slots:', err.message);
-    res.status(400).json({ message: err.errors ? err.errors : 'Invalid input' });
+    // Destructure the sanitized data
+    const { BorderRight, Active, Busy, Fault, AreaID, CameraIP, SlotIP } = sanitizedData;
+    console.log('Sanitized data for new slot:', sanitizedData);
+
+    // Call the model function to add a new slot
+    const result = await addIndividualSlotModel({ BorderRight, Active, Busy, Fault, AreaID, CameraIP, SlotIP });
+
+    // Return the result
+    return res.status(201).json(result); // Return 201 Created status on success
+  } catch (error) {
+    console.error('Error adding slot:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
-};
+}
+
 // TODO view slots- add criteria (busy)
 async function viewSlotsByCriteriaController(req, res) {
   try {
@@ -533,92 +561,40 @@ async function viewSlotsByCriteriaController(req, res) {
 async function updateIndividualSlot(req, res) {
   try {
     const { idSlots } = req.params;
-    console.log('idslots in controller:' + idSlots);
-    const { BorderRight, Active } = req.body;
-    const result = await updateSlotByID(idSlots, { BorderRight, Active });
+    console.log('idslots in controller:', idSlots);
+
+    const stringFields = ['CameraIP', 'SlotIP'];
+    const sanitizedData = sanitizeObject(req.body, stringFields); // Sanitize incoming data
+
+    const { BorderRight, Active, Busy, Fault, AreaID, CameraIP, SlotIP } = sanitizedData;
+    console.log('Busy in controller:', Busy);
+
+    const result = await updateSlotByID(idSlots, { BorderRight, Active, Busy, Fault, AreaID, CameraIP, SlotIP });
 
     if (result.message) {
       return res.status(404).json({ message: result.message });
     }
 
+    // Return the updated slot data
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error updating slot:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }
-//NEEDS TESTING
-async function updateSlotsByCriteriaController(req, res) {
-  try {
-    const { cityId, areaId, active } = req.query;
-    const { BorderRight, Active } = req.body;
 
-    // Call the model function to update slots
-    const result = await updateSlotsByCriteria({
-      cityId: Number(cityId), // Ensure query parameters are converted to numbers
-      areaId: areaId ? Number(areaId) : undefined,
-      active: active ? JSON.parse(active) : undefined,
-      updates: {
-        BorderRight: BorderRight,
-        Active: Active
-      }
-    });
-
-    if (result.count === 0) {
-      // `updateMany` returns an object with `count` of updated records
-      return res.status(404).json({ message: 'No slots found matching the criteria' });
-    }
-    return res.status(200).json(result);
-  } catch (error) {
-    console.error('Error updating slots:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-}
-
-//NEEDS TESTING
-async function deleteSlotsByStatusAreaCity(req, res) {
-  try {
-    const { cityID } = req.params;
-    const { AreaID, Active } = req.query;
-
-    if (!cityID) {
-      return res.status(400).json({ error: 'City is required' });
-    }
-
-    // Create criteria object using the correct field names
-    const criteria = {
-      cityId: parseInt(cityID, 10),
-      AreaID: AreaID ? parseInt(AreaID, 10) : undefined,
-      Active: Active !== undefined ? Active === 'true' : undefined
-    };
-
-    console.log('Criteria in controller:', criteria);
-    const result = await deleteSlotsByCriteria(criteria);
-
-    if (result.count === 0) {
-      return res.status(404).json({ message: 'No slots found to delete' });
-    }
-
-    return res.status(200).json({ message: `Deleted ${result.count} slots successfully` });
-  } catch (error) {
-    console.error('Error deleting slots:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-}
-
-// NEEDS TESTING
 async function deleteSlotByIDController(req, res) {
   try {
     const { idSlots } = req.params;
-
     const result = await deleteSlotByID(idSlots);
-
     if (!result) {
       return res.status(404).json({ message: 'Slot not found' });
     }
-
-    return res.status(200).json(result);
-  } catch (error) {}
+    return res.status(200).json({ message: 'Slot deleted successfully', result });
+  } catch (error) {
+    console.error('Error deleting slot:', error);
+    return res.status(500).json({ message: 'An error occurred while deleting the slot.' });
+  }
 }
 
 //NEEDS TESTING
@@ -760,9 +736,12 @@ module.exports = {
   areasByCityID,
   addArea,
   removeArea,
-  deleteSlotsByIdRangeController,
-  toggleSlot,
+  editArea,
+
+  viewSlotsByCriteriaController,
   addSlotsToArea,
+  deleteSlotByIDController,
+
   addSubscriptionController,
   updateSubscriptionController,
   removeSubscriptionController,
@@ -770,11 +749,8 @@ module.exports = {
   avgParkingTimeForAll,
   mostActiveUsersController,
   incomeByTimeFrame,
-  viewSlotsByCriteriaController,
   updateIndividualSlot,
-  updateSlotsByCriteriaController,
-  deleteSlotsByStatusAreaCity,
-  deleteSlotByIDController,
+
   viewUsersByCriteria,
   toggleUserSubscriptionStatus,
   updateCityPicture,
@@ -782,5 +758,6 @@ module.exports = {
   getParkingLotsFaultsController,
   getRecentSubscriptionsController,
   calculateAverageParkingTimeAllUsersController,
-  getRecentParkingLogsController
+  getRecentParkingLogsController,
+  addIndividualSlot
 };

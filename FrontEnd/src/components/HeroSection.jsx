@@ -27,10 +27,10 @@ const HeroSection = () => {
           }}
         >
           <div className='flex flex-col gap-2 text-left font-sans'>
-            <h1 className='text-white text-4xl font-black leading-tight tracking-[-0.033em] md:text-5xl md:leading-tight md:tracking-[-0.033em]'>
+            <h1 className='text-[#f7fafc] text-4xl font-black leading-tight tracking-[-0.033em] md:text-5xl md:leading-tight md:tracking-[-0.033em]'>
               Welcome to ParkNow
             </h1>
-            <h2 className='text-white text-sm font-normal leading-normal md:text-base'>
+            <h2 className='text-[#f7fafc] text-sm font-normal leading-normal md:text-base'>
               The smarter way to park. Reserve a spot and receive reminders before time runs out. Extend your session without leaving your spot.
             </h2>
           </div>

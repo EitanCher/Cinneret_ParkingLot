@@ -113,18 +113,29 @@ const ParkingLogUpdateSchema = ParkingLogSchema.partial();
 // Slot Schema
 const SlotSchema = z.object({
   idSlots: z.number().int(),
-  Busy: z.boolean(),
+  Busy: z.boolean().optional(), // Optional because the model allows it to be nullable
+  BorderRight: z.number(),
+  Active: z.boolean().optional(), // Optional because the model allows it to be nullable
+  Fault: z.boolean().optional(), // Optional because the model allows it to be nullable
   AreaID: z.number().int(),
-  BorderRight: z.number().int(),
-  Active: z.boolean(),
-  Fault: z.boolean()
+  CameraIP: z.string().max(15).optional(), // Optional and restricted to a max length of 15 (IPv4 length)
+  SlotIP: z.string().max(15).optional() // Optional and restricted to a max length of 15 (IPv4 length)
 });
+
+// Define the schema for creating a new slot, excluding the primary key (idSlots)
 const SlotCreateSchema = SlotSchema.omit({ idSlots: true });
 
+// Define the schema for updating a slot with all fields optional
 const updateSlotSchema = z.object({
+  Busy: z.boolean().optional(),
   BorderRight: z.number().optional(),
-  Active: z.boolean().optional() // Active status, true or false
+  Active: z.boolean().optional(),
+  Fault: z.boolean().optional(),
+  AreaID: z.number().int().optional(),
+  CameraIP: z.string().max(15).optional(),
+  SlotIP: z.string().max(15).optional()
 });
+
 const updateCriteriaSchema = z.object({
   cityId: z.number().int().min(1),
   areaId: z.number().int().optional(),

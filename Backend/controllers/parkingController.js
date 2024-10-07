@@ -167,68 +167,35 @@ const bookSlotController = async (req, res) => {
 
 const cancelReservationController = async (req, res) => {
   try {
-    // Extract reservation ID or car ID from the request body
-    const { idReservation, idCars } = req.body;
-    console.log('idReservations from req.body is: ' + idReservation);
-    console.log('idCars from req.body is: ' + idCars);
+    const { idReservation } = req.body;
 
-    let reservationIdToCancel = idReservation;
-
-    // If idReservation is not provided, find it using idCars
-    if (!idReservation && idCars) {
-      // First, check the ParkingLog to find the ReservationID associated with the car
-      const parkingLog = await prisma.parkingLog.findFirst({
-        where: {
-          CarID: idCars,
-          Exit: null // Ensure the car is still parked
-        },
-        select: {
-          ReservationID: true
-        }
-      });
-
-      // If there's a parking log, use its ReservationID
-      if (parkingLog && parkingLog.ReservationID) {
-        reservationIdToCancel = parkingLog.ReservationID;
-      } else {
-        return res.status(404).json({ error: 'No active reservation found for the provided car ID' });
-      }
+    if (!idReservation) {
+      return res.status(400).json({ error: 'Reservation ID is required' });
     }
 
-    // Check if the reservation exists
-    const reservation = await prisma.reservations.findUnique({
+    const userId = req.user.id;
+
+    const reservation = await prisma.reservations.findFirst({
       where: {
-        idReservation: reservationIdToCancel
+        idReservation: idReservation,
+        UserID: userId // Ensure the reservation belongs to the authenticated user
       }
     });
 
     if (!reservation) {
-      return res.status(404).json({ error: 'Reservation not found' });
+      return res.status(404).json({ error: 'Reservation not found or you do not have permission to cancel this reservation' });
     }
+    console.log('about to delete reservation');
 
-    // Now cancel the reservation
     await prisma.reservations.delete({
       where: {
-        idReservation: reservationIdToCancel
+        idReservation: idReservation
       }
     });
 
     res.status(200).json({ message: 'Reservation canceled successfully' });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      // Handle Zod validation errors
-      return res.status(400).json({
-        error: 'Validation error',
-        details: err.errors // Include details of validation errors
-      });
-    }
-
-    console.error('Error cancelling reservation:', err.message);
-
-    if (err.message === 'Reservation not found') {
-      return res.status(404).json({ error: 'Reservation not found' });
-    }
-
+  } catch (error) {
+    console.error('Error cancelling reservation:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

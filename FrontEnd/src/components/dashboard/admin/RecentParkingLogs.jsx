@@ -14,7 +14,9 @@ export const RecentParkingLogsCard = () => {
 
   const startIndex = (page - 1) * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
-  const paginatedRows = parkingLogs.slice(startIndex, endIndex);
+
+  // Include an index to each paginated row
+  const paginatedRows = parkingLogs.slice(startIndex, endIndex).map((item, index) => ({ ...item, index }));
 
   useEffect(() => {
     const handleParkingLogsData = async () => {
@@ -45,7 +47,7 @@ export const RecentParkingLogsCard = () => {
             )}
           </TableHeader>
           <TableBody items={paginatedRows}>
-            {(item) => <TableRow key={item.registrationNo}>{(columnKey) => <TableCell>{item[columnKey]}</TableCell>}</TableRow>}
+            {(item) => <TableRow key={`${item.registrationNo}-${item.index}`}>{(columnKey) => <TableCell>{item[columnKey]}</TableCell>}</TableRow>}
           </TableBody>
         </Table>
 
