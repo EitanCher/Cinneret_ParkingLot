@@ -82,7 +82,13 @@ const Header = () => {
       <NavbarMenu className={`navbar-menu ${isDarkMode ? 'dark' : ''}`}>
         {menuItems.map((item, index) => (
           <NavbarMenuItem key={`${item.name}-${index}`}>
-            <Link onClick={() => setIsMenuOpen(false)} color={index === 2 ? 'primary' : 'foreground'} className='w-full' to={item.path} size='lg'>
+            <Link
+              onClick={() => setIsMenuOpen(false)}
+              color={index === 2 ? 'primary' : 'foreground'}
+              className='w-full dark:text-white'
+              to={item.path}
+              size='lg'
+            >
               {item.name}
             </Link>
           </NavbarMenuItem>

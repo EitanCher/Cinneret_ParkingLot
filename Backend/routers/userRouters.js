@@ -3,6 +3,8 @@
 // "Password": "password123"
 
 const express = require('express');
+const { loginLimiter, generalLimiter } = require('../middlewares/rateLimit');
+
 const router = express.Router();
 const {
   updateUser,
@@ -17,7 +19,8 @@ const {
   logout,
   fetchCheckoutSessionURL,
   getUserSubscription,
-  getUserCars
+  getUserCars,
+  getUpcomingReservations
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -37,6 +40,9 @@ const passport = require('passport');
 const { createStripeSession, cancelSubscription } = require('../controllers/stripeCheckoutController');
 const { handleCheckoutSessionCompleted } = require('../controllers/stripeWebHookController');
 const { authenticateJWT } = require('../middlewares/authenticateJWT');
+
+router.use(generalLimiter);
+
 router.get('/checkout-session/:sessionId', fetchCheckoutSessionURL);
 
 router.get(
@@ -50,6 +56,7 @@ router.get(
   getUserDetails
 );
 
+router.get('/parking/reservations', authenticateJWT, getUpcomingReservations);
 router.post('/cancel-subscription', authenticateJWT, cancelSubscription);
 router.get('/parkinglots', getParkingLotCities);
 router.get('/user-subscription', authenticateJWT, getUserSubscription);
@@ -57,7 +64,7 @@ router.get('/user-subscription', authenticateJWT, getUserSubscription);
 router.patch('/cars', authenticateJWT, updateCars);
 router.get('/subscriptions', getSubscriptionTiers);
 router.post('/signup', addUserController);
-router.post('/login', login);
+router.post('/login', loginLimiter, login);
 router.post('/logout', authenticateJWT, logout);
 router.get('/parking/slots-count/:cityId', authenticateJWT, countSlotsByCityID);
 router.patch('/:id', authenticateJWT, updateUser);

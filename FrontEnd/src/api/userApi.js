@@ -216,3 +216,28 @@ export const postBookSlot = async (slotId, StartDate, EndDate, idCars) => {
     throw error;
   }
 };
+
+export const checkReservation = async () => {
+  try {
+    console.log('start of check reservation user api');
+    const response = await api.get('/parking/reservations', { withCredentials: true });
+    console.log('reservations in user api:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    throw error;
+  }
+};
+
+export const cancelReservation = async (idReservation) => {
+  try {
+    console.log('start of cancel reservation user api');
+    const response = await api.delete('/parking/reservation', { data: { idReservation }, withCredentials: true });
+
+    console.log('canceled reservation:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    throw error;
+  }
+};
