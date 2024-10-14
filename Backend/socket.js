@@ -89,13 +89,13 @@ pgPool.connect().then((client) => {
 
       if (cityIdResult) {
         const cityID = cityIdResult.CityID;
-        console.log(`Area ${areaID} belongs to city ${cityID}`); // Debug for cityID
+        console.log(`Area ${areaID} belongs to city ${cityID}`);
         await updateAvailableSpots(cityID, isBusy);
       } else {
-        console.error(`Area ID ${areaID} not found`); // Debug if area ID is not found
+        console.error(`Area ID ${areaID} not found`);
       }
     } catch (error) {
-      console.error('Error resolving city ID:', error.message); // Error resolving city
+      console.error('Error resolving city ID:', error.message);
     }
   });
 });

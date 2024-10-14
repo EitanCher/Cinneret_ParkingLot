@@ -87,6 +87,37 @@ async function addSlotsBulk(idAreas, numOfSlots) {
   }
 }
 
+async function addGate(cityId, cameraIP, gateIP) {
+  try {
+    const newGate = await prisma.gates.create({
+      data: {
+        CityID: cityId,
+
+        CameraIP: cameraIP,
+        GateIP: gateIP
+      }
+    });
+    return newGate; // Return the new gate
+  } catch (err) {
+    console.error('Error adding gate:', err.message);
+    throw new Error('Failed to add the gate');
+  }
+}
+
+async function getGatesByCity(cityId) {
+  try {
+    const gates = await prisma.gates.findMany({
+      where: {
+        CityID: parseInt(cityId, 10)
+      }
+    });
+    return gates;
+  } catch (err) {
+    console.error('Error fetching gates from database:', err.message);
+    throw new Error('Database query failed');
+  }
+}
+
 async function addSubscription(data) {
   try {
     // The schema is already validated in the controller function
@@ -798,5 +829,7 @@ module.exports = {
   getParkingLotsFaultsModel,
   getRecentSubscriptionsModel,
   calculateAverageParkingTimeAllUsers,
-  getRecentParkingLogs
+  getRecentParkingLogs,
+  addGate,
+  getGatesByCity
 };

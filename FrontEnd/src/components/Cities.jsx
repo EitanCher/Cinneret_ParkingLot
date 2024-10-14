@@ -2,17 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Spinner, Card, CardBody, CardFooter, Image, Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
 import { fetchCities } from '../api/userApi';
 import { useTheme } from '../Context/ThemeContext';
-import io from 'socket.io-client'; // Import socket.io-client
+import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001'); // WebSocket server URL
 
 const Cities = () => {
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // State to handle errors
-  const { isDarkMode } = useTheme(); // Add this line to get the dark mode state
-  const [availableSpots, setAvailableSpots] = useState({}); // State to store live available parking spots
-  const [activePopover, setActivePopover] = useState(null); // Track the active popover
+  const [error, setError] = useState(null);
+  const { isDarkMode } = useTheme();
+  const [availableSpots, setAvailableSpots] = useState({});
+  const [activePopover, setActivePopover] = useState(null);
 
   useEffect(() => {
     const getCities = async () => {
@@ -60,16 +60,16 @@ const Cities = () => {
 
     return () => {
       socket.off('count_available_spots'); // Clean up the socket listener on component unmount
-      socket.off('updateAvailableSpots'); // Clean up the socket listener on component unmount
+      socket.off('updateAvailableSpots');
     };
   }, []);
 
   const handlePopoverOpenChange = (isOpen, cityID) => {
     if (isOpen) {
-      console.log(`Popover opened for city: ${cityID}`); // Debug log
+      console.log(`Popover opened for city: ${cityID}`);
       setActivePopover(cityID);
     } else {
-      console.log(`Popover closed for city: ${cityID}`); // Debug log
+      console.log(`Popover closed for city: ${cityID}`);
       setActivePopover(null);
     }
   };

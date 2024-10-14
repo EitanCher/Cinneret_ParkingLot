@@ -547,9 +547,9 @@ async function queryCheckAvailable(pgClient) {
   const query = `SELECT \"idSlots\" FROM \"Slots\" \
         WHERE \"Busy\" = $1 AND \"idSlots\" \
             NOT IN (SELECT \"SlotID\" FROM \"Reservations\" \
-                WHERE \"Status\" = $2);`;
+                WHERE \"Status\" = $2 AND \"ReservationStart\" < $3);`;
 
-  const result = await pgClient.query(query, [false, 'pending']);
+  const result = await pgClient.query(query, [false, 'pending', 'NOW()']);
   if (result.rows.length > 0) return true;
   return false;
 }
@@ -584,8 +584,14 @@ async function queryInsertLogRow(pgClient, myCar, myReservation, myEndBy) {
   await pgClient.query(query, values);
 }
 async function queryUpdateReservationStatus(pgClient, myCar, myStatus) {
-  const query = `UPDATE \"Reservations\" SET \"Status\" = $1 WHERE \"CarID\" = $2;`;
-  await pgClient.query(query, [myStatus, myCar]);
+  let query = '';
+  if (myStatus == 'finished') {
+    query = `DELETE FROM \"Reservations\" WHERE \"CarID\" = $1 `;
+    await pgClient.query(query, [myCar]);
+  } else {
+    query = `UPDATE \"Reservations\" SET \"Status\" = $1 WHERE \"CarID\" = $2;`;
+    await pgClient.query(query, [myStatus, myCar]);
+  }
 }
 async function queryUpdateSlotBusy(pgClient, mySlot, myStatus) {
   const query = `UPDATE \"Slots\" SET \"Busy\" = $1 WHERE \"idSlots\" = $2;`;
@@ -603,6 +609,6 @@ async function queryUpdateViolationUser(pgClient, myCar) {
 async function queryUpdateLatestCarLog(pgClient, myCar) {
   const query =
     'UPDATE "ParkingLog" SET "Exit" = $1 WHERE "CarID" = $2 AND "Entrance" = \
-			(SELECT MAX("Entrance") FROM "ParkingLog" WHERE "CarID" = $2)';
+            (SELECT MAX("Entrance") FROM "ParkingLog" WHERE "CarID" = $2)';
   await pgClient.query(query, ['NOW()', myCar]);
 }

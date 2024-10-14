@@ -22,7 +22,9 @@ const {
   getRecentSubscriptionsModel,
   calculateAverageParkingTimeAllUsers,
   getRecentParkingLogs,
-  addIndividualSlotModel
+  addIndividualSlotModel,
+  addGate,
+  getGatesByCity
 } = require('../models/adminModel');
 const { getAreaIdsByCityId } = require('../models/parkingModel');
 const { z } = require('zod'); // Import Zod for validation
@@ -666,7 +668,137 @@ async function userCountController(req, res) {
   }
 }
 
-async function createGate(req, res) {}
+async function addGateToCity(req, res) {
+  const stringFields = ['cameraIP', 'gateIP'];
+
+  try {
+    // Sanitize the incoming request body
+    const sanitizedInput = sanitizeObject(req.body, stringFields);
+
+    const { cityId, cameraIP, gateIP } = sanitizedInput;
+
+    if (!cityId || !cameraIP || !gateIP) {
+      return res.status(400).json({ message: 'City ID, Camera IP, and Gate IP are required' });
+    }
+
+    const newGate = await addGate(cityId, cameraIP, gateIP);
+
+    res.status(200).json({
+      message: `Gate added successfully to city ${cityId}`,
+      gate: newGate
+    });
+  } catch (err) {
+    console.error('Error adding gate:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+async function getGatesByCityController(req, res) {
+  const stringFields = ['idCities'];
+
+  try {
+    // Sanitize the incoming request params
+    const sanitizedParams = sanitizeObject(req.params, stringFields);
+    const { idCities: cityId } = sanitizedParams;
+
+    if (!cityId) {
+      return res.status(400).json({ message: 'City ID is required' });
+    }
+
+    const gates = await getGatesByCity(cityId);
+
+    if (!gates || gates.length === 0) {
+      return res.status(404).json({ message: `No gates found for city ID ${cityId}` });
+    }
+
+    res.status(200).json({
+      message: `Gates retrieved successfully for city ${cityId}`,
+      gates
+    });
+  } catch (err) {
+    console.error('Error retrieving gates:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+async function deleteGate(req, res) {
+  try {
+    const { idGates } = req.params;
+
+    if (!idGates) {
+      return res.status(400).json({ message: 'Gate ID is required' });
+    }
+
+    const result = await prisma.gates.delete({
+      where: {
+        idGates: parseInt(idGates, 10)
+      }
+    });
+
+    return res.status(200).json({ message: `Gate deleted successfully for ID ${idGates}` });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: `No gate found for ID ${idGates}` });
+    }
+
+    // Handle other errors
+    console.error('Error deleting gate:', error.message);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+async function editGate(req, res) {
+  const stringFields = ['CameraIP', 'GateIP']; // Fields to sanitize
+  try {
+    // Sanitize and validate input
+    console.log('Request body before sanitization:', req.body); // Debugging input before sanitization
+    const sanitizedInput = sanitizeObject(req.body, stringFields);
+    console.log('Sanitized input:', sanitizedInput); // Debugging sanitized input
+
+    const { idGates } = req.params;
+    const { CameraIP, GateIP, Entrance, Fault } = sanitizedInput;
+
+    // Ensure required fields are present
+    if (!idGates || !CameraIP || !GateIP) {
+      console.warn('Missing required fields:', { idGates, CameraIP, GateIP });
+      return res.status(400).json({ message: 'Gate ID, Camera IP, and Gate IP are required' });
+    }
+
+    // Log what will be updated
+    console.log('Updating gate with:', {
+      idGates,
+      CameraIP,
+      GateIP,
+      Entrance: Entrance !== undefined ? Boolean(Entrance) : false,
+      Fault: Fault !== undefined ? Boolean(Fault) : false
+    });
+
+    // Update the gate in the database
+    const updatedGate = await prisma.gates.update({
+      where: { idGates: parseInt(idGates, 10) },
+      data: {
+        CameraIP,
+        GateIP,
+        Entrance: Entrance !== undefined ? Boolean(Entrance) : false,
+        Fault: Fault !== undefined ? Boolean(Fault) : false
+      }
+    });
+
+    console.log(`Gate with ID ${idGates} updated successfully`, updatedGate); // Debugging successful update
+    return res.status(200).json({
+      message: `Gate updated successfully with ID ${idGates}`,
+      gate: updatedGate
+    });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      // Prisma unique constraint violation error
+      console.error('Unique constraint violation:', error.meta);
+      return res.status(400).json({ message: `The ${error.meta.target} is already in use.` });
+    }
+    console.error('Error updating gate:', error.message);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
 
 async function getParkingLotsFaultsController(req, res) {
   try {
@@ -759,5 +891,9 @@ module.exports = {
   getRecentSubscriptionsController,
   calculateAverageParkingTimeAllUsersController,
   getRecentParkingLogsController,
-  addIndividualSlot
+  addIndividualSlot,
+  addGateToCity,
+  getGatesByCityController,
+  deleteGate,
+  editGate
 };
