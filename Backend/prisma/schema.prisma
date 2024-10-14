@@ -41,8 +41,8 @@ model Cars {
 
 model Gates {
   idGates  Int     @id @default(autoincrement())
-  Entrance Boolean
-  Fault    Boolean
+  Entrance Boolean @default(false)
+  Fault    Boolean @default(false)
   CityID   Int
   CameraIP String  @unique @db.VarChar(15)
   GateIP   String  @unique @db.VarChar(15)

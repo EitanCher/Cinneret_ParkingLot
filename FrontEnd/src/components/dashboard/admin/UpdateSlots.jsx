@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Pagination, Input, Switch } from '@nextui-org/react';
 import { deleteSlotByID, updateIndividualSlot } from '@/api/adminApi';
 
 export const UpdateSlots = ({ selectedCity, slots, setSlots }) => {
-  const [page, setPage] = React.useState(1);
-  const [editingSlots, setEditingSlots] = React.useState({}); // State to track editing values for each slot
+  const [page, setPage] = useState(1);
+  const [editingSlots, setEditingSlots] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null); // State for success message
+  const [errorMessage, setErrorMessage] = useState(null); // State for error message
   const rowsPerPage = 5;
 
   // Initialize the editingSlots state based on fetched slots
-  React.useEffect(() => {
+  useEffect(() => {
     const initialEditingState = {};
     slots.forEach((slot) => {
       initialEditingState[slot.idSlots] = {
@@ -36,24 +39,29 @@ export const UpdateSlots = ({ selectedCity, slots, setSlots }) => {
   const handleDelete = async (idSlots) => {
     try {
       await deleteSlotByID(idSlots);
-      // Update the slots state to remove the deleted slot
       setSlots((prevSlots) => prevSlots.filter((slot) => slot.idSlots !== idSlots));
+      setSuccessMessage(`Slot with ID ${idSlots} deleted successfully.`);
+      setErrorMessage(null); // Clear error message if successful
     } catch (error) {
       console.error('Failed to delete slot:', error);
-      alert(`Failed to delete slot with ID: ${idSlots}`);
+      setErrorMessage(`Failed to delete slot with ID ${idSlots}.`);
+      setSuccessMessage(null); // Clear success message on error
     }
   };
 
   // Handle updating a slot
   const handleEdit = async (idSlots) => {
+    const updatedData = editingSlots[idSlots];
+
     try {
-      const updatedData = editingSlots[idSlots];
       await updateIndividualSlot(idSlots, updatedData);
-      // Update slots with the latest data
       setSlots((prev) => prev.map((slot) => (slot.idSlots === idSlots ? { ...slot, ...updatedData } : slot)));
+      setSuccessMessage(`Slot with ID ${idSlots} updated successfully.`);
+      setErrorMessage(null); // Clear error message if successful
     } catch (error) {
       console.error('Failed to update slot:', error);
-      alert(`Failed to update slot with ID: ${idSlots}`);
+      setErrorMessage(`Failed to update slot with ID ${idSlots}.`);
+      setSuccessMessage(null); // Clear success message on error
     }
   };
 
@@ -162,6 +170,12 @@ export const UpdateSlots = ({ selectedCity, slots, setSlots }) => {
 
           <div className='flex w-full justify-center mt-4'>
             <Pagination isCompact showControls showShadow color='primary' page={page} total={totalPages} onChange={(page) => setPage(page)} />
+          </div>
+
+          {/* Display success or error message */}
+          <div className='mt-4'>
+            {successMessage && <p className='text-green-500 text-center'>{successMessage}</p>}
+            {errorMessage && <p className='text-red-500 text-center'>{errorMessage}</p>}
           </div>
         </div>
       </div>

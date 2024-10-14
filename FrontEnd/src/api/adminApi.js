@@ -352,3 +352,57 @@ export const addSlotsToAreaBulk = async (areaId, numOfSlots) => {
     throw error; // Propagate the error so it can be handled by the caller
   }
 };
+
+export const addGateToCity = async (idCities, CameraIP, GateIP) => {
+  try {
+    const payload = {
+      cityId: idCities,
+      cameraIP: CameraIP,
+      gateIP: GateIP
+    };
+    const response = await api.post('/parking/gates/add', payload, { withCredentials: true });
+    console.log('gate added to city:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding gate to city:', error);
+    throw error;
+  }
+};
+
+// /parking/gates/:idCities
+export const getGatesByCity = async (idCities) => {
+  try {
+    const response = await api.get(`/parking/gates/${idCities}`, { withCredentials: true });
+    console.log('gates by city id:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching gates:', error);
+    throw error;
+  }
+};
+
+export const deleteGateById = async (idGates) => {
+  try {
+    const response = await api.delete(`/parking/gates/${idGates}`, { withCredentials: true });
+    console.log('Gate deleted successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting gate:', error);
+    throw error;
+  }
+};
+
+export const editGateById = async (idGates, updatedGateData) => {
+  try {
+    console.log('Sending update request for gate with ID:', idGates); // Debugging gate ID
+    console.log('Updated data being sent:', updatedGateData); // Debugging data sent in the request
+
+    const response = await api.put(`/parking/gates/${idGates}`, updatedGateData, { withCredentials: true });
+
+    console.log('Gate updated successfully in API call:', response.data); // Debugging successful API response
+    return response.data;
+  } catch (error) {
+    console.error('Error updating gate in API call:', error); // Debugging error
+    throw error;
+  }
+};
