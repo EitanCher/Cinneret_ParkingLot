@@ -241,3 +241,18 @@ export const cancelReservation = async (idReservation) => {
     throw error;
   }
 };
+
+export const addCar = async (RegistrationID, Model) => {
+  try {
+    const car = {
+      RegistrationID: RegistrationID,
+      Model: Model
+    };
+    const response = await api.post('/cars/add', { data: car, withCredentials: true });
+    console.log('added car:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding car:', error);
+    throw error;
+  }
+};

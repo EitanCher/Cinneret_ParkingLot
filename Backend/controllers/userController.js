@@ -151,16 +151,15 @@ const addUserController = async (req, res) => {
 };
 
 const addCarsController = async (req, res) => {
-  // Extract user ID from JWT token
+  const idUsers = req.user.id;
 
-  const idUsers = req.user.idUsers; // Ensure this matches how the user ID is stored in req.user
+  const { data } = req.body;
 
-  const { cars } = req.body;
-
+  console.log('req body:', req.body);
   try {
     // Sanitize input data
     console.log('sanitizing cars');
-    const sanitizedCars = cars.map((car) => sanitizeObject(car, ['make', 'model']));
+    const sanitizedCar = sanitizeObject(data, ['RegistrationID', 'Model']);
 
     // Fetch user's subscription plan
     console.log('fetching user subscription');
@@ -177,7 +176,7 @@ const addCarsController = async (req, res) => {
 
     // Add cars to the database
     console.log('triggering create cars model');
-    await createCars(idUsers, sanitizedCars, SubscriptionPlanID);
+    await createCars(idUsers, sanitizedCar, SubscriptionPlanID);
 
     // Respond with success
     res.status(201).json({

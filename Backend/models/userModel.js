@@ -147,7 +147,8 @@ async function getNumCarsByUserId(userId) {
   }
 }
 
-async function createCars(userId, carsData, subscriptionPlanID) {
+async function createCars(userId, carData, subscriptionPlanID) {
+  console.log('car data:', carData);
   // Validate car count based on subscription plan
   console.log('fetching max car per subscription ');
   const maxCarsObj = await prisma.subscriptionPlans.findFirst({
@@ -159,34 +160,33 @@ async function createCars(userId, carsData, subscriptionPlanID) {
 
   const maxCars = maxCarsObj.MaxCars;
   const numCarsUserHas = await getNumCarsByUserId(userId);
+
   console.log('sub plan max cars: ' + maxCars);
   console.log('user has ' + numCarsUserHas + 'cars');
-  if (carsData.length > maxCars) throw new Error(`This subscription plan only supports up to ${maxCars} cars`);
-  if (numCarsUserHas >= maxCars) throw new Error(` this subscription already has the maximum car count for this plan: ${numCarsUserHas}`);
-  if (carsData.length === 0) throw new Error('No cars data provided');
 
-  // Add cars to the database
+  if (numCarsUserHas >= maxCars) throw new Error(` this subscription already has the maximum car count for this plan: ${numCarsUserHas}`);
+
   try {
-    const result = await prisma.cars.createMany({
-      data: carsData.map((car) => ({
-        RegistrationID: car.RegistrationID,
-        Model: car.Model,
+    const result = await prisma.cars.create({
+      data: {
+        RegistrationID: carData.RegistrationID,
+        Model: carData.Model,
         OwnerID: userId
-      })),
-      skipDuplicates: true // Skip duplicates if any
+      }
     });
 
-    // Log the successful insertion
-    console.log(`Successfully inserted ${result.count} cars.`);
+    console.log('Car added successfully: ', result);
 
-    // Return relevant information
     return {
-      message: 'Cars added successfully.',
-      count: result.count // Number of cars inserted
+      message: 'Car added successfully.',
+      car: result
     };
   } catch (error) {
-    console.error('Error adding cars:', error.message);
-    throw error; // Re-throw the error to be handled by the calling function
+    if (error.code === 'P2002' && error.meta && error.meta.target.includes('RegistrationID')) {
+      throw new Error(`The car with Registration ID ${carData.RegistrationID} already exists.`);
+    }
+    console.error('Error adding car:', error.message);
+    throw error;
   }
 }
 

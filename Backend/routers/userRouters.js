@@ -68,7 +68,7 @@ router.post('/login', loginLimiter, login);
 router.post('/logout', authenticateJWT, logout);
 router.get('/parking/slots-count/:cityId', authenticateJWT, countSlotsByCityID);
 router.patch('/:id', authenticateJWT, updateUser);
-router.post('/cars', authenticateJWT, addCarsController);
+router.post('/cars/add', authenticateJWT, addCarsController);
 router.delete('/cars/:id', authenticateJWT, deleteCarById);
 router.get('/cars', authenticateJWT, getUserCars);
 router.get('/parking/total-time', authenticateJWT, calculateTotalParkingTimeByUser);
