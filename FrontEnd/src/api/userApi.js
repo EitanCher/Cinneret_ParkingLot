@@ -256,3 +256,39 @@ export const addCar = async (RegistrationID, Model) => {
     throw error;
   }
 };
+
+// '/cars'
+
+export const getUserCars = async () => {
+  try {
+    console.log('start of getusercars');
+    const response = await api.get('/cars', { withCredentials: true });
+    console.log('user cars in userapi:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user cars:', error);
+    throw error;
+  }
+};
+
+export const updateCar = async (idCars, updatedCarData) => {
+  try {
+    const response = await api.put(`/cars/${idCars}`, updatedCarData, { withCredentials: true });
+    console.log('updated car:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating car:', error);
+    throw error;
+  }
+};
+
+export const deleteCar = async (idCars) => {
+  try {
+    const response = await api.delete(`/cars/${idCars}`, { withCredentials: true });
+    console.log('deleted car:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting car:', error);
+    throw error;
+  }
+};

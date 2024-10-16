@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, Routes, Route, Outlet } from 'react-router-dom';
 import { Sidebar, SidebarBody, SidebarLink } from '../../ui/sidebar';
-import { IconUserBolt, IconBrandTabler, IconParkingCircle, IconCar } from '@tabler/icons-react';
+import { IconUserBolt, IconBrandTabler, IconParkingCircle, IconCar, IconSettings } from '@tabler/icons-react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import { motion } from 'framer-motion';
 import { cn } from '../../../lib/utils';
@@ -38,6 +38,11 @@ function UserDashboard() {
       label: 'Cars',
       href: '/UserDashboard/Cars',
       icon: <IconCar className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
+    },
+    {
+      label: 'Account',
+      href: '/UserDashboard/Account',
+      icon: <IconSettings className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     }
   ];
 
@@ -89,7 +94,7 @@ function UserDashboard() {
       </Sidebar>
       <div className='flex-1 overflow-auto p-4'>
         <Routes>
-          <Route path='/' element={<BookSlot userData={userData} />} />
+          <Route path='/*' element={<BookSlot userData={userData} />} />
           <Route path='/Cars/*' element={<Cars userData={userData} />} />
         </Routes>
         <Outlet />

@@ -50,11 +50,11 @@ const hwAliveSchema = z.object({
 
 // Cars Schema
 const carSchema = z.object({
-  idCars: z.number().int().positive(), // Ensure `idCars` is a positive integer
+  idCars: z.number().int().positive(),
   RegistrationID: z.string().length(11),
-  Model: z.string().max(45),
-  OwnerID: z.number().int().min(1)
+  Model: z.string().max(45)
 });
+
 const carsArraySchema = z.array(carSchema);
 
 // City Schema

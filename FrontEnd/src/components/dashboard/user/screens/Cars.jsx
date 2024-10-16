@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, Link, useNavigate, Routes, Route } from 'react-router-dom';
 import { Tabs, Tab } from '@nextui-org/react';
-import { AddCar } from '../AddCar';
-export const Cars = ({ userData }) => {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const [selectedTab, setSelectedTab] = useState('add-car');
+import { AddCar } from '../AddCar'; // Component for adding cars
+import { EditCars } from '../EditCars'; // Component for editing cars
 
+export const Cars = () => {
+  const location = useLocation(); // Get the current path
+  const navigate = useNavigate(); // Hook to navigate between tabs
+  const [selectedTab, setSelectedTab] = useState('add-car'); // Default to the add-car tab
+
+  // Update selectedTab based on pathname
   useEffect(() => {
-    if (pathname === '/UserDashboard/Cars') {
+    if (location.pathname.includes('edit-cars')) {
+      setSelectedTab('edit-cars');
+    } else {
       setSelectedTab('add-car');
     }
-  }, [pathname]);
+  }, [location.pathname]);
 
   // Handle tab change and navigate to the appropriate route
   const handleTabChange = (key) => {
@@ -30,13 +35,14 @@ export const Cars = ({ userData }) => {
             aria-label='Cars Management Tabs'
             onSelectionChange={handleTabChange}
           >
-            <Tab key='add-car' as={Link} to='' title='Add Car' />
-            <Tab key='edit-cars' as={Link} to='edit-cars' title='Edit Cars' />
+            <Tab key='add-car' title='Add Car' />
+            <Tab key='edit-cars' title='Edit Cars' />
           </Tabs>
 
           <Routes>
-            <Route path='/' element={<AddCar userData={userData} />} />
-            <Route path='edit-cars' element={<div></div>} />
+            <Route path='add-car' element={<AddCar />} />
+            <Route path='' element={<AddCar />} />
+            <Route path='edit-cars' element={<EditCars />} />
           </Routes>
         </div>
       </div>

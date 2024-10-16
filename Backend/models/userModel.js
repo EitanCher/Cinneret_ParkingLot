@@ -5,7 +5,7 @@ const { z } = require('zod');
 
 const { hashPassword } = require('../utils/passwordUtils');
 const { convertToISODate } = require('../utils/dateUtils');
-const { updateUserSchema, addUserControllerSchema, carsArraySchema } = require('../db-postgres/zodSchema');
+const { updateUserSchema, addUserControllerSchema, carSchema } = require('../db-postgres/zodSchema');
 const { promise } = require('zod');
 const saltRounds = 10;
 
@@ -207,72 +207,44 @@ const findUserByEmail = async (email) => {
   }
 };
 
-async function updateCarsModel(userID, carsData) {
+async function updateCarModel(userID, idCars, carData) {
   try {
-    console.log('Start of try block in updateCarsModel');
+    console.log('Start of try block in updateCarModel');
 
-    // Validate and sanitize input data
-    const validatedCars = carsArraySchema.parse(carsData);
-    console.log('Validated cars:', validatedCars);
+    // Use `carSchema` to validate a single car
+    const validatedCar = carSchema.parse({ idCars, ...carData });
+    console.log('Validated car:', validatedCar);
 
-    // Fetch existing cars from the database
-    const carsInDB = await prisma.cars.findMany({
-      where: { OwnerID: userID }
+    const carInDB = await prisma.cars.findFirst({
+      where: { idCars: parseInt(idCars, 10), OwnerID: userID }
     });
-    console.log('Cars in DB:', carsInDB);
 
-    // Map existing cars for quick lookup
-    const carsInDBMap = new Map(carsInDB.map((car) => [car.idCars, car]));
-
-    // Determine which cars need to be updated
-    const carsToUpdate = validatedCars
-      .map((car) => {
-        const existingCar = carsInDBMap.get(car.idCars);
-
-        if (!existingCar) {
-          console.log(`Car with idCars ${car.idCars} not found in DB.`);
-          return null;
-        }
-
-        // Always update the car
-        console.log(`Car with idCars ${car.idCars} will be updated.`);
-        return {
-          idCars: car.idCars,
-          data: {
-            RegistrationID: car.RegistrationID,
-            Model: car.Model
-          }
-        };
-      })
-      .filter(Boolean); // Remove null values
-
-    if (carsToUpdate.length === 0) {
-      console.log('No cars to update.');
-      return { success: true, message: 'No cars to update.' };
+    if (!carInDB) {
+      console.log(`Car with idCars ${idCars} not found in DB for user ${userID}.`);
+      throw new Error(`Car with ID ${idCars} not found.`);
     }
 
-    // Update cars in the database
-    await Promise.all(
-      carsToUpdate.map((carUpdate) => {
-        console.log(`Updating car with idCars ${carUpdate.idCars}`);
-        return prisma.cars.update({
-          where: { idCars: carUpdate.idCars },
-          data: carUpdate.data
-        });
-      })
-    );
+    // Update the car in the database
+    console.log(`Updating car with idCars ${idCars}`);
+    const updatedCar = await prisma.cars.update({
+      where: { idCars: parseInt(idCars, 10) },
+      data: {
+        RegistrationID: validatedCar.RegistrationID,
+        Model: validatedCar.Model
+      }
+    });
 
-    console.log(`Successfully updated ${carsToUpdate.length} cars.`);
+    console.log(`Successfully updated car with idCars ${idCars}`);
     return {
-      message: 'Cars updated successfully.',
-      count: carsToUpdate.length // Number of cars updated
+      message: 'Car updated successfully.',
+      car: updatedCar
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('Validation error:', error.errors);
       throw new Error(`Validation error: ${error.errors.map((e) => e.message).join(', ')}`);
     }
-    console.error('Error updating cars:', error.message);
+    console.error('Error updating car:', error.message);
     throw error;
   }
 }
@@ -284,6 +256,6 @@ module.exports = {
   getSubscriptions,
   createUser,
   createCars,
-  updateCarsModel,
+  updateCarModel,
   findUserByEmail
 };

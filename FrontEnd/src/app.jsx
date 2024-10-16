@@ -15,6 +15,8 @@ import AdminDashboard from './components/dashboard/admin/AdminDashboard';
 import UserDashboard from './components/dashboard/user/UserDashboard';
 import ProtectedRouteAdmin from './components/ProtectedRouteAdmin'; // Import the ProtectedRoute component
 import ProtectedRouteUser from './components/ProtectedRouteUser';
+import SuccessPage from './components/SuccessPage'; // Import your SuccessPage
+
 const App = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
@@ -67,6 +69,8 @@ const App = () => {
                   </ProtectedRouteAdmin>
                 }
               />
+              {/* Add the success route here */}
+              <Route path='/success' element={<SuccessPage />} />
             </Routes>
           </div>
         </div>
