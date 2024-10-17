@@ -104,21 +104,6 @@ model UserSubscriptions {
   @@unique([UserID, Status])
 }
 
-model Users {
-  idUsers           Int                 @id @default(autoincrement())
-  persId            String              @db.VarChar(9)
-  FirstName         String              @db.VarChar(40)
-  LastName          String              @db.VarChar(45)
-  Phone             String              @db.VarChar(20)
-  Email             String              @unique @db.VarChar(100)
-  Password          String              @db.VarChar(255)
-  Violations        Int                 @default(0) @map("Violations") // Correct column name and map it to the existing database column
-  Role              String              @default("user") @map("Role") // Correct column name and map it to the existing database column
-  Cars              Cars[]
-  Reservations      Reservations[]      @relation("UserReservations")
-  UserSubscriptions UserSubscriptions[]
-}
-
 model Reservations {
   idReservation    Int          @id @default(autoincrement())
   UserID           Int
@@ -131,4 +116,49 @@ model Reservations {
   Cars             Cars         @relation("CarReservations", fields: [CarID], references: [idCars])
   Slots            Slots        @relation("SlotReservations", fields: [SlotID], references: [idSlots])
   Users            Users        @relation("UserReservations", fields: [UserID], references: [idUsers])
+}
+
+model Notifications {
+  id        Int      @id @default(autoincrement())
+  userId    Int? // For user-specific notifications (null for global notifications)
+  message   String
+  isRead    Boolean  @default(false) // Optional: Only relevant for user-specific notifications
+  createdAt DateTime @default(now())
+
+  // Relations
+  user              Users?              @relation("UserNotifications", fields: [userId], references: [idUsers], onDelete: Cascade)
+  userNotifications UserNotifications[] // Relation to track which users received/read the notification
+}
+
+model UserNotifications {
+  id             Int           @id @default(autoincrement())
+  userId         Int // Reference to the user
+  notificationId Int // Reference to the notification
+  isRead         Boolean       @default(false) // Whether the user has read the notification
+  user           Users         @relation(fields: [userId], references: [idUsers], onDelete: Cascade)
+  notification   Notifications @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  // Unique constraint to prevent duplicate notifications for a user
+  @@unique([userId, notificationId])
+}
+
+model Users {
+  idUsers           Int                 @id @default(autoincrement())
+  persId            String              @db.VarChar(9)
+  FirstName         String              @db.VarChar(40)
+  LastName          String              @db.VarChar(45)
+  Phone             String              @db.VarChar(20)
+  Email             String              @unique @db.VarChar(100)
+  Password          String              @db.VarChar(255)
+  Violations        Int                 @default(0) @map("Violations")
+  Role              String              @default("user") @map("Role")
+  Cars              Cars[]
+  Reservations      Reservations[]      @relation("UserReservations")
+  UserSubscriptions UserSubscriptions[]
+
+  // Relation for notifications
+  Notifications Notifications[] @relation("UserNotifications")
+
+  // Add the reverse relation to UserNotifications
+  UserNotifications UserNotifications[]
 }

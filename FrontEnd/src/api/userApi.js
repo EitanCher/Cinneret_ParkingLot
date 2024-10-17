@@ -292,3 +292,16 @@ export const deleteCar = async (idCars) => {
     throw error;
   }
 };
+
+//  router.get('notifications', fetchUnreadNotificationsCount);
+
+export const fetchUnreadNotificationsCount = async () => {
+  try {
+    const response = await api.get('/notifications/unread', { withCredentials: true });
+    console.log('unread notifications:', response.data);
+    return response.data.count;
+  } catch (error) {
+    console.error('Error fetching unread notifications:', error);
+    throw error;
+  }
+};

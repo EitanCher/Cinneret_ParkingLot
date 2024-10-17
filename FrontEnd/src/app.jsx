@@ -13,9 +13,10 @@ import SignUp from './components/SignUp';
 import { useTheme } from './Context/ThemeContext';
 import AdminDashboard from './components/dashboard/admin/AdminDashboard';
 import UserDashboard from './components/dashboard/user/UserDashboard';
-import ProtectedRouteAdmin from './components/ProtectedRouteAdmin'; // Import the ProtectedRoute component
+import ProtectedRouteAdmin from './components/ProtectedRouteAdmin';
 import ProtectedRouteUser from './components/ProtectedRouteUser';
-import SuccessPage from './components/SuccessPage'; // Import your SuccessPage
+import SuccessPage from './components/SuccessPage';
+import Notifications from './components/Notifications'; // Import the Notifications component
 
 const App = () => {
   const { isDarkMode } = useTheme();
@@ -51,7 +52,6 @@ const App = () => {
               <Route path='/subscriptions' element={<Subscriptions />} />
               <Route path='/login' element={<Login />} />
               <Route path='/signup' element={<SignUp />} />
-              {/* User Dashboard (can be accessed by all authenticated users) */}
               <Route
                 path='/UserDashboard/*'
                 element={
@@ -60,7 +60,6 @@ const App = () => {
                   </ProtectedRouteUser>
                 }
               />
-              {/* Admin Dashboard protected by the "admin" role */}
               <Route
                 path='/AdminDashboard/*'
                 element={
@@ -71,6 +70,15 @@ const App = () => {
               />
               {/* Add the success route here */}
               <Route path='/success' element={<SuccessPage />} />
+              {/* Add the notifications route here */}
+              <Route
+                path='/notifications'
+                element={
+                  <ProtectedRouteUser>
+                    <Notifications />
+                  </ProtectedRouteUser>
+                }
+              />
             </Routes>
           </div>
         </div>

@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
-
+import { useLocation, Link, Routes, Route, Outlet } from 'react-router-dom';
+import { NotificationScreen } from './DashBoardScreens/NotificationScreen';
 import { Sidebar, SidebarBody, SidebarLink } from '../../ui/sidebar';
 import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconParking } from '@tabler/icons-react';
-import { Link } from 'react-router-dom'; // Ensure this import is from react-router-dom
 import { motion } from 'framer-motion';
-import { cn } from '../../../lib/utils';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
-import 'react-lazy-load-image-component/src/effects/blur.css';
 import { fetchUserDetails } from '../../../api/userApi';
 import { ParkingLots } from '../admin/DashBoardScreens/ParkingLots';
 import { Overview } from './DashBoardScreens/Overview';
@@ -47,18 +43,13 @@ function AdminDashboard() {
       icon: <IconBrandTabler className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
-      label: 'Users',
-      href: '/AdminDashboard/Users',
-      icon: <IconUserBolt className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
-    },
-    {
       label: 'Parking Lots',
       href: '/AdminDashboard/ParkingLots',
       icon: <IconParking className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
-      label: 'Settings',
-      href: '/AdminDashboard/Settings',
+      label: 'Notifications',
+      href: '/AdminDashboard/Notifications',
       icon: <IconSettings className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     },
     {
@@ -69,12 +60,7 @@ function AdminDashboard() {
   ];
 
   return (
-    <div
-      className={cn(
-        'rounded-md flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1  mx-auto border border-neutral-200 dark:border-neutral-700 overflow-hidden',
-        'h-[60vh]' // for your use case, use `h-screen` instead of `h-[60vh]`
-      )}
-    >
+    <div className='rounded-md flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1 mx-auto border border-neutral-200 dark:border-neutral-700 overflow-hidden h-[60vh]'>
       <Sidebar open={open} setOpen={setOpen}>
         <SidebarBody className='justify-between gap-10'>
           <div className='flex flex-col flex-1 overflow-y-auto overflow-x-hidden'>
@@ -117,8 +103,8 @@ function AdminDashboard() {
       <div className='flex-1 overflow-auto p-4'>
         <Routes>
           <Route path='/' element={<Overview />} />
-          <Route path='/users' element={<Overview />} />
-          <Route path='/ParkingLots/*' element={<ParkingLots />} /> {/* Note the change here */}
+          <Route path='/ParkingLots/*' element={<ParkingLots />} />
+          <Route path='/Notifications' element={<NotificationScreen />} />
         </Routes>
         <Outlet />
       </div>

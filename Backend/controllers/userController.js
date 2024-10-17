@@ -472,6 +472,39 @@ const getUpcomingReservations = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+async function markNotificationsAsRead() {
+  try {
+    userId = req.user.id;
+    await prisma.userNotifications.updateMany({
+      where: {
+        userId: userId
+      },
+      data: {
+        isRead: true
+      }
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+
+async function fetchUnreadNotificationsCount(req, res) {
+  const { userId } = req.params;
+
+  try {
+    const unreadCount = await prisma.userNotifications.count({
+      where: {
+        userId: userId,
+        isRead: false
+      }
+    });
+
+    res.json({ count: unreadCount });
+  } catch (error) {
+    console.error('Error fetching unread notifications count:', error);
+    res.status(500).json({ error: 'Failed to fetch unread notifications count' });
+  }
+}
 
 module.exports = {
   updateUser,
@@ -487,5 +520,7 @@ module.exports = {
   fetchCheckoutSessionURL,
   getUserSubscription,
   getUserCars,
-  getUpcomingReservations
+  getUpcomingReservations,
+  markNotificationsAsRead,
+  fetchUnreadNotificationsCount
 };

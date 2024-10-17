@@ -31,7 +31,8 @@ const {
   addGateToCity,
   getGatesByCityController,
   deleteGate,
-  editGate
+  editGate,
+  createNotification
 } = require('../controllers/adminController');
 const { getSubscriptionTiers } = require('../controllers/userController');
 const { cancelReservationController, setExitTimeController } = require('../controllers/parkingController');
@@ -50,6 +51,8 @@ router.post('/parking/gates/add', addGateToCity);
 router.get('/parking/gates/:idCities', getGatesByCityController);
 router.delete('/parking/gates/:idGates', deleteGate);
 router.put('/parking/gates/:idGates', editGate);
+
+router.post('/notifications', createNotification);
 
 router.post('/parking/slots/add-individual', addIndividualSlot);
 router.get('/parking/recent-parking-logs', getRecentParkingLogsController);

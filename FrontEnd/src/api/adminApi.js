@@ -406,3 +406,14 @@ export const editGateById = async (idGates, updatedGateData) => {
     throw error;
   }
 };
+
+export const postNotification = async (message, isGlobal) => {
+  try {
+    const response = await api.post('/notifications', { message, isGlobal }, { withCredentials: true });
+    console.log('Notification sent successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    throw error;
+  }
+};
