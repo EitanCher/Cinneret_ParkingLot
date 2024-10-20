@@ -8,13 +8,12 @@ import NotificationBadge from './NotificationBadge';
 import { fetchUserDetails, fetchUnreadNotificationsCount } from '../api/userApi'; // Add this new API call
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:3001'); // Socket connection
-
 const Header = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
   const { isAuthenticated, loading, logoutUser } = useAuth();
   const location = useLocation();
 
+  const [socket, setSocket] = useState(null); // State to hold socket connection
   const [notificationsCount, setNotificationsCount] = useState(0); // Notification count state
   const [userData, setUserData] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,37 +26,53 @@ const Header = () => {
 
   const isActivePath = (path) => location.pathname === path;
 
-  // useEffect to listen for notifications and fetch user data
+  // Fetch user data and set up socket connection
   useEffect(() => {
     const handleUserData = async () => {
       try {
         const userInfo = await fetchUserDetails();
-        setUserData(userInfo); // Fetch user data on initial load
+        setUserData(userInfo);
 
-        // Fetch unread notifications count for the logged-in user
+        // Fetch unread notification count only once
         const unreadCount = await fetchUnreadNotificationsCount();
-        setNotificationsCount(unreadCount); // Set the initial notification count
+        setNotificationsCount(unreadCount);
+
+        // Initialize socket connection with userId only after fetching user details
+        if (userInfo?.idUsers && !socket) {
+          console.log('user id in header is ', userInfo.idUsers);
+          const socketConnection = io('http://localhost:3001', {
+            auth: {
+              userId: userInfo.idUsers // Pass the actual user ID here
+            }
+          });
+
+          // Set socket in state
+          setSocket(socketConnection);
+
+          // Set up listeners
+          socketConnection.on('new-notification', (notification) => {
+            if (notification.userId === null || notification.userId === userInfo.idUsers) {
+              setNotificationsCount((prevCount) => prevCount + 1);
+            }
+          });
+
+          socketConnection.on('unread-notifications-count', (newCount) => {
+            setNotificationsCount(newCount);
+          });
+
+          return () => {
+            socketConnection.disconnect();
+          };
+        }
       } catch (error) {
         console.error('Error fetching user details or unread notifications:', error);
       }
     };
 
-    handleUserData();
-
-    // Listen for 'new-notification' event and update notificationsCount
-    const handleNotification = (notification) => {
-      if (notification.userId === null || notification.userId === userData.idUsers) {
-        // Increment count only if the notification is global or meant for the logged-in user
-        setNotificationsCount((prevCount) => prevCount + 1);
-      }
-    };
-
-    socket.on('new-notification', handleNotification); // Attach event listener
-
-    return () => {
-      socket.off('new-notification', handleNotification); // Clean up on unmount
-    };
-  }, []); // Run this effect when userData changes
+    if (!userData) {
+      handleUserData(); // Fetch user data only once on mount if not already fetched
+    }
+  }, [userData, socket]); // Add userData and socket as dependencies to avoid repeated requests
 
   return (
     <Navbar isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen} isBordered isBlurred={true} className={isDarkMode ? 'bg-dark-bg' : ''}>
@@ -87,7 +102,8 @@ const Header = () => {
         className={`transition-opacity duration-500 ease-in-out ${loading ? 'opacity-0 invisible' : 'opacity-100 visible'}`}
         justify='end'
       >
-        {isAuthenticated && <NotificationBadge notificationsCount={notificationsCount} />} {/* Updated Badge */}
+        {isAuthenticated && <NotificationBadge setNotificationsCount={setNotificationsCount} notificationsCount={notificationsCount} />}{' '}
+        {/* Updated Badge */}
         <NavbarItem>
           <ThemeSwitcher setIsDarkMode={setIsDarkMode} isDarkMode={isDarkMode} />
         </NavbarItem>

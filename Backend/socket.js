@@ -88,11 +88,24 @@ async function updateAvailableSpots(cityID) {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
+
+  const userId = socket.handshake.auth.userId;
+  console.log('userid in socket is', userId);
+  console.log('user id is ', userId);
+
+  if (userId) {
+    socket.join(`user-${userId}`); // Join the user-specific room using userId
+    console.log(`User ${socket.id} joined room user-${userId}`);
+  }
+
+  // Subscribe to city updates
   socket.on('subscribe_to_city', async (cityID) => {
-    socket.join(cityID);
+    socket.join(cityID); // Join the room for city-specific updates
     console.log(`User ${socket.id} subscribed to city ${cityID}`);
     await countAvailableSpots(cityID);
   });
+
+  // Handle disconnection
   socket.on('disconnect', () => {
     console.log('A user disconnected:', socket.id);
   });

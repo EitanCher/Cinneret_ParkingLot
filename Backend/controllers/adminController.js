@@ -863,15 +863,27 @@ async function getRecentParkingLogsController(req, res) {
 }
 
 async function createNotification(req, res) {
-  const { userId, message, isGlobal } = req.body;
+  const userId = req.user.id; // Get the user ID from the request object
+  const { title, message, isGlobal } = req.body;
 
   try {
+    // Sanitize the title and message to prevent XSS attacks
+    const sanitizedData = sanitizeObject({ title, message }, ['title', 'message']);
+
     // Create the notification (global or user-specific)
+    const notificationData = {
+      title: sanitizedData.title, // Use the sanitized title
+      message: sanitizedData.message // Use the sanitized message
+    };
+
+    // If the notification is for a specific user, use the `user` relation field
+    if (!isGlobal) {
+      notificationData.user = { connect: { idUsers: userId } }; // Connect notification to the specific user
+    }
+
+    // Create the notification
     const newNotification = await prisma.notifications.create({
-      data: {
-        userId: isGlobal ? null : userId, // If global, userId is null
-        message
-      }
+      data: notificationData
     });
 
     // If the notification is global, create entries for all users in UserNotifications
@@ -912,6 +924,72 @@ async function createNotification(req, res) {
   }
 }
 
+async function createParkingLotNotification(req, res) {
+  const { cityId } = req.params;
+  console.log('city id in req params:', cityId);
+  const { title, message } = req.body;
+  const cityIdInt = parseInt(cityId, 10);
+  console.log('type of cityidint', typeof cityIdInt);
+  try {
+    const sanitizedData = sanitizeObject({ title, message }, ['title', 'message']);
+
+    const notificationData = {
+      title: sanitizedData.title,
+      message: sanitizedData.message
+    };
+
+    const newNotification = await prisma.notifications.create({
+      data: notificationData
+    });
+
+    const activeUsersInCity = await prisma.users.findMany({
+      where: {
+        Cars: {
+          some: {
+            ParkingLog: {
+              some: {
+                Slots: {
+                  Areas: {
+                    CityID: parseInt(cityIdInt) // Use the correct reference for CityID in Areas
+                  }
+                },
+                Exit: null // Active parking (Exit is null, meaning the car is still parked)
+              }
+            }
+          }
+        }
+      },
+      select: {
+        idUsers: true // Only select the user ID
+      }
+    });
+
+    if (activeUsersInCity.length === 0) {
+      return res.status(404).json({ message: 'No active users found in the selected city' });
+    }
+
+    const userNotifications = activeUsersInCity.map((user) => ({
+      userId: user.idUsers,
+      notificationId: newNotification.id
+    }));
+
+    await prisma.userNotifications.createMany({
+      data: userNotifications
+    });
+
+    const io = getIO();
+    activeUsersInCity.forEach((user) => {
+      io.to(`user-${user.idUsers}`).emit('new-notification', newNotification);
+    });
+
+    // Return success response
+    res.status(201).json({ message: 'Notification sent to active users in the city', newNotification });
+  } catch (error) {
+    console.error('Error sending city notification:', error);
+    res.status(500).json({ error: 'Failed to send city notification' });
+  }
+}
+
 module.exports = {
   addParkingLot,
   updateParkingLot,
@@ -946,5 +1024,6 @@ module.exports = {
   getGatesByCityController,
   deleteGate,
   editGate,
-  createNotification
+  createNotification,
+  createParkingLotNotification
 };

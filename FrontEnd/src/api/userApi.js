@@ -305,3 +305,38 @@ export const fetchUnreadNotificationsCount = async () => {
     throw error;
   }
 };
+
+export const markNotificationsAsRead = async () => {
+  try {
+    const response = await api.post('/notifications/clear', {}, { withCredentials: true });
+    console.log('marked notifications as read:', response);
+    return response;
+  } catch (error) {
+    console.error('Error marking notifications as read:', error);
+    throw error;
+  }
+};
+
+export const fetchAllUserNotifications = async () => {
+  try {
+    const response = await api.get('/notifications', { withCredentials: true });
+    console.log('user specific notifications:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all user notifications:', error);
+    throw error;
+  }
+};
+
+// router.post('/notifications/:notificationId', authenticateJWT, markSingleNotificationRead);
+
+export const markSingleNotificationRead = async (notificationId) => {
+  try {
+    const response = await api.post(`/notifications/${notificationId}`, { withCredentials: true });
+    console.log('marked notification as read:', response);
+    return response;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+};

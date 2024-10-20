@@ -16,7 +16,7 @@ import UserDashboard from './components/dashboard/user/UserDashboard';
 import ProtectedRouteAdmin from './components/ProtectedRouteAdmin';
 import ProtectedRouteUser from './components/ProtectedRouteUser';
 import SuccessPage from './components/SuccessPage';
-import Notifications from './components/Notifications'; // Import the Notifications component
+import UserNotifications from './components/UserNotifications'; // Import the Notifications component
 
 const App = () => {
   const { isDarkMode } = useTheme();
@@ -70,12 +70,11 @@ const App = () => {
               />
               {/* Add the success route here */}
               <Route path='/success' element={<SuccessPage />} />
-              {/* Add the notifications route here */}
               <Route
                 path='/notifications'
                 element={
                   <ProtectedRouteUser>
-                    <Notifications />
+                    <UserNotifications />
                   </ProtectedRouteUser>
                 }
               />

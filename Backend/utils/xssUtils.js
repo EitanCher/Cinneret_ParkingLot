@@ -1,14 +1,5 @@
 const xss = require('xss');
 
-// Define the fields you need to sanitize as strings
-const stringFields = [
-  'idUsers',
-  'Name',
-  'Price',
-  'MaxCars',
-  'features' // Add "features" to indicate it's an array of strings
-];
-
 const sanitizeObject = (obj, stringFields) => {
   if (!Array.isArray(stringFields)) {
     throw new Error('stringFields must be an array');

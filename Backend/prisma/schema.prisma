@@ -121,8 +121,9 @@ model Reservations {
 model Notifications {
   id        Int      @id @default(autoincrement())
   userId    Int? // For user-specific notifications (null for global notifications)
+  title     String? // Make title optional by adding a question mark
   message   String
-  isRead    Boolean  @default(false) // Optional: Only relevant for user-specific notifications
+  isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
   // Relations

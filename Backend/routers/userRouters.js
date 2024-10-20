@@ -25,7 +25,9 @@ const {
   getUserCars,
   getUpcomingReservations,
   markNotificationsAsRead,
-  fetchUnreadNotificationsCount
+  fetchUnreadNotificationsCount,
+  fetchUserNotifications,
+  markSingleNotificationRead
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -71,8 +73,10 @@ router.get('/sessions/:sessionId', async (req, res) => {
   }
 });
 
-router.get('/notifications/unread', fetchUnreadNotificationsCount);
+router.get('/notifications/unread', authenticateJWT, fetchUnreadNotificationsCount);
 router.post('/notifications/clear', authenticateJWT, markNotificationsAsRead);
+router.get('/notifications', authenticateJWT, fetchUserNotifications);
+router.post('/notifications/:notificationId', authenticateJWT, markSingleNotificationRead);
 router.get('/parking/reservations', authenticateJWT, getUpcomingReservations);
 router.post('/cancel-subscription', authenticateJWT, cancelSubscription);
 router.get('/parkinglots', getParkingLotCities);
