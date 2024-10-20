@@ -406,3 +406,28 @@ export const editGateById = async (idGates, updatedGateData) => {
     throw error;
   }
 };
+
+export const postNotification = async (title, message, isGlobal) => {
+  try {
+    const response = await api.post('/notifications', { title, message, isGlobal }, { withCredentials: true });
+    console.log('Notification sent successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    throw error;
+  }
+};
+
+// router.post('/notifications/cities/:cityId', createParkingLotNotification);
+
+export const createParkingLotNotification = async (cityId, title, message) => {
+  try {
+    console.log('city id in admin api:', cityId);
+    const response = await api.post(`/notifications/cities/${cityId}`, { title, message }, { withCredentials: true });
+    console.log('parking lot notification:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error sending parking lot notification:', error);
+    throw error;
+  }
+};

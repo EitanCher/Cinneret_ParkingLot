@@ -241,3 +241,102 @@ export const cancelReservation = async (idReservation) => {
     throw error;
   }
 };
+
+export const addCar = async (RegistrationID, Model) => {
+  try {
+    const car = {
+      RegistrationID: RegistrationID,
+      Model: Model
+    };
+    const response = await api.post('/cars/add', { data: car, withCredentials: true });
+    console.log('added car:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding car:', error);
+    throw error;
+  }
+};
+
+// '/cars'
+
+export const getUserCars = async () => {
+  try {
+    console.log('start of getusercars');
+    const response = await api.get('/cars', { withCredentials: true });
+    console.log('user cars in userapi:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user cars:', error);
+    throw error;
+  }
+};
+
+export const updateCar = async (idCars, updatedCarData) => {
+  try {
+    const response = await api.put(`/cars/${idCars}`, updatedCarData, { withCredentials: true });
+    console.log('updated car:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating car:', error);
+    throw error;
+  }
+};
+
+export const deleteCar = async (idCars) => {
+  try {
+    const response = await api.delete(`/cars/${idCars}`, { withCredentials: true });
+    console.log('deleted car:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting car:', error);
+    throw error;
+  }
+};
+
+//  router.get('notifications', fetchUnreadNotificationsCount);
+
+export const fetchUnreadNotificationsCount = async () => {
+  try {
+    const response = await api.get('/notifications/unread', { withCredentials: true });
+    console.log('unread notifications:', response.data);
+    return response.data.count;
+  } catch (error) {
+    console.error('Error fetching unread notifications:', error);
+    throw error;
+  }
+};
+
+export const markNotificationsAsRead = async () => {
+  try {
+    const response = await api.post('/notifications/clear', {}, { withCredentials: true });
+    console.log('marked notifications as read:', response);
+    return response;
+  } catch (error) {
+    console.error('Error marking notifications as read:', error);
+    throw error;
+  }
+};
+
+export const fetchAllUserNotifications = async () => {
+  try {
+    const response = await api.get('/notifications', { withCredentials: true });
+    console.log('user specific notifications:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all user notifications:', error);
+    throw error;
+  }
+};
+
+// router.post('/notifications/:notificationId', authenticateJWT, markSingleNotificationRead);
+
+export const markSingleNotificationRead = async (notificationId) => {
+  try {
+    const response = await api.post(`/notifications/${notificationId}`, { withCredentials: true });
+    console.log('marked notification as read:', response);
+    return response;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+};

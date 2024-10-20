@@ -1,4 +1,6 @@
 const xss = require('xss');
+const { getIO } = require('../io'); // Access the io instance
+
 const { deleteUserById, updateUserById, getSubscriptions, createUser } = require('../models/userModel');
 const {
   getUsersWithActiveSubscriptions,
@@ -859,8 +861,134 @@ async function getRecentParkingLogsController(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
-//deal with parking violations web socket
-//make slot inactive when fault is detected
+
+async function createNotification(req, res) {
+  const userId = req.user.id; // Get the user ID from the request object
+  const { title, message, isGlobal } = req.body;
+
+  try {
+    // Sanitize the title and message to prevent XSS attacks
+    const sanitizedData = sanitizeObject({ title, message }, ['title', 'message']);
+
+    // Create the notification (global or user-specific)
+    const notificationData = {
+      title: sanitizedData.title, // Use the sanitized title
+      message: sanitizedData.message // Use the sanitized message
+    };
+
+    // If the notification is for a specific user, use the `user` relation field
+    if (!isGlobal) {
+      notificationData.user = { connect: { idUsers: userId } }; // Connect notification to the specific user
+    }
+
+    // Create the notification
+    const newNotification = await prisma.notifications.create({
+      data: notificationData
+    });
+
+    // If the notification is global, create entries for all users in UserNotifications
+    if (isGlobal) {
+      const allUsers = await prisma.users.findMany({ select: { idUsers: true } });
+      const userNotifications = allUsers.map((user) => ({
+        userId: user.idUsers, // Create for every user
+        notificationId: newNotification.id // Notification ID from above
+      }));
+
+      // Insert into UserNotifications table for all users
+      await prisma.userNotifications.createMany({
+        data: userNotifications
+      });
+
+      // Emit the notification to all connected users
+      const io = getIO();
+      io.emit('new-notification', newNotification); // Broadcast to all users
+    } else {
+      // If it's user-specific, create an entry in UserNotifications for the target user
+      await prisma.userNotifications.create({
+        data: {
+          userId: userId,
+          notificationId: newNotification.id
+        }
+      });
+
+      // Emit the notification only to the specific user via their socket room
+      const io = getIO();
+      io.to(`user-${userId}`).emit('new-notification', newNotification); // Emit to the specific user
+    }
+
+    // Return the created notification
+    res.status(201).json(newNotification);
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    res.status(500).json({ error: 'Failed to create notification' });
+  }
+}
+
+async function createParkingLotNotification(req, res) {
+  const { cityId } = req.params;
+  console.log('city id in req params:', cityId);
+  const { title, message } = req.body;
+  const cityIdInt = parseInt(cityId, 10);
+  console.log('type of cityidint', typeof cityIdInt);
+  try {
+    const sanitizedData = sanitizeObject({ title, message }, ['title', 'message']);
+
+    const notificationData = {
+      title: sanitizedData.title,
+      message: sanitizedData.message
+    };
+
+    const newNotification = await prisma.notifications.create({
+      data: notificationData
+    });
+
+    const activeUsersInCity = await prisma.users.findMany({
+      where: {
+        Cars: {
+          some: {
+            ParkingLog: {
+              some: {
+                Slots: {
+                  Areas: {
+                    CityID: parseInt(cityIdInt) // Use the correct reference for CityID in Areas
+                  }
+                },
+                Exit: null // Active parking (Exit is null, meaning the car is still parked)
+              }
+            }
+          }
+        }
+      },
+      select: {
+        idUsers: true // Only select the user ID
+      }
+    });
+
+    if (activeUsersInCity.length === 0) {
+      return res.status(404).json({ message: 'No active users found in the selected city' });
+    }
+
+    const userNotifications = activeUsersInCity.map((user) => ({
+      userId: user.idUsers,
+      notificationId: newNotification.id
+    }));
+
+    await prisma.userNotifications.createMany({
+      data: userNotifications
+    });
+
+    const io = getIO();
+    activeUsersInCity.forEach((user) => {
+      io.to(`user-${user.idUsers}`).emit('new-notification', newNotification);
+    });
+
+    // Return success response
+    res.status(201).json({ message: 'Notification sent to active users in the city', newNotification });
+  } catch (error) {
+    console.error('Error sending city notification:', error);
+    res.status(500).json({ error: 'Failed to send city notification' });
+  }
+}
 
 module.exports = {
   addParkingLot,
@@ -895,5 +1023,7 @@ module.exports = {
   addGateToCity,
   getGatesByCityController,
   deleteGate,
-  editGate
+  editGate,
+  createNotification,
+  createParkingLotNotification
 };

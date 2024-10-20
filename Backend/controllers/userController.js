@@ -1,5 +1,7 @@
-const { deleteUserById, updateUserById, getSubscriptions, createUser, createCars, updateCarsModel } = require('../models/userModel');
+const { deleteUserById, updateUserById, getSubscriptions, createUser, createCars, updateCarModel } = require('../models/userModel');
 const { sanitizeObject } = require('../utils/xssUtils');
+const { getIO } = require('../io'); // Access the io instance
+
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
 const passport = require('../utils/passport-config'); // Import from the correct path
@@ -7,16 +9,12 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
-//hashing should move to controller
-//--------------------------------------------------------------------------------------------------------------------------------//
-
-//TODO: some controllers will need a subscription status check (important!)
 const getActiveUsers = (req, res) => {
   res.status(200).json({ message: 'Users retrieved successfully' });
 };
 const updateUser = async (req, res) => {
   const id = parseInt(req.params.id); // Convert id to integer if it's a string
-  const idFromToken = req.user.idUsers;
+  const idFromToken = req.user.id;
 
   if (id !== idFromToken) {
     return res.status(403).json({ message: 'You are not authorized to update this account' });
@@ -151,16 +149,15 @@ const addUserController = async (req, res) => {
 };
 
 const addCarsController = async (req, res) => {
-  // Extract user ID from JWT token
+  const idUsers = req.user.id;
 
-  const idUsers = req.user.idUsers; // Ensure this matches how the user ID is stored in req.user
+  const { data } = req.body;
 
-  const { cars } = req.body;
-
+  console.log('req body:', req.body);
   try {
     // Sanitize input data
     console.log('sanitizing cars');
-    const sanitizedCars = cars.map((car) => sanitizeObject(car, ['make', 'model']));
+    const sanitizedCar = sanitizeObject(data, ['RegistrationID', 'Model']);
 
     // Fetch user's subscription plan
     console.log('fetching user subscription');
@@ -177,7 +174,7 @@ const addCarsController = async (req, res) => {
 
     // Add cars to the database
     console.log('triggering create cars model');
-    await createCars(idUsers, sanitizedCars, SubscriptionPlanID);
+    await createCars(idUsers, sanitizedCar, SubscriptionPlanID);
 
     // Respond with success
     res.status(201).json({
@@ -265,53 +262,30 @@ async function getSubscriptionTiers(req, res) {
   }
 }
 
-// TODO: when building frontend part, remember this is a bulk edit
-const updateCars = async (req, res) => {
-  console.log('Received PATCH request for /api/users/cars');
-  console.log('User:', req.user); // Log authenticated user
-  console.log('Request Body:', req.body); // Log request body
-  // Extract user ID from JWT token
-  console.log('extracting user from JWT token');
-  const idUsers = req.user.idUsers; // Ensure this matches how the user ID is stored in req.user
+const updateCar = async (req, res) => {
+  console.log('Extracting user from JWT token');
+  const idUsers = req.user.idUsers;
 
-  const { cars } = req.body;
+  const { idCars } = req.params;
+  const carId = parseInt(idCars, 10);
+
+  const { RegistrationID, Model } = req.body;
 
   try {
-    console.log('start of try block in updateCars conntroller');
+    console.log('Start of try block in updateCarController');
 
-    // Sanitize input data
-    console.log('sanitizing');
-    const sanitizedCars = cars.map((car) => sanitizeObject(car, ['RegistrationID', 'Model']));
+    console.log('Sanitizing');
+    const sanitizedCar = sanitizeObject({ RegistrationID, Model }, ['RegistrationID', 'Model']);
 
-    // Update cars in the database
-    console.log('calling updateCarsModel');
-    await updateCarsModel(idUsers, sanitizedCars);
-
-    // Respond with success
+    console.log('Calling updateCarModel');
+    await updateCarModel(idUsers, carId, sanitizedCar);
 
     res.status(200).json({
-      message: 'Cars updated successfully.'
+      message: 'Car updated successfully.'
     });
   } catch (err) {
-    console.error('Error updating cars:', err.message);
+    console.error('Error updating car:', err.message);
     res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-const getUserCarsController = async (req, res) => {
-  const userId = req.user.idUsers; // Extract user ID from the JWT token
-
-  try {
-    const result = await getCarsByUserId(userId);
-
-    if (result.success) {
-      return res.status(200).json(result.cars);
-    } else {
-      return res.status(404).json({ message: result.message });
-    }
-  } catch (error) {
-    console.error('Error in getUserCarsController:', error.message);
-    return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -382,7 +356,7 @@ const deleteCarById = async (req, res) => {
 
   // Extract car ID from request parameters
   const { idCars } = req.params;
-  const userId = req.user.idUsers; // User ID from JWT token
+  const userId = req.user.id; // User ID from JWT token
 
   try {
     console.log('start of try block in deleteCarById controller');
@@ -500,6 +474,103 @@ const getUpcomingReservations = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+async function markNotificationsAsRead(req, res) {
+  try {
+    const userID = req.user.id;
+    const result = await prisma.userNotifications.updateMany({
+      where: {
+        userId: userID,
+        isRead: false
+      },
+      data: {
+        isRead: true
+      }
+    });
+    return res.status(200).json({ message: `Marked ${result.count} notifications as read` });
+  } catch (error) {
+    console.error('Error marking notifications as read:', error);
+    res.status(500).json({ error: 'Failed to mark notifications as read' });
+  }
+}
+
+async function fetchUnreadNotificationsCount(req, res) {
+  try {
+    console.log('req user:', req.user);
+    const userId = req.user.id;
+    const unreadCount = await prisma.userNotifications.count({
+      where: {
+        userId: userId,
+        isRead: false
+      }
+    });
+
+    res.json({ count: unreadCount });
+  } catch (error) {
+    console.error('Error fetching unread notifications count:', error);
+    res.status(500).json({ error: 'Failed to fetch unread notifications count' });
+  }
+}
+async function fetchUserNotifications(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const notifications = await prisma.notifications.findMany({
+      where: {
+        OR: [
+          { userId: null }, // Fetch global notifications
+          { userId: userId } // Fetch user-specific notifications
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        createdAt: true,
+        userNotifications: {
+          where: { userId }, // Filter notifications by user ID
+          select: { isRead: true }
+        }
+      }
+    });
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+}
+
+async function markSingleNotificationRead(req, res) {
+  try {
+    const { notificationId } = req.params;
+    const userId = req.user.id;
+
+    const result = await prisma.userNotifications.updateMany({
+      where: {
+        userId: userId,
+        notificationId: parseInt(notificationId, 10),
+        isRead: false // Ensure it is unread
+      },
+      data: { isRead: true }
+    });
+    const unreadCount = await prisma.userNotifications.count({
+      where: {
+        userId: userId,
+        isRead: false
+      }
+    });
+
+    // Emit the new unread notifications count via Socket.IO
+    const io = getIO(); //IO instance
+    io.to(`user-${userId}`).emit('unread-notifications-count', unreadCount); // Emit the unread count to the specific user
+
+    return res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+}
 
 module.exports = {
   updateUser,
@@ -508,12 +579,16 @@ module.exports = {
   addUserController,
   login,
   addCarsController,
-  updateCars,
+  updateCar,
   deleteCarById,
   getUserDetails,
   logout,
   fetchCheckoutSessionURL,
   getUserSubscription,
   getUserCars,
-  getUpcomingReservations
+  getUpcomingReservations,
+  markNotificationsAsRead,
+  fetchUnreadNotificationsCount,
+  fetchUserNotifications,
+  markSingleNotificationRead
 };

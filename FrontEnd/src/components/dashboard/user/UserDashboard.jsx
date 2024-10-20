@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, Routes, Route, Outlet } from 'react-router-dom';
 import { Sidebar, SidebarBody, SidebarLink } from '../../ui/sidebar';
-import { IconUserBolt, IconBrandTabler } from '@tabler/icons-react';
+import { IconUserBolt, IconBrandTabler, IconParkingCircle, IconCar, IconSettings } from '@tabler/icons-react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import { motion } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import { fetchUserDetails } from '../../../api/userApi';
 import { BookSlot } from '../user/screens/BookSlot';
 
+import { Cars } from '../user/screens/Cars'; // Cars view component
+
 function UserDashboard() {
   const [userData, setUserData] = useState(null);
   const [open, setOpen] = useState(false);
-  const [userDataError, setUserDataError] = useState();
+  const [userDataError, setUserDataError] = useState(null);
 
   useEffect(() => {
     const handleUserData = async () => {
@@ -30,7 +32,17 @@ function UserDashboard() {
     {
       label: 'Book',
       href: '/UserDashboard',
-      icon: <IconBrandTabler className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
+      icon: <IconParkingCircle className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
+    },
+    {
+      label: 'Cars',
+      href: '/UserDashboard/Cars',
+      icon: <IconCar className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
+    },
+    {
+      label: 'Account',
+      href: '/UserDashboard/Account',
+      icon: <IconSettings className='text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0' />
     }
   ];
 
@@ -83,6 +95,7 @@ function UserDashboard() {
       <div className='flex-1 overflow-auto p-4'>
         <Routes>
           <Route path='/*' element={<BookSlot userData={userData} />} />
+          <Route path='/Cars/*' element={<Cars userData={userData} />} />
         </Routes>
         <Outlet />
       </div>
@@ -90,7 +103,6 @@ function UserDashboard() {
   );
 }
 
-export default UserDashboard;
 export const Logo = () => (
   <Link to='/UserDashboard' className='font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20'>
     <svg viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-5 h-5 text-black dark:text-white'>
@@ -109,3 +121,5 @@ export const LogoIcon = () => (
     </svg>
   </Link>
 );
+
+export default UserDashboard;

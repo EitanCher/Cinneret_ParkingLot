@@ -5,6 +5,9 @@
 const express = require('express');
 const { loginLimiter, generalLimiter } = require('../middlewares/rateLimit');
 
+const Stripe = require('stripe');
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
 const router = express.Router();
 const {
   updateUser,
@@ -13,14 +16,18 @@ const {
   addUserController,
   login,
   addCarsController,
-  updateCars,
+  updateCar,
   deleteCarById,
   getUserDetails,
   logout,
   fetchCheckoutSessionURL,
   getUserSubscription,
   getUserCars,
-  getUpcomingReservations
+  getUpcomingReservations,
+  markNotificationsAsRead,
+  fetchUnreadNotificationsCount,
+  fetchUserNotifications,
+  markSingleNotificationRead
 } = require('../controllers/userController');
 const {
   getParkingLotCities,
@@ -56,20 +63,34 @@ router.get(
   getUserDetails
 );
 
+router.get('/sessions/:sessionId', async (req, res) => {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
+    res.json(session);
+  } catch (error) {
+    console.error('Error retrieving session:', error);
+    res.status(500).json({ error: 'Unable to retrieve session' });
+  }
+});
+
+router.get('/notifications/unread', authenticateJWT, fetchUnreadNotificationsCount);
+router.post('/notifications/clear', authenticateJWT, markNotificationsAsRead);
+router.get('/notifications', authenticateJWT, fetchUserNotifications);
+router.post('/notifications/:notificationId', authenticateJWT, markSingleNotificationRead);
 router.get('/parking/reservations', authenticateJWT, getUpcomingReservations);
 router.post('/cancel-subscription', authenticateJWT, cancelSubscription);
 router.get('/parkinglots', getParkingLotCities);
 router.get('/user-subscription', authenticateJWT, getUserSubscription);
 //im aware the the router below doesn'tfully follow restful conventions by not usind :id. however i chose this approach in order to edit bulk items
-router.patch('/cars', authenticateJWT, updateCars);
+router.put('/cars/:idCars', authenticateJWT, updateCar);
 router.get('/subscriptions', getSubscriptionTiers);
 router.post('/signup', addUserController);
 router.post('/login', loginLimiter, login);
 router.post('/logout', authenticateJWT, logout);
 router.get('/parking/slots-count/:cityId', authenticateJWT, countSlotsByCityID);
 router.patch('/:id', authenticateJWT, updateUser);
-router.post('/cars', authenticateJWT, addCarsController);
-router.delete('/cars/:id', authenticateJWT, deleteCarById);
+router.post('/cars/add', authenticateJWT, addCarsController);
+router.delete('/cars/:idCars', authenticateJWT, deleteCarById);
 router.get('/cars', authenticateJWT, getUserCars);
 router.get('/parking/total-time', authenticateJWT, calculateTotalParkingTimeByUser);
 router.get('/parking/average-duration', authenticateJWT, calculateAverageParkingTimeByUser);
